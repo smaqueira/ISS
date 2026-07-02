@@ -44,7 +44,8 @@ export async function GET(req: NextRequest) {
     const yaExiste = tasks.find(t => t.client_id === c.id && t.action === 'send_proposal')
     if (!yaExiste) {
       tasks.push({
-        date: new Date().toISOString().split('T')[0],
+        id: '',
+        created_at: new Date().toISOString(),
         title: `Contactar a ${c.name}`,
         description: `Prospecto nuevo sin contactar. Canal sugerido: ${c.channel || 'whatsapp'}.`,
         priority: 'urgente',
