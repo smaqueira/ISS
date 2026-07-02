@@ -3,12 +3,20 @@ import { ask } from '@/lib/ai/client'
 import { getSetting } from '@/lib/settings'
 
 export async function POST(req: NextRequest) {
-  const { products, idea, prompt: customPrompt, width = 1080, height = 1080 } = await req.json()
+  const { products, idea, tipo = 'showcase', prompt: customPrompt, width = 1080, height = 1080 } = await req.json()
+
+  const tipoContexts: Record<string, string> = {
+    flyer: 'promotional flyer with bold discount offer, price crossed out, vibrant colors, Argentine market style',
+    story: 'Instagram story vertical format, eye-catching, swipe up call to action, bold typography, gradient background',
+    whatsapp: 'WhatsApp banner horizontal, product on right, clear promotional message, friendly professional tone',
+    showcase: 'elegant product photography, clean studio background, professional lighting, premium minimalist composition',
+  }
+  const tipoContext = tipoContexts[tipo] || tipoContexts['showcase']
 
   const promptText = customPrompt || await ask(
-    `Generá un prompt en inglés para crear una imagen comercial profesional para una empresa que vende: ${products}.
-Idea visual: ${idea || 'producto destacado con fondo atractivo'}.
-El prompt debe ser visual, detallado, estilo comercial premium. Solo el prompt, sin explicaciones. Max 80 palabras.`,
+    `Generá un prompt en inglés para una imagen comercial fotorrealista de: ${products}.
+Estilo: ${tipoContext}.
+El prompt debe ser muy visual y detallado. Solo el prompt en inglés, sin explicaciones. Max 80 palabras.`,
     120
   )
 

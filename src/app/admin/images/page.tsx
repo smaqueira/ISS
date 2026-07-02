@@ -1,71 +1,38 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const TIPOS = [
-  {
-    id: 'flyer',
-    label: '🎯 Flyer de oferta',
-    desc: 'Precio tachado, descuento destacado. Ideal para post de Instagram.',
-    size: '1080x1080',
-    prompt: (products: string, detail: string) =>
-      `Commercial promotional flyer for ${products}. Bold discount offer, price crossed out, new price highlighted. Professional product photography, vibrant colors, clean modern design, Argentine market style. ${detail}`,
-  },
-  {
-    id: 'story',
-    label: '📱 Historia de Instagram',
-    desc: 'Formato vertical 9:16. Diseño llamativo para stories.',
-    size: '1080x1920',
-    prompt: (products: string, detail: string) =>
-      `Instagram story vertical format for ${products}. Eye-catching design, swipe up call to action, bold typography, gradient background, mobile-first layout. ${detail}`,
-  },
-  {
-    id: 'whatsapp',
-    label: '💬 Banner para WhatsApp',
-    desc: 'Imagen horizontal para mandar en broadcasts.',
-    size: '1280x720',
-    prompt: (products: string, detail: string) =>
-      `WhatsApp promotional banner for ${products}. Horizontal layout, clear message, product image on right, text on left, professional clean design, friendly tone. ${detail}`,
-  },
-  {
-    id: 'showcase',
-    label: '🌟 Showcase de producto',
-    desc: 'Imagen elegante del producto sobre fondo neutro.',
-    size: '1080x1080',
-    prompt: (products: string, detail: string) =>
-      `Elegant product showcase photography of ${products}. Clean white or dark background, professional studio lighting, premium quality, minimalist composition, high-end commercial photography. ${detail}`,
-  },
+  { id: 'flyer', label: '🎯 Flyer de oferta', desc: 'Precio tachado, descuento destacado.', size: '1080x1080' },
+  { id: 'story', label: '📱 Historia de Instagram', desc: 'Formato vertical 9:16.', size: '1080x1920' },
+  { id: 'whatsapp', label: '💬 Banner para WhatsApp', desc: 'Imagen horizontal para broadcasts.', size: '1280x720' },
+  { id: 'showcase', label: '🌟 Showcase de producto', desc: 'Foto elegante sobre fondo neutro.', size: '1080x1080' },
 ]
 
 export default function ImagesPage() {
   const [products, setProducts] = useState('')
-  const [detail, setDetail] = useState('')
   const [selectedTipo, setSelectedTipo] = useState(TIPOS[0])
   const [loading, setLoading] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
-
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
 
-  useState(() => {
+  useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then(data => {
       if (Array.isArray(data)) {
         const map = Object.fromEntries(data.map((r: { key: string; value: string }) => [r.key, r.value]))
         if (map.COMPANY_LOGO_URL) setLogoUrl(map.COMPANY_LOGO_URL)
       }
     })
-  })
+  }, [])
 
   async function generate() {
     if (!products) return
     setLoading(true)
     setImageUrl(null)
-
     const [w, h] = selectedTipo.size.split('x').map(Number)
-    const prompt = selectedTipo.prompt(products, detail)
-
     const res = await fetch('/api/ai/image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ products, prompt, width: w, height: h }),
+      body: JSON.stringify({ products, tipo: selectedTipo.id, width: w, height: h }),
     })
     const data = await res.json()
     setImageUrl(data.url)
@@ -77,16 +44,12 @@ export default function ImagesPage() {
   return (
     <div style={{ maxWidth: 640 }}>
       <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 6 }}>Generador de imágenes IA</h1>
-      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginBottom: 24 }}>Creá imágenes profesionales para redes y WhatsApp en segundos.</p>
+      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginBottom: 24 }}>Solo poné el producto — la IA hace el resto.</p>
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ marginBottom: 14 }}>
-          <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 5 }}>Productos / servicios</label>
-          <input value={products} onChange={e => setProducts(e.target.value)} placeholder="Producto 1, Producto 2..." style={inputStyle} />
-        </div>
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 5 }}>Detalle adicional (opcional)</label>
-          <input value={detail} onChange={e => setDetail(e.target.value)} placeholder="Colores, estilo, mensaje especial..." style={inputStyle} />
+          <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 5 }}>¿Qué producto querés mostrar?</label>
+          <input value={products} onChange={e => setProducts(e.target.value)} placeholder="Ej: salmón fresco, mariscos, atún..." style={inputStyle} />
         </div>
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 10 }}>Tipo de imagen</label>
@@ -103,7 +66,6 @@ export default function ImagesPage() {
             ))}
           </div>
         </div>
-
         <button onClick={generate} disabled={loading || !products} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: 12, fontSize: '0.95rem' }}>
           {loading ? '🎨 Generando...' : '✨ Generar imagen'}
         </button>
