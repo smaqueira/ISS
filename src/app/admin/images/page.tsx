@@ -43,6 +43,17 @@ export default function ImagesPage() {
   const [loading, setLoading] = useState(false)
   const [imageUrl, setImageUrl] = useState<string | null>(null)
 
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+
+  useState(() => {
+    fetch('/api/settings').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) {
+        const map = Object.fromEntries(data.map((r: { key: string; value: string }) => [r.key, r.value]))
+        if (map.COMPANY_LOGO_URL) setLogoUrl(map.COMPANY_LOGO_URL)
+      }
+    })
+  })
+
   async function generate() {
     if (!products) return
     setLoading(true)
@@ -107,18 +118,23 @@ export default function ImagesPage() {
       {imageUrl && !loading && (
         <div className="card">
           <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 10 }}>{selectedTipo.label} — {selectedTipo.size}px</div>
-          <img
-            src={imageUrl}
-            alt="Imagen generada"
-            style={{ width: '100%', borderRadius: 10, display: 'block', marginBottom: 12 }}
-            onLoad={() => setLoading(false)}
-          />
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+            <img src={imageUrl} alt="Imagen generada" style={{ width: '100%', borderRadius: 10, display: 'block' }} />
+            {logoUrl && (
+              <img src={logoUrl} alt="Logo" style={{
+                position: 'absolute', bottom: 16, right: 16,
+                width: '18%', objectFit: 'contain',
+                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.5))',
+              }} />
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <a href={imageUrl} download="imagen.jpg" target="_blank" rel="noreferrer" style={{ flex: 1 }}>
               <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>⬇️ Descargar</button>
             </a>
             <button onClick={generate} className="btn btn-ghost" style={{ flex: 1, justifyContent: 'center' }}>🔄 Regenerar</button>
           </div>
+          {!logoUrl && <p style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 8 }}>Subí tu logo en Configuración para que aparezca en las imágenes.</p>}
         </div>
       )}
     </div>
