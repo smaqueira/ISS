@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { formatARS, formatDate, waLink } from '@/lib/utils'
 import DeleteClientButton from '@/components/clients/DeleteClientButton'
+import WhatsAppButton from '@/components/clients/WhatsAppButton'
 
 type Params = Promise<{ id: string }>
 
@@ -56,9 +57,7 @@ export default async function ClientDetailPage({ params }: { params: Params }) {
 
       {/* Acciones rápidas */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
-        {client.phone && (
-          <a href={waLink(client.phone)} target="_blank" rel="noreferrer" className="btn btn-primary">📱 WhatsApp</a>
-        )}
+        {client.phone && <WhatsAppButton clientId={id} />}
         {client.email && (
           <a href={`mailto:${client.email}`} className="btn btn-ghost">📧 Email</a>
         )}

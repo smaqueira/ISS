@@ -38,6 +38,24 @@ export async function GET(req: NextRequest) {
   const coldIds = clients.filter(c => c.status === 'contactado' && c.last_contact && daysSince(c.last_contact) > 14).map(c => c.id)
   if (coldIds.length > 0) await db.from('clients').update({ status: 'inactivo' }).in('id', coldIds)
 
+  // Recordatorio: prospectos nuevos sin contactar hace más de 1 día
+  const sinContactar = clients.filter(c => c.status === 'nuevo' && daysSince(c.created_at) >= 1)
+  for (const c of sinContactar) {
+    const yaExiste = tasks.find(t => t.client_id === c.id && t.action === 'send_proposal')
+    if (!yaExiste) {
+      tasks.push({
+        date: new Date().toISOString().split('T')[0],
+        title: `Contactar a ${c.name}`,
+        description: `Prospecto nuevo sin contactar. Canal sugerido: ${c.channel || 'whatsapp'}.`,
+        priority: 'urgente',
+        action: 'send_proposal',
+        client_id: c.id,
+        done: false,
+        payload: {},
+      })
+    }
+  }
+
   // Enviar briefing a Telegram
   const summary = {
     nuevos: clients.filter(c => c.status === 'nuevo').length,
