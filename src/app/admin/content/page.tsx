@@ -13,14 +13,25 @@ export default function ContentPage() {
   const [clientName, setClientName] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<Generated | null>(null)
-  const [tab, setTab] = useState<'instagram' | 'broadcast'>('instagram')
+  const [tab, setTab] = useState<'instagram' | 'broadcast' | 'calendar'>('instagram')
   const [imageUrl, setImageUrl] = useState<string | null>(null)
   const [imageLoading, setImageLoading] = useState(false)
+  const [calendar, setCalendar] = useState<{ day: string; theme: string; idea: string; caption: string; hashtags: string[] }[] | null>(null)
 
   async function generate() {
     setLoading(true)
     setResult(null)
     setImageUrl(null)
+    setCalendar(null)
+
+    if (tab === 'calendar') {
+      const res = await fetch('/api/ai/content', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'calendar', products: products.split(',').map(p => p.trim()) }) })
+      const data = await res.json()
+      setCalendar(data.days)
+      setLoading(false)
+      return
+    }
+
     const endpoint = tab === 'instagram' ? 'instagram' : 'broadcast'
     const body = tab === 'instagram'
       ? { type: endpoint, products: products.split(',').map(p => p.trim()), content_type: contentType }
@@ -51,9 +62,10 @@ export default function ContentPage() {
       <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 6 }}>Contenido IA</h1>
       <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginBottom: 24 }}>Generá posts para Instagram o mensajes de broadcast con un click.</p>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         <button style={tabStyle('instagram')} onClick={() => setTab('instagram')}>📸 Instagram</button>
         <button style={tabStyle('broadcast')} onClick={() => setTab('broadcast')}>📢 Broadcast WhatsApp</button>
+        <button style={tabStyle('calendar')} onClick={() => setTab('calendar')}>📅 Calendario Semanal</button>
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
@@ -102,6 +114,24 @@ export default function ContentPage() {
           {loading ? '🤖 Generando...' : '✨ Generar con IA'}
         </button>
       </div>
+
+      {calendar && (
+        <div>
+          {calendar.map((item, i) => (
+            <div key={i} className="card" style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{item.day}</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--muted)', background: 'var(--bg)', padding: '3px 8px', borderRadius: 6 }}>{item.theme}</span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>IDEA</div>
+              <p style={{ fontSize: '0.85rem', marginBottom: 10 }}>{item.idea}</p>
+              <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>CAPTION</div>
+              <p style={{ fontSize: '0.85rem', lineHeight: 1.6, marginBottom: 8 }}>{item.caption}</p>
+              <p style={{ color: '#3b82f6', fontSize: '0.8rem' }}>{item.hashtags.map(h => `#${h}`).join(' ')}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {result && (
         <div className="card">

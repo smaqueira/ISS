@@ -1,6 +1,21 @@
 import { ask, parseJSON } from './client'
 import { getSeason, getDayName } from '@/lib/utils'
 
+const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+const TEMAS = ['presentación del producto estrella', 'testimonio o caso de éxito', 'tip o consejo útil del rubro', 'oferta o promoción', 'detrás de escena del negocio', 'producto nuevo o destacado', 'contenido de valor educativo']
+
+export async function generateWeeklyCalendar(products: string[]): Promise<{ day: string; theme: string; idea: string; caption: string; hashtags: string[] }[]> {
+  const prompt = `Sos community manager experto en Argentina. Creá un calendario de contenido para Instagram de 7 días.
+SOLO JSON sin markdown, array de 7 objetos:
+[{"day":"Lunes","theme":"tema","idea":"qué mostrar","caption":"texto max 60 palabras con emojis","hashtags":["5 hashtags"]}]
+
+Productos/servicios: ${products.join(', ')} | Temporada: ${getSeason()}
+Temas sugeridos por día: ${DIAS.map((d, i) => `${d}: ${TEMAS[i]}`).join(', ')}`
+
+  const text = await ask(prompt, 1500)
+  return parseJSON(text)
+}
+
 interface InstagramContent {
   idea: string
   caption: string
