@@ -14,6 +14,29 @@ El prompt debe ser visual, detallado, estilo comercial premium. Solo el prompt, 
 
   const ideogramKey = await getSetting('IDEOGRAM_API_KEY')
 
+  // Fal.ai FLUX (fotorrealista)
+  const falKey = await getSetting('FAL_API_KEY')
+  if (falKey) {
+    try {
+      const res = await fetch('https://fal.run/fal-ai/flux/schnell', {
+        method: 'POST',
+        headers: { 'Authorization': `Key ${falKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: promptText,
+          image_size: width === height ? 'square_hd' : width > height ? 'landscape_16_9' : 'portrait_16_9',
+          num_images: 1,
+          enable_safety_checker: false,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const url = data.images?.[0]?.url
+        if (url) return NextResponse.json({ url, prompt: promptText, source: 'fal' })
+      }
+    } catch { /* fallback */ }
+  }
+
+  // Ideogram
   if (ideogramKey) {
     try {
       const res = await fetch('https://api.ideogram.ai/generate', {
