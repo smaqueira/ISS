@@ -10,6 +10,7 @@ interface Result {
   type: string
   score: number
   reason: string
+  existing?: boolean
 }
 
 const RUBROS_GASTRONOMIA = [
@@ -223,8 +224,12 @@ export default function ProspectingPage() {
       </div>
 
       {imported != null && (
-        <div style={{ background: '#22c55e20', border: '1px solid #22c55e40', borderRadius: 10, padding: '12px 16px', marginBottom: 16, color: '#22c55e', fontSize: '0.9rem' }}>
-          ✅ {imported} clientes importados al CRM — {results.length} resultados encontrados
+        <div style={{ background: '#22c55e20', border: '1px solid #22c55e40', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: '0.9rem' }}>
+          <span style={{ color: '#22c55e' }}>✅ {imported} nuevos importados al CRM</span>
+          {results.filter(r => r.existing).length > 0 && (
+            <span style={{ color: '#f59e0b', marginLeft: 12 }}>· {results.filter(r => r.existing).length} ya estaban en la base</span>
+          )}
+          <span style={{ color: 'var(--muted)', marginLeft: 12 }}>· {results.length} resultados totales</span>
         </div>
       )}
 
@@ -234,9 +239,12 @@ export default function ProspectingPage() {
             {results.length} resultados
           </div>
           {results.map((r, i) => (
-            <div key={i} className="card" style={{ marginBottom: 10, display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+            <div key={i} className="card" style={{ marginBottom: 10, display: 'flex', gap: 14, alignItems: 'flex-start', opacity: r.existing ? 0.65 : 1, borderColor: r.existing ? 'var(--border)' : undefined }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, marginBottom: 2 }}>{r.name}</div>
+                <div style={{ fontWeight: 600, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {r.name}
+                  {r.existing && <span style={{ fontSize: '0.68rem', background: '#f59e0b20', color: '#f59e0b', border: '1px solid #f59e0b40', borderRadius: 6, padding: '2px 7px', fontWeight: 500 }}>ya en CRM</span>}
+                </div>
                 <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 4 }}>{r.address}</div>
                 <div style={{ fontSize: '0.72rem', color: 'var(--muted)', fontStyle: 'italic' }}>{r.reason}</div>
                 <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
