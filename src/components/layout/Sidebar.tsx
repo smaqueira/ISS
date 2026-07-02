@@ -6,10 +6,11 @@ const nav = [
   { href: '/admin', label: 'Hoy', icon: '⚡' },
   { href: '/admin/clients', label: 'Clientes', icon: '👥' },
   { href: '/admin/orders', label: 'Pedidos', icon: '📦' },
-  { href: '/admin/products', label: 'Productos', icon: '🐟' },
+  { href: '/admin/productos', label: 'Catálogo', icon: '🛍️' },
   { href: '/admin/content', label: 'Contenido', icon: '📱' },
   { href: '/admin/images', label: 'Imágenes IA', icon: '🎨' },
   { href: '/admin/prospecting', label: 'Prospección', icon: '🔍' },
+  { href: '/admin/grupos', label: 'Grupos B2C', icon: '👥' },
   { href: '/admin/settings', label: 'Configuración', icon: '⚙️' },
 ]
 
