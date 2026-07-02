@@ -16,15 +16,19 @@ export async function POST(req: NextRequest) {
   const promptText = customPrompt || await ask(
     `Generá un prompt en inglés para una imagen comercial fotorrealista de: ${products}.
 Estilo: ${tipoContext}.
+IMPORTANTE: NO incluir texto, letras, palabras ni números en la imagen. Solo elementos visuales puros.
 El prompt debe ser muy visual y detallado. Solo el prompt en inglés, sin explicaciones. Max 80 palabras.`,
     120
   )
 
   const ideogramKey = await getSetting('IDEOGRAM_API_KEY')
 
-  // Fal.ai FLUX (fotorrealista)
-  const falKey = await getSetting('FAL_API_KEY')
-  if (falKey) {
+  // Fal.ai FLUX (fotorrealista) con rotación de keys
+  const [falKey1, falKey2, falKey3] = await Promise.all([
+    getSetting('FAL_API_KEY'), getSetting('FAL_API_KEY_2'), getSetting('FAL_API_KEY_3'),
+  ])
+  const falKeys = [falKey1, falKey2, falKey3].filter(Boolean)
+  for (const falKey of falKeys) {
     try {
       const res = await fetch('https://fal.run/fal-ai/flux/schnell', {
         method: 'POST',
@@ -41,7 +45,7 @@ El prompt debe ser muy visual y detallado. Solo el prompt en inglés, sin explic
         const url = data.images?.[0]?.url
         if (url) return NextResponse.json({ url, prompt: promptText, source: 'fal' })
       }
-    } catch { /* fallback */ }
+    } catch { continue }
   }
 
   // Ideogram
