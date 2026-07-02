@@ -14,10 +14,13 @@ export default function ContentPage() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<Generated | null>(null)
   const [tab, setTab] = useState<'instagram' | 'broadcast'>('instagram')
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+  const [imageLoading, setImageLoading] = useState(false)
 
   async function generate() {
     setLoading(true)
     setResult(null)
+    setImageUrl(null)
     const endpoint = tab === 'instagram' ? 'instagram' : 'broadcast'
     const body = tab === 'instagram'
       ? { type: endpoint, products: products.split(',').map(p => p.trim()), content_type: contentType }
@@ -27,6 +30,14 @@ export default function ContentPage() {
     const data = await res.json()
     setResult(data)
     setLoading(false)
+
+    if (tab === 'instagram' && data.idea) {
+      setImageLoading(true)
+      const imgRes = await fetch('/api/ai/image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ products, idea: data.idea }) })
+      const imgData = await imgRes.json()
+      setImageUrl(imgData.url)
+      setImageLoading(false)
+    }
   }
 
   const tabStyle = (t: string) => ({
@@ -95,6 +106,22 @@ export default function ContentPage() {
       {result && (
         <div className="card">
           {result.idea && <><div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>IDEA VISUAL</div><p style={{ marginBottom: 16, fontSize: '0.9rem' }}>{result.idea}</p></>}
+
+          {tab === 'instagram' && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 8 }}>FLYER GENERADO CON IA</div>
+              {imageLoading && <div style={{ background: 'var(--bg)', borderRadius: 12, height: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '0.85rem' }}>🎨 Generando imagen...</div>}
+              {imageUrl && !imageLoading && (
+                <div>
+                  <img src={imageUrl} alt="Flyer generado" style={{ width: '100%', borderRadius: 12, display: 'block' }} />
+                  <a href={imageUrl} download="flyer.jpg" target="_blank" rel="noreferrer">
+                    <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 10 }}>⬇️ Descargar flyer</button>
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+
           {result.caption && <><div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>CAPTION</div><p style={{ marginBottom: 16, fontSize: '0.9rem', lineHeight: 1.6 }}>{result.caption}</p></>}
           {result.hashtags && <><div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>HASHTAGS</div><p style={{ color: '#3b82f6', fontSize: '0.85rem' }}>{result.hashtags.map((h: string) => `#${h}`).join(' ')}</p></>}
           {result.text && <><div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 4 }}>MENSAJE WHATSAPP</div><p style={{ fontSize: '0.9rem', lineHeight: 1.6 }}>{result.text}</p></>}
