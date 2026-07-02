@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { generateDailyTasks } from '@/lib/tasks/generator'
 import { generateFollowUp } from '@/lib/ai/followup'
 import { sendMessage } from '@/lib/telegram/send'
+import { sendProposalEmail } from '@/lib/email/send'
 import { formatBriefing } from '@/lib/telegram/format'
 import { daysSince } from '@/lib/utils'
 
@@ -31,6 +32,7 @@ export async function GET(req: NextRequest) {
   for (const c of toFollowUp) {
     const days = daysSince(c.last_contact)
     const fu = await generateFollowUp({ name: c.name, rubro: c.rubro || 'negocio', type: c.type, days })
+    await sendProposalEmail({ to: c.email, client_name: c.name, subject: fu.subject, body: fu.email })
     await db.from('interactions').insert({ client_id: c.id, channel: 'email', type: 'seguimiento', notes: `Follow-up día ${days} — ${fu.subject}`, ai_generated: true })
   }
 
