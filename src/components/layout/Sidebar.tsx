@@ -8,6 +8,7 @@ const nav = [
   { href: '/admin/orders', label: 'Pedidos', icon: '📦' },
   { href: '/admin/products', label: 'Productos', icon: '🐟' },
   { href: '/admin/content', label: 'Contenido', icon: '📱' },
+  { href: '/admin/images', label: 'Imágenes IA', icon: '🎨' },
   { href: '/admin/prospecting', label: 'Prospección', icon: '🔍' },
   { href: '/admin/settings', label: 'Configuración', icon: '⚙️' },
 ]
