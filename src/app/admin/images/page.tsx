@@ -50,10 +50,14 @@ export default function ImagesPage() {
 
     const [w, h] = selectedTipo.size.split('x').map(Number)
     const prompt = selectedTipo.prompt(products, detail)
-    const encoded = encodeURIComponent(prompt)
-    const url = `https://image.pollinations.ai/prompt/${encoded}?width=${w}&height=${h}&nologo=true&seed=${Date.now()}`
 
-    setImageUrl(url)
+    const res = await fetch('/api/ai/image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ products, prompt, width: w, height: h }),
+    })
+    const data = await res.json()
+    setImageUrl(data.url)
     setLoading(false)
   }
 

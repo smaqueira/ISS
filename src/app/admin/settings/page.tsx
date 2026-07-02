@@ -27,6 +27,12 @@ const GROUPS = [
     ],
   },
   {
+    title: '🎨 Imágenes IA',
+    keys: [
+      { key: 'IDEOGRAM_API_KEY', label: 'Ideogram API Key', placeholder: 'wR59...' },
+    ],
+  },
+  {
     title: '🔍 Prospección',
     keys: [
       { key: 'SERPER_API_KEY_1', label: 'Serper API Key 1', placeholder: '0eb2...' },
