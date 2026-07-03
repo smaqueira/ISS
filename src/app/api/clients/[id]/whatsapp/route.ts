@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateProposal } from '@/lib/ai/proposals'
+import { getSetting } from '@/lib/settings'
 
 type Params = Promise<{ id: string }>
 
@@ -10,11 +10,14 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
   const { data: client } = await db.from('clients').select('*').eq('id', id).single()
   if (!client || !client.phone) return NextResponse.json({ error: 'Sin teléfono' }, { status: 400 })
 
-  let whatsapp = `Hola ${client.name}, te contacto de parte de nuestro equipo comercial. ¿Podemos coordinar una charla breve?`
-  try {
-    const proposal = await generateProposal({ name: client.name, rubro: client.rubro || 'negocio', type: client.type, city: client.city })
-    whatsapp = proposal.whatsapp
-  } catch { /* usa el mensaje genérico */ }
+  const [companyName, companyDesc] = await Promise.all([
+    getSetting('COMPANY_NAME'),
+    getSetting('COMPANY_DESCRIPTION'),
+  ])
+
+  const nombre = companyName || 'nuestro equipo'
+  const descripcion = companyDesc || 'productos de calidad para tu negocio'
+  const whatsapp = `Hola! Soy de *${nombre}*. ${descripcion}. ¿Te puedo contar más? 🙌`
 
   const phone = client.phone.replace(/\D/g, '')
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(whatsapp)}`

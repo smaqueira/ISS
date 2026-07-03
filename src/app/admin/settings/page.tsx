@@ -45,8 +45,9 @@ const GROUPS = [
   {
     title: '🏢 Empresa',
     keys: [
-      { key: 'COMPANY_NAME', label: 'Nombre del sistema', placeholder: 'Intelligent Sales System' },
+      { key: 'COMPANY_NAME', label: 'Nombre del negocio', placeholder: 'MariscoVittomare' },
       { key: 'COMPANY_WHATSAPP', label: 'WhatsApp del negocio', placeholder: '5491100000000' },
+      { key: 'COMPANY_DESCRIPTION', label: 'Qué vendés (para mensajes IA)', placeholder: 'Proveemos mariscos y pescados frescos a restaurantes y hoteles de Buenos Aires' },
     ],
   },
 ]
