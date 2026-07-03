@@ -20,20 +20,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ saved: 0 })
     }
     const db = await createClient()
-    let saved = 0
-    for (const g of grupos) {
-      if (!g.link) continue
-      const { error } = await db.from('grupos').upsert({
+
+    const rows = grupos
+      .filter((g: { link?: string }) => !!g.link)
+      .map((g: { title?: string; link: string; platform?: string; snippet?: string }) => ({
         zona: zona || '',
         tema: tema || '',
         title: g.title || '',
         link: g.link,
         platform: g.platform || 'otro',
         snippet: g.snippet || '',
-      }, { onConflict: 'link', ignoreDuplicates: true })
-      if (!error) saved++
-    }
-    return NextResponse.json({ saved })
+      }))
+
+    if (rows.length === 0) return NextResponse.json({ saved: 0 })
+
+    const { data, error } = await db.from('grupos').insert(rows).select()
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ saved: data?.length || 0 })
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }
