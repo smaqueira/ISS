@@ -28,16 +28,29 @@ export async function runMañana() {
   const db = await createClient()
   const actions: string[] = []
 
-  // Elegir zona y rubro del día (rotación basada en día del año)
-  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000)
-  const zona = ZONAS_ROTACION[dayOfYear % ZONAS_ROTACION.length]
-  const zona2 = ZONAS_ROTACION[(dayOfYear + 1) % ZONAS_ROTACION.length]
-  const rubro1 = RUBROS_ROTACION[dayOfYear % RUBROS_ROTACION.length]
-  const rubro2 = RUBROS_ROTACION[(dayOfYear + 2) % RUBROS_ROTACION.length]
+  // Traer todas las combinaciones ya buscadas
+  const { data: logsAnteriores } = await db.from('agent_logs').select('detalle').eq('accion', 'búsqueda')
+  const yasBuscadas = new Set((logsAnteriores || []).map(l => l.detalle))
 
-  // Prospectar 4 combinaciones zona×rubro
-  const combos = [[zona, rubro1], [zona, rubro2], [zona2, rubro1], [zona2, rubro2]]
+  // Generar todas las combinaciones posibles y filtrar las ya buscadas
+  const todasCombos: [string, string][] = []
+  for (const z of ZONAS_ROTACION) {
+    for (const r of RUBROS_ROTACION) {
+      const key = `${r} en ${z}`
+      if (!yasBuscadas.has(key)) todasCombos.push([z, r])
+    }
+  }
+
+  // Tomar las próximas 4 combinaciones no buscadas
+  const combos = todasCombos.slice(0, 4)
   let totalImportados = 0
+
+  if (combos.length === 0) {
+    await log(db, 'mañana', 'prospección', 'Todas las combinaciones zona×rubro ya fueron buscadas. Ciclo completo.', 0)
+    actions.push('✅ Ciclo completo — todas las zonas y rubros ya fueron buscados')
+    await sendMessage(`🤖 *Agente — Turno mañana*\n\n✅ Ciclo completo de prospección. Todas las combinaciones zona×rubro ya fueron buscadas.`)
+    return { actions, importados: 0 }
+  }
 
   const { data: existing } = await db.from('clients').select('name, phone')
   const existingNames = new Set((existing || []).map(c => c.name?.toLowerCase().trim()))
@@ -64,16 +77,22 @@ export async function runMañana() {
           if (p.phone) existingPhones.add(p.phone)
         }
       }
-    } catch { continue }
+      // Marcar combinación como buscada
+      await log(db, 'mañana', 'búsqueda', `${r} en ${z}`, toImport.length)
+    } catch {
+      await log(db, 'mañana', 'búsqueda', `${combos[0][1]} en ${combos[0][0]}`, 0)
+      continue
+    }
   }
 
-  // Log detallado de cada combinación buscada
-  for (const [z, r] of combos) {
-    await log(db, 'mañana', 'búsqueda', `${r} en ${z}`, 0)
-  }
-  await log(db, 'mañana', 'prospección', `Zonas: ${zona}, ${zona2} · Rubros: ${rubro1}, ${rubro2} · Importados: ${totalImportados}`, totalImportados)
+  const zonasHoy = [...new Set(combos.map(([z]) => z))].join(', ')
+  const rubrosHoy = [...new Set(combos.map(([, r]) => r))].join(', ')
+  const restantes = todasCombos.length - combos.length
+
+  await log(db, 'mañana', 'prospección', `Zonas: ${zonasHoy} · Rubros: ${rubrosHoy} · Importados: ${totalImportados} · Quedan: ${restantes} combinaciones`, totalImportados)
   actions.push(`🔍 ${totalImportados} nuevos prospectos importados`)
-  actions.push(`📍 Zonas: ${zona} + ${zona2} · Rubros: ${rubro1} + ${rubro2}`)
+  actions.push(`📍 ${zonasHoy} · ${rubrosHoy}`)
+  actions.push(`📊 Quedan ${restantes} combinaciones por explorar`)
 
   // Generar tareas prioritarias con IA
   const { data: clientes } = await db.from('clients').select('*')
