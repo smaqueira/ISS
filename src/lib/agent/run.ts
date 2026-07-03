@@ -16,7 +16,7 @@ const ZONAS_ROTACION = [
 
 const RUBROS_ROTACION = [
   'restaurante', 'parrilla', 'hotel',
-  'catering', 'bodegon', 'pizzeria', 'rotiseria', 'cantina',
+  'catering', 'bodegon', 'rotiseria', 'cantina',
 ]
 
 async function log(db: Awaited<ReturnType<typeof createClient>>, turno: string, accion: string, detalle: string, cantidad = 0) {
