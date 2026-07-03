@@ -68,8 +68,8 @@ export async function runMañana() {
         const isDupe = existingNames.has(place.name?.toLowerCase().trim()) || (place.phone && existingPhones.has(place.phone))
         return { ...place, ...ai, isDupe }
       }))
-      // Importar con score >= 50 (bajado de 60) y sin requerir teléfono obligatorio
-      const toImport = results.filter(p => p.score >= 50 && !p.isDupe)
+      // Importar solo si tiene teléfono o web, y score >= 50
+      const toImport = results.filter(p => p.score >= 50 && !p.isDupe && (p.phone || p.website))
       const sinContacto = results.filter(p => p.score >= 50 && !p.phone && !p.website && !p.isDupe).length
       for (const p of toImport) {
         const { error } = await db.from('clients').insert({

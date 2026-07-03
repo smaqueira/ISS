@@ -62,6 +62,7 @@ export default async function ClientDetailPage({ params }: { params: Params }) {
           <a href={`mailto:${client.email}`} className="btn btn-ghost">📧 Email</a>
         )}
         <Link href={`/admin/orders/new?client=${id}`} className="btn btn-ghost">📦 Nuevo pedido</Link>
+        <Link href={`/admin/clients/${id}/edit`} className="btn btn-ghost">✏️ Editar</Link>
         <DeleteClientButton id={id} />
       </div>
 
