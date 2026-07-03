@@ -20,7 +20,7 @@ export default function AgentePage() {
   const [logs, setLogs] = useState<AgentLog[]>([])
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState<string | null>(null)
-  const [recientes, setRecientes] = useState<{id:string;name:string;city:string;rubro:string;score:number;type:string;created_at:string}[]>([])
+  const [recientes, setRecientes] = useState<{id:string;name:string;city:string;rubro:string;score:number;type:string;phone?:string;website?:string;instagram?:string;created_at:string}[]>([])
 
   useEffect(() => { load() }, [])
 
@@ -142,25 +142,52 @@ export default function AgentePage() {
       </div>
 
       {/* Prospectos recientes del agente */}
-      {recientes.length > 0 && (
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>🎯 Prospectos importados por el agente</div>
-            <a href="/admin/clients?origen=agente" style={{ fontSize: '0.78rem', color: 'var(--accent)', textDecoration: 'none' }}>Ver todos →</a>
-          </div>
-          {recientes.map(c => (
-            <div key={c.id} className="card" style={{ marginBottom: 8, display: 'flex', gap: 14, alignItems: 'center', padding: '10px 16px' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{c.name}</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{c.city} · {c.rubro}</div>
+      {recientes.length > 0 && (() => {
+        const completos = recientes.filter(c => c.phone)
+        const incompletos = recientes.filter(c => !c.phone)
+        const ProspectoCard = (c: typeof recientes[number]) => (
+          <div key={c.id} className="card" style={{ marginBottom: 8, display: 'flex', gap: 14, alignItems: 'center', padding: '10px 16px' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{c.name}</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
+                {c.city} · {c.rubro}
+                {c.phone && <span> · 📱 {c.phone}</span>}
+                {!c.phone && c.instagram && <span> · 📷 {c.instagram}</span>}
+                {!c.phone && !c.instagram && c.website && <span> · 🔗 web</span>}
               </div>
-              <span className={`badge badge-${c.type}`}>{c.type.toUpperCase()}</span>
-              <div style={{ fontWeight: 800, fontSize: '1rem', color: c.score >= 75 ? '#22c55e' : c.score >= 50 ? '#eab308' : '#ef4444', minWidth: 32, textAlign: 'right' }}>{c.score}</div>
-              <a href={`/admin/clients/${c.id}`} style={{ fontSize: '0.72rem', color: 'var(--accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}>Ver →</a>
             </div>
-          ))}
-        </div>
-      )}
+            <span className={`badge badge-${c.type}`}>{c.type.toUpperCase()}</span>
+            <div style={{ fontWeight: 800, fontSize: '1rem', color: c.score >= 75 ? '#22c55e' : c.score >= 50 ? '#eab308' : '#ef4444', minWidth: 32, textAlign: 'right' }}>{c.score}</div>
+            <a href={`/admin/clients/${c.id}`} style={{ fontSize: '0.72rem', color: 'var(--accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}>Ver →</a>
+          </div>
+        )
+        return (
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>🎯 Prospectos importados por el agente</div>
+              <a href="/admin/clients?origen=agente" style={{ fontSize: '0.78rem', color: 'var(--accent)', textDecoration: 'none' }}>Ver todos →</a>
+            </div>
+
+            {completos.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: '0.72rem', color: '#22c55e', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>
+                  ✅ Con teléfono ({completos.length})
+                </div>
+                {completos.map(ProspectoCard)}
+              </div>
+            )}
+
+            {incompletos.length > 0 && (
+              <div>
+                <div style={{ fontSize: '0.72rem', color: '#f59e0b', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 700 }}>
+                  ⚠️ Sin teléfono — solo IG/web ({incompletos.length})
+                </div>
+                {incompletos.map(ProspectoCard)}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Log de actividad */}
       <div>
