@@ -59,17 +59,23 @@ export async function runMañana() {
   for (const [z, r] of combos) {
     try {
       const places = await searchPlaces(r, z)
+      if (!places.length) {
+        await log(db, 'mañana', 'búsqueda', `${r} en ${z} — sin resultados de Serper`, 0)
+        continue
+      }
       const results = await Promise.all(places.map(async place => {
         const ai = await classifyLead({ name: place.name, rubro: r, description: place.address })
         const isDupe = existingNames.has(place.name?.toLowerCase().trim()) || (place.phone && existingPhones.has(place.phone))
         return { ...place, ...ai, isDupe }
       }))
-      const toImport = results.filter(r => r.score >= 60 && (r.phone || r.website) && !r.isDupe)
+      // Importar con score >= 50 (bajado de 60) y sin requerir teléfono obligatorio
+      const toImport = results.filter(p => p.score >= 50 && !p.isDupe)
+      const sinContacto = results.filter(p => p.score >= 50 && !p.phone && !p.website && !p.isDupe).length
       for (const p of toImport) {
         const { error } = await db.from('clients').insert({
           name: p.name, type: p.type, rubro: r, phone: p.phone || null,
           city: z, website: p.website || null, notes: p.address || null,
-          status: 'nuevo', score: p.score, channel: p.channel, tags: [],
+          status: 'nuevo', score: p.score, channel: p.channel || 'whatsapp', tags: [],
         })
         if (!error) {
           totalImportados++
@@ -77,10 +83,9 @@ export async function runMañana() {
           if (p.phone) existingPhones.add(p.phone)
         }
       }
-      // Marcar combinación como buscada
-      await log(db, 'mañana', 'búsqueda', `${r} en ${z}`, toImport.length)
-    } catch {
-      await log(db, 'mañana', 'búsqueda', `${combos[0][1]} en ${combos[0][0]}`, 0)
+      await log(db, 'mañana', 'búsqueda', `${r} en ${z} — ${places.length} encontrados, ${toImport.length} importados, ${sinContacto} sin contacto`, toImport.length)
+    } catch (err) {
+      await log(db, 'mañana', 'búsqueda', `${r} en ${z} — error: ${err instanceof Error ? err.message : 'desconocido'}`, 0)
       continue
     }
   }
