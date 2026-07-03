@@ -20,12 +20,18 @@ export default function AgentePage() {
   const [logs, setLogs] = useState<AgentLog[]>([])
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState<string | null>(null)
+  const [recientes, setRecientes] = useState<{id:string;name:string;city:string;rubro:string;score:number;type:string;created_at:string}[]>([])
 
   useEffect(() => { load() }, [])
 
   async function load() {
-    const res = await fetch('/api/agent/logs')
-    setLogs(await res.json())
+    const [logsRes, clientsRes] = await Promise.all([
+      fetch('/api/agent/logs'),
+      fetch('/api/clients?status=nuevo&limit=20'),
+    ])
+    setLogs(await logsRes.json())
+    const cls = await clientsRes.json()
+    setRecientes((cls || []).filter((c: {score:number}) => c.score > 0).slice(0, 20))
     setLoading(false)
   }
 
@@ -134,6 +140,27 @@ export default function AgentePage() {
           ))}
         </div>
       </div>
+
+      {/* Prospectos recientes del agente */}
+      {recientes.length > 0 && (
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>🎯 Prospectos importados por el agente</div>
+            <a href="/admin/clients?origen=agente" style={{ fontSize: '0.78rem', color: 'var(--accent)', textDecoration: 'none' }}>Ver todos →</a>
+          </div>
+          {recientes.map(c => (
+            <div key={c.id} className="card" style={{ marginBottom: 8, display: 'flex', gap: 14, alignItems: 'center', padding: '10px 16px' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{c.name}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{c.city} · {c.rubro}</div>
+              </div>
+              <span className={`badge badge-${c.type}`}>{c.type.toUpperCase()}</span>
+              <div style={{ fontWeight: 800, fontSize: '1rem', color: c.score >= 75 ? '#22c55e' : c.score >= 50 ? '#eab308' : '#ef4444', minWidth: 32, textAlign: 'right' }}>{c.score}</div>
+              <a href={`/admin/clients/${c.id}`} style={{ fontSize: '0.72rem', color: 'var(--accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}>Ver →</a>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Log de actividad */}
       <div>
