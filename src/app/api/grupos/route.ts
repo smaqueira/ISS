@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
     .map(g => ({ zona, tema, title: g.title, link: g.link, platform: g.platform, snippet: g.snippet || '' }))
 
   if (nuevos.length > 0) {
-    await db.from('grupos').insert(nuevos)
+    const { error } = await db.from('grupos').insert(nuevos)
+    if (error) return NextResponse.json({ error: error.message, details: error }, { status: 500 })
   }
 
   return NextResponse.json({ saved: nuevos.length })
