@@ -237,9 +237,30 @@ export default function GruposPage() {
           )}
 
           {results.length > 0 && (
-            <div style={{ background: '#22c55e15', border: '1px solid #22c55e30', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: '0.82rem', color: '#22c55e' }}>
-              ✅ {results.length} grupos encontrados y guardados automáticamente en "Mis grupos"
-            </div>
+            <>
+              <div style={{ background: '#22c55e15', border: '1px solid #22c55e30', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: '0.82rem', color: '#22c55e' }}>
+                ✅ {results.length} grupos encontrados y guardados en "Mis grupos"
+              </div>
+              {results.map((r, i) => {
+                const p = PLATFORM_COLORS[r.platform] || PLATFORM_COLORS.otro
+                return (
+                  <div key={i} className="card" style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                      <div style={{ background: p.bg, color: p.color, borderRadius: 8, padding: '6px 10px', fontSize: '1.1rem', flexShrink: 0 }}>{p.icon}</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, marginBottom: 4, fontSize: '0.9rem' }}>{r.title}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 8 }}>{r.snippet}</div>
+                        <a href={r.link} target="_blank" rel="noreferrer">
+                          <button style={{ background: p.bg, color: p.color, border: `1px solid ${p.color}40`, borderRadius: 7, padding: '5px 12px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}>
+                            {r.platform === 'whatsapp' ? '💬 Unirme' : r.platform === 'facebook' ? '👥 Ver grupo' : '🔗 Abrir'}
+                          </button>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </>
           )}
         </>
       )}

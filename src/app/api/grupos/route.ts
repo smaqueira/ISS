@@ -8,21 +8,33 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const { zona, tema, grupos } = await req.json()
+  const body = await req.json()
+  const { zona, tema, grupos } = body
+
+  if (!grupos || !Array.isArray(grupos) || grupos.length === 0) {
+    return NextResponse.json({ saved: 0, error: 'sin grupos' })
+  }
+
   const db = await createClient()
 
-  // Traer links ya guardados para evitar duplicados
   const { data: existing } = await db.from('grupos').select('link')
   const existingLinks = new Set((existing || []).map((g: { link: string }) => g.link))
 
-  const nuevos = (grupos as { title: string; link: string; platform: string; snippet: string }[])
-    .filter(g => !existingLinks.has(g.link))
-    .map(g => ({ zona, tema, title: g.title, link: g.link, platform: g.platform, snippet: g.snippet || '' }))
+  const nuevos = grupos
+    .filter((g: { link: string }) => g.link && !existingLinks.has(g.link))
+    .map((g: { title: string; link: string; platform: string; snippet: string }) => ({
+      zona: zona || '',
+      tema: tema || '',
+      title: g.title || '',
+      link: g.link,
+      platform: g.platform || 'otro',
+      snippet: g.snippet || '',
+    }))
 
-  if (nuevos.length > 0) {
-    const { error } = await db.from('grupos').insert(nuevos)
-    if (error) return NextResponse.json({ error: error.message, details: error }, { status: 500 })
-  }
+  if (nuevos.length === 0) return NextResponse.json({ saved: 0 })
+
+  const { error } = await db.from('grupos').insert(nuevos)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ saved: nuevos.length })
 }
