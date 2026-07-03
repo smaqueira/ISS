@@ -12,6 +12,8 @@ export default function ClientRow({ client }: Props) {
         <div style={{ fontWeight: 600, marginBottom: 2 }}>{client.name}</div>
         <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
           {client.rubro || '—'} · {client.city || '—'}
+          {client.phone && <span> · 📱 {client.phone}</span>}
+          {!client.phone && client.notes && <span style={{ fontStyle: 'italic' }}> · {client.notes}</span>}
         </div>
       </div>
 
