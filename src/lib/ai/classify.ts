@@ -16,11 +16,17 @@ export async function classifyLead(data: {
   description?: string
 }): Promise<ClassifyResult> {
   try {
-    const prompt = `Sos experto en ventas B2B y B2C en Argentina.
-B2B = negocios que compran en cantidad para revender o usar (restaurantes, hoteles, supermercados, catering, bares, parrillas, empresas).
-B2C = consumidores finales particulares.
+    const prompt = `Sos experto en ventas B2B en Argentina. Tu tarea es clasificar negocios como compradores potenciales en cantidad.
 
-Analizá este negocio y respondé SOLO JSON sin markdown:
+REGLA PRINCIPAL: Si el negocio es un local comercial de gastronomía o servicio, SIEMPRE es B2B.
+B2B = restaurante, cafetería, bar, parrilla, hotel, catering, bodegón, pizzería, cantina, rotisería, hamburguesería, buffet, supermercado, carnicería, verdulería, almacén, empresa, colegio, hospital, club.
+B2C = persona particular sin local comercial.
+
+Score 80-100: gastronomía o negocio grande con alta demanda de productos.
+Score 60-79: negocio mediano o con demanda moderada.
+Score 40-59: negocio pequeño o demanda incierta.
+
+Respondé SOLO JSON sin markdown:
 {"type":"b2b o b2c","score":0-100,"reason":"breve","channel":"whatsapp|email|telefono"}
 
 Negocio: ${data.name}
