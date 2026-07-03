@@ -29,9 +29,25 @@ export default function AgentePage() {
     setLoading(false)
   }
 
+  const [lastResult, setLastResult] = useState<string | null>(null)
+
   async function runNow(turno: string) {
     setRunning(turno)
-    await fetch(`/api/agent/run?turno=${turno}`, { method: 'POST' })
+    setLastResult(null)
+    try {
+      const res = await fetch(`/api/agent/run?turno=${turno}`, { method: 'POST' })
+      const data = await res.json()
+      if (data.error) {
+        setLastResult(`❌ Error: ${data.error}`)
+      } else {
+        const acciones = data.actions || []
+        setLastResult(acciones.length > 0
+          ? `✅ Completado:\n${acciones.join('\n')}`
+          : '⚠️ Ejecutado pero sin acciones — revisá que las claves Serper y Groq estén configuradas en Configuración')
+      }
+    } catch (e) {
+      setLastResult(`❌ Error de conexión: ${e}`)
+    }
     await load()
     setRunning(null)
   }
@@ -78,6 +94,11 @@ export default function AgentePage() {
         <p style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 14 }}>
           Normalmente corre automático. Podés ejecutar cualquier turno manualmente para probarlo.
         </p>
+        {lastResult && (
+          <div style={{ background: lastResult.startsWith('✅') ? '#22c55e15' : '#ef444415', border: `1px solid ${lastResult.startsWith('✅') ? '#22c55e40' : '#ef444440'}`, borderRadius: 8, padding: '12px 14px', marginBottom: 14, fontSize: '0.82rem', whiteSpace: 'pre-line', color: lastResult.startsWith('✅') ? '#22c55e' : '#ef4444' }}>
+            {lastResult}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {[
             { id: 'manana', label: '🌅 Turno mañana', desc: 'Prospección + tareas' },
