@@ -145,9 +145,7 @@ export default async function AdminPage() {
               { href: '/admin/grupos', icon: '👥', label: 'Buscar grupos', desc: 'WhatsApp y Facebook por zona' },
             ].map(a => (
               <a key={a.href} href={a.href} style={{ textDecoration: 'none' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', cursor: 'pointer' }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border)')}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', borderRadius: 8, border: '1px solid var(--border)', cursor: 'pointer' }}>
                   <span style={{ fontSize: '1.2rem' }}>{a.icon}</span>
                   <div>
                     <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)' }}>{a.label}</div>
