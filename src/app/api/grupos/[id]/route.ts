@@ -11,3 +11,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
+
+export async function DELETE(_req: NextRequest, { params }: { params: Params }) {
+  const { id } = await params
+  const db = await createClient()
+  const { error } = await db.from('grupos').delete().eq('id', id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}

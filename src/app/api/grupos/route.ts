@@ -2,39 +2,39 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export async function GET() {
-  const db = await createClient()
-  const { data } = await db.from('grupos').select('*').order('created_at', { ascending: false })
-  return NextResponse.json(data || [])
+  try {
+    const db = await createClient()
+    const { data, error } = await db.from('grupos').select('*').order('created_at', { ascending: false })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(data || [])
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json()
-  const { zona, tema, grupos } = body
-
-  if (!grupos || !Array.isArray(grupos) || grupos.length === 0) {
-    return NextResponse.json({ saved: 0, error: 'sin grupos' })
+  try {
+    const body = await req.json()
+    const { zona, tema, grupos } = body
+    if (!grupos || !Array.isArray(grupos) || grupos.length === 0) {
+      return NextResponse.json({ saved: 0 })
+    }
+    const db = await createClient()
+    let saved = 0
+    for (const g of grupos) {
+      if (!g.link) continue
+      const { error } = await db.from('grupos').upsert({
+        zona: zona || '',
+        tema: tema || '',
+        title: g.title || '',
+        link: g.link,
+        platform: g.platform || 'otro',
+        snippet: g.snippet || '',
+      }, { onConflict: 'link', ignoreDuplicates: true })
+      if (!error) saved++
+    }
+    return NextResponse.json({ saved })
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
   }
-
-  const db = await createClient()
-
-  const { data: existing } = await db.from('grupos').select('link')
-  const existingLinks = new Set((existing || []).map((g: { link: string }) => g.link))
-
-  const nuevos = grupos
-    .filter((g: { link: string }) => g.link && !existingLinks.has(g.link))
-    .map((g: { title: string; link: string; platform: string; snippet: string }) => ({
-      zona: zona || '',
-      tema: tema || '',
-      title: g.title || '',
-      link: g.link,
-      platform: g.platform || 'otro',
-      snippet: g.snippet || '',
-    }))
-
-  if (nuevos.length === 0) return NextResponse.json({ saved: 0 })
-
-  const { error } = await db.from('grupos').insert(nuevos)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  return NextResponse.json({ saved: nuevos.length })
 }
