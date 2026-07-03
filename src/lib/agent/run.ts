@@ -110,8 +110,6 @@ export async function runMediodía() {
   // Leads sin contactar por más de 2 días → score boost
   const urgentes = cl.filter(c => c.status === 'nuevo' && daysSince(c.created_at) >= 2)
   if (urgentes.length > 0) {
-    const ids = urgentes.map(c => c.id)
-    await db.from('clients').update({ score: db.rpc ? undefined : undefined }).in('id', ids)
     await log(db, 'mediodia', 'escalado', `${urgentes.length} leads sin contactar hace 2+ días marcados como urgentes`, urgentes.length)
     actions.push(`⚠️ ${urgentes.length} leads sin contactar escalados a urgente`)
   }
