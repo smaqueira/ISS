@@ -10,9 +10,14 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
   const { data: client } = await db.from('clients').select('*').eq('id', id).single()
   if (!client || !client.phone) return NextResponse.json({ error: 'Sin teléfono' }, { status: 400 })
 
-  const proposal = await generateProposal({ name: client.name, rubro: client.rubro || 'negocio', type: client.type, city: client.city })
-  const phone = client.phone.replace(/\D/g, '')
-  const url = `https://wa.me/${phone}?text=${encodeURIComponent(proposal.whatsapp)}`
+  let whatsapp = `Hola ${client.name}, te contacto de parte de nuestro equipo comercial. ¿Podemos coordinar una charla breve?`
+  try {
+    const proposal = await generateProposal({ name: client.name, rubro: client.rubro || 'negocio', type: client.type, city: client.city })
+    whatsapp = proposal.whatsapp
+  } catch { /* usa el mensaje genérico */ }
 
-  return NextResponse.json({ url, message: proposal.whatsapp })
+  const phone = client.phone.replace(/\D/g, '')
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(whatsapp)}`
+
+  return NextResponse.json({ url, message: whatsapp })
 }
