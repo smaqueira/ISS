@@ -10,6 +10,7 @@ const nav = [
   { href: '/admin/productos', label: 'Catálogo', icon: '🛍️' },
   { href: '/admin/content', label: 'Contenido', icon: '📱' },
   { href: '/admin/images', label: 'Imágenes IA', icon: '🎨' },
+  { href: '/admin/cotizaciones', label: 'Cotizaciones', icon: '📄' },
   { href: '/admin/broadcast', label: 'Broadcast', icon: '📣' },
   { href: '/admin/prospecting', label: 'Prospección', icon: '🔍' },
   { href: '/admin/grupos', label: 'Grupos B2C', icon: '👥' },
