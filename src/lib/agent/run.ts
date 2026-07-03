@@ -67,8 +67,13 @@ export async function runMañana() {
     } catch { continue }
   }
 
-  await log(db, 'mañana', 'prospección', `Zonas: ${zona}, ${zona2} · Rubros: ${rubro1}, ${rubro2}`, totalImportados)
-  actions.push(`🔍 ${totalImportados} nuevos prospectos importados (${zona} + ${zona2})`)
+  // Log detallado de cada combinación buscada
+  for (const [z, r] of combos) {
+    await log(db, 'mañana', 'búsqueda', `${r} en ${z}`, 0)
+  }
+  await log(db, 'mañana', 'prospección', `Zonas: ${zona}, ${zona2} · Rubros: ${rubro1}, ${rubro2} · Importados: ${totalImportados}`, totalImportados)
+  actions.push(`🔍 ${totalImportados} nuevos prospectos importados`)
+  actions.push(`📍 Zonas: ${zona} + ${zona2} · Rubros: ${rubro1} + ${rubro2}`)
 
   // Generar tareas prioritarias con IA
   const { data: clientes } = await db.from('clients').select('*')
