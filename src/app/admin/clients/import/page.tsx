@@ -1,0 +1,196 @@
+'use client'
+import { useState, useRef } from 'react'
+
+interface PreviewRow {
+  name: string
+  phone?: string
+  email?: string
+  city?: string
+  type: string
+  rubro?: string
+  notes?: string
+  valid: boolean
+  error?: string
+}
+
+export default function ImportPage() {
+  const [rows, setRows] = useState<PreviewRow[]>([])
+  const [importing, setImporting] = useState(false)
+  const [done, setDone] = useState<{ imported: number; skipped: number } | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  function parseCSV(text: string): PreviewRow[] {
+    const lines = text.trim().split('\n').filter(l => l.trim())
+    if (lines.length < 2) return []
+
+    const header = lines[0].split(/[,;]/).map(h => h.trim().toLowerCase().replace(/[^a-z]/g, ''))
+
+    const colMap: Record<string, number> = {}
+    const aliases: Record<string, string[]> = {
+      name:  ['nombre', 'name', 'razon', 'empresa', 'negocio', 'cliente'],
+      phone: ['telefono', 'phone', 'cel', 'celular', 'whatsapp', 'movil', 'tel'],
+      email: ['email', 'mail', 'correo'],
+      city:  ['ciudad', 'city', 'zona', 'barrio', 'localidad'],
+      type:  ['tipo', 'type', 'segmento'],
+      rubro: ['rubro', 'categoria', 'categoria', 'categoria', 'giro'],
+      notes: ['notas', 'notes', 'observaciones', 'comentarios'],
+    }
+    for (const [key, aliasList] of Object.entries(aliases)) {
+      for (const alias of aliasList) {
+        const idx = header.findIndex(h => h.includes(alias))
+        if (idx >= 0 && colMap[key] === undefined) { colMap[key] = idx; break }
+      }
+    }
+
+    return lines.slice(1).map(line => {
+      const cols = line.split(/[,;]/).map(c => c.trim().replace(/^["']|["']$/g, ''))
+      const name = colMap.name !== undefined ? cols[colMap.name] : cols[0]
+      const phone = colMap.phone !== undefined ? cols[colMap.phone] : undefined
+      const email = colMap.email !== undefined ? cols[colMap.email] : undefined
+      const city = colMap.city !== undefined ? cols[colMap.city] : undefined
+      const typeRaw = colMap.type !== undefined ? cols[colMap.type]?.toLowerCase() : ''
+      const type = typeRaw?.includes('b2b') || typeRaw?.includes('negocio') || typeRaw?.includes('empresa') ? 'b2b' : 'b2c'
+      const rubro = colMap.rubro !== undefined ? cols[colMap.rubro] : undefined
+      const notes = colMap.notes !== undefined ? cols[colMap.notes] : undefined
+
+      const valid = !!name?.trim()
+      const error = !valid ? 'Falta nombre' : (!phone && !email) ? 'Sin teléfono ni email' : undefined
+
+      return { name: name?.trim() || '', phone: phone?.trim(), email: email?.trim(), city: city?.trim(), type, rubro: rubro?.trim(), notes: notes?.trim(), valid: !!name?.trim(), error }
+    }).filter(r => r.name)
+  }
+
+  function handleFile(file: File) {
+    const reader = new FileReader()
+    reader.onload = e => {
+      const text = e.target?.result as string
+      setRows(parseCSV(text))
+      setDone(null)
+    }
+    reader.readAsText(file, 'UTF-8')
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    const file = e.dataTransfer.files[0]
+    if (file) handleFile(file)
+  }
+
+  async function importAll() {
+    const toImport = rows.filter(r => r.valid)
+    if (!toImport.length) return
+    setImporting(true)
+    const res = await fetch('/api/clients/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: toImport }),
+    })
+    const data = await res.json()
+    setDone(data)
+    setImporting(false)
+  }
+
+  const validCount = rows.filter(r => r.valid && !r.error).length
+  const warnCount = rows.filter(r => r.valid && r.error).length
+
+  return (
+    <div style={{ maxWidth: 800 }}>
+      <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 6 }}>Importar contactos</h1>
+      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginBottom: 24 }}>
+        Subí un archivo CSV o Excel exportado como CSV. Las columnas se detectan automáticamente.
+      </p>
+
+      {/* Zona de drop */}
+      {rows.length === 0 && (
+        <>
+          <div
+            onDrop={handleDrop}
+            onDragOver={e => e.preventDefault()}
+            onClick={() => fileRef.current?.click()}
+            className="card"
+            style={{ border: '2px dashed var(--border)', textAlign: 'center', padding: 48, cursor: 'pointer', marginBottom: 20 }}
+          >
+            <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📥</div>
+            <div style={{ fontWeight: 600, marginBottom: 6 }}>Arrastrá tu archivo acá o hacé clic para seleccionar</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>CSV o Excel exportado como CSV · Codificación UTF-8</div>
+            <input ref={fileRef} type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+          </div>
+
+          <div className="card" style={{ fontSize: '0.82rem', color: 'var(--muted)' }}>
+            <div style={{ fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>Columnas reconocidas automáticamente:</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+              <span>• <strong>nombre</strong> / name / empresa / cliente</span>
+              <span>• <strong>telefono</strong> / phone / cel / whatsapp</span>
+              <span>• <strong>email</strong> / mail / correo</span>
+              <span>• <strong>ciudad</strong> / zona / barrio / localidad</span>
+              <span>• <strong>tipo</strong> → b2b o b2c</span>
+              <span>• <strong>rubro</strong> / categoria</span>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Preview */}
+      {rows.length > 0 && !done && (
+        <>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+            <div style={{ background: '#22c55e20', color: '#22c55e', borderRadius: 8, padding: '6px 14px', fontSize: '0.82rem', fontWeight: 600 }}>
+              ✅ {validCount} listos para importar
+            </div>
+            {warnCount > 0 && (
+              <div style={{ background: '#f59e0b20', color: '#f59e0b', borderRadius: 8, padding: '6px 14px', fontSize: '0.82rem', fontWeight: 600 }}>
+                ⚠️ {warnCount} sin teléfono ni email
+              </div>
+            )}
+            <button onClick={() => { setRows([]); setDone(null) }} className="btn btn-ghost" style={{ marginLeft: 'auto', fontSize: '0.78rem' }}>
+              🔄 Cambiar archivo
+            </button>
+          </div>
+
+          <div className="card" style={{ marginBottom: 16, maxHeight: 400, overflowY: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                  {['Nombre', 'Teléfono', 'Email', 'Ciudad', 'Tipo', 'Rubro', ''].map(h => (
+                    <th key={h} style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid var(--border)', opacity: r.valid ? 1 : 0.4 }}>
+                    <td style={{ padding: '6px 8px', fontWeight: 500 }}>{r.name}</td>
+                    <td style={{ padding: '6px 8px', color: 'var(--muted)' }}>{r.phone || '—'}</td>
+                    <td style={{ padding: '6px 8px', color: 'var(--muted)' }}>{r.email || '—'}</td>
+                    <td style={{ padding: '6px 8px', color: 'var(--muted)' }}>{r.city || '—'}</td>
+                    <td style={{ padding: '6px 8px' }}><span className={`badge badge-${r.type}`}>{r.type}</span></td>
+                    <td style={{ padding: '6px 8px', color: 'var(--muted)' }}>{r.rubro || '—'}</td>
+                    <td style={{ padding: '6px 8px' }}>
+                      {r.error && <span style={{ color: '#f59e0b', fontSize: '0.68rem' }}>⚠️ {r.error}</span>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <button onClick={importAll} disabled={importing || validCount === 0} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: 13, fontSize: '0.95rem' }}>
+            {importing ? '⏳ Importando...' : `📥 Importar ${validCount} contactos al CRM`}
+          </button>
+        </>
+      )}
+
+      {done && (
+        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>✅</div>
+          <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 6 }}>{done.imported} contactos importados</div>
+          {done.skipped > 0 && <div style={{ color: 'var(--muted)', fontSize: '0.82rem', marginBottom: 16 }}>{done.skipped} ya existían y fueron omitidos</div>}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a href="/admin/clients"><button className="btn btn-primary">Ver contactos →</button></a>
+            <button onClick={() => { setRows([]); setDone(null) }} className="btn btn-ghost">Importar otro archivo</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
