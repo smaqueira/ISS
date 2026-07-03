@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { ask } from '@/lib/ai/client'
 import { searchPlaces } from '@/lib/prospecting/serper'
+import { enrichContact } from '@/lib/prospecting/enrich'
 import { classifyLead } from '@/lib/ai/classify'
 import { generateFollowUp } from '@/lib/ai/followup'
 import { sendProposalEmail } from '@/lib/email/send'
@@ -66,15 +67,30 @@ export async function runMañana() {
       const results = await Promise.all(places.map(async place => {
         const ai = await classifyLead({ name: place.name, rubro: r, description: place.address })
         const isDupe = existingNames.has(place.name?.toLowerCase().trim()) || (place.phone && existingPhones.has(place.phone))
-        return { ...place, ...ai, isDupe }
+        return { ...place, ...ai, isDupe, instagram: undefined as string | undefined }
       }))
-      // Importar si tiene teléfono, web o rating de Google (negocio real y verificado)
-      const toImport = results.filter(p => p.score >= 50 && !p.isDupe && (p.phone || p.website || p.rating))
-      const sinContacto = results.filter(p => p.score >= 50 && !p.phone && !p.website && !p.isDupe).length
+      // Candidatos con buen score que no son duplicados
+      const candidatos = results.filter(p => p.score >= 50 && !p.isDupe)
+
+      // Enriquecer los que no tienen contacto: buscar teléfono/IG/web en Google
+      let enriquecidos = 0
+      for (const p of candidatos) {
+        if (p.phone || p.website) continue
+        const extra = await enrichContact(p.name, z)
+        if (extra.phone) p.phone = extra.phone
+        if (extra.website) p.website = extra.website
+        if (extra.instagram) p.instagram = extra.instagram
+        if (extra.phone || extra.website || extra.instagram) enriquecidos++
+      }
+
+      // Importar solo los que tienen alguna vía de contacto
+      const toImport = candidatos.filter(p => p.phone || p.website || p.instagram)
+      const descartados = candidatos.length - toImport.length
       for (const p of toImport) {
         const { error } = await db.from('clients').insert({
           name: p.name, type: p.type, rubro: r, phone: p.phone || null,
-          city: z, website: p.website || null, notes: p.address || null,
+          city: z, website: p.website || null, instagram: p.instagram || null,
+          notes: p.address || null,
           status: 'nuevo', score: p.score, channel: p.channel || 'whatsapp', tags: [],
         })
         if (!error) {
@@ -83,7 +99,7 @@ export async function runMañana() {
           if (p.phone) existingPhones.add(p.phone)
         }
       }
-      await log(db, 'mañana', 'búsqueda', `${r} en ${z} — ${places.length} encontrados, ${toImport.length} importados, ${sinContacto} sin contacto`, toImport.length)
+      await log(db, 'mañana', 'búsqueda', `${r} en ${z} — ${places.length} encontrados, ${toImport.length} importados (${enriquecidos} enriquecidos), ${descartados} descartados sin contacto`, toImport.length)
     } catch (err) {
       await log(db, 'mañana', 'búsqueda', `${r} en ${z} — error: ${err instanceof Error ? err.message : 'desconocido'}`, 0)
       continue
