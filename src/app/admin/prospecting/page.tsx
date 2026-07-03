@@ -25,10 +25,21 @@ const ZONAS_CABA = [
   'Puerto Madero', 'Microcentro', 'Villa Urquiza', 'Chacarita',
 ]
 
-const ZONAS_GBA = [
-  'San Isidro', 'Vicente Lopez', 'Tigre', 'Martinez', 'Olivos', 'Florida',
-  'Quilmes', 'Lanus', 'Avellaneda', 'Moron', 'Ramos Mejia', 'Banfield',
-  'Lomas de Zamora', 'Adrogué', 'San Justo', 'Merlo',
+const ZONAS_GBA_NORTE = [
+  'San Isidro', 'Vicente Lopez', 'Martinez', 'Olivos', 'La Lucila', 'Munro',
+  'Florida', 'Boulogne', 'Beccar', 'Villa Adelina', 'Nordelta',
+  'Tigre', 'San Fernando', 'Don Torcuato', 'Pacheco', 'Garín',
+  'Pilar', 'Escobar', 'San Miguel', 'Malvinas Argentinas', 'José C. Paz',
+]
+
+const ZONAS_GBA_SUR = [
+  'Quilmes', 'Lanus', 'Avellaneda', 'Banfield', 'Lomas de Zamora',
+  'Adrogué', 'Bernal', 'Berazategui', 'Florencio Varela', 'Temperley',
+]
+
+const ZONAS_GBA_OESTE = [
+  'Moron', 'Ramos Mejia', 'San Justo', 'Merlo', 'Haedo', 'Castelar',
+  'Ituzaingo', 'Hurlingham', 'Ciudadela', 'Liniers',
 ]
 
 export default function ProspectingPage() {
@@ -182,19 +193,37 @@ export default function ProspectingPage() {
               </div>
 
               <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 6 }}>
-                CABA {selectedZonas.filter(z => ZONAS_CABA.includes(z)).length > 0 ? `(${selectedZonas.filter(z => ZONAS_CABA.includes(z)).length} seleccionadas)` : ''}
+                CABA {selectedZonas.filter(z => ZONAS_CABA.includes(z)).length > 0 ? `(${selectedZonas.filter(z => ZONAS_CABA.includes(z)).length} sel.)` : ''}
               </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
                 {ZONAS_CABA.map(z => (
                   <button key={z} onClick={() => toggle(z, selectedZonas, setSelectedZonas)} style={chipStyle(selectedZonas.includes(z))}>{z}</button>
                 ))}
               </div>
 
               <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 6 }}>
-                GBA {selectedZonas.filter(z => ZONAS_GBA.includes(z)).length > 0 ? `(${selectedZonas.filter(z => ZONAS_GBA.includes(z)).length} seleccionadas)` : ''}
+                GBA Norte {selectedZonas.filter(z => ZONAS_GBA_NORTE.includes(z)).length > 0 ? `(${selectedZonas.filter(z => ZONAS_GBA_NORTE.includes(z)).length} sel.)` : ''}
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                {ZONAS_GBA_NORTE.map(z => (
+                  <button key={z} onClick={() => toggle(z, selectedZonas, setSelectedZonas)} style={chipStyle(selectedZonas.includes(z))}>{z}</button>
+                ))}
+              </div>
+
+              <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 6 }}>
+                GBA Sur {selectedZonas.filter(z => ZONAS_GBA_SUR.includes(z)).length > 0 ? `(${selectedZonas.filter(z => ZONAS_GBA_SUR.includes(z)).length} sel.)` : ''}
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                {ZONAS_GBA_SUR.map(z => (
+                  <button key={z} onClick={() => toggle(z, selectedZonas, setSelectedZonas)} style={chipStyle(selectedZonas.includes(z))}>{z}</button>
+                ))}
+              </div>
+
+              <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 6 }}>
+                GBA Oeste {selectedZonas.filter(z => ZONAS_GBA_OESTE.includes(z)).length > 0 ? `(${selectedZonas.filter(z => ZONAS_GBA_OESTE.includes(z)).length} sel.)` : ''}
               </label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {ZONAS_GBA.map(z => (
+                {ZONAS_GBA_OESTE.map(z => (
                   <button key={z} onClick={() => toggle(z, selectedZonas, setSelectedZonas)} style={chipStyle(selectedZonas.includes(z))}>{z}</button>
                 ))}
               </div>

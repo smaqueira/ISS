@@ -8,11 +8,23 @@ interface GroupResult {
   platform: 'whatsapp' | 'facebook' | 'telegram' | 'otro'
 }
 
-const ZONAS = [
+const ZONAS_CABA = [
   'Palermo', 'Recoleta', 'Belgrano', 'San Telmo', 'Caballito', 'Almagro',
   'Villa Crespo', 'Nunez', 'Flores', 'Barracas', 'La Boca', 'Microcentro',
-  'San Isidro', 'Vicente Lopez', 'Tigre', 'Olivos', 'Quilmes', 'Avellaneda',
-  'Moron', 'Lomas de Zamora', 'Banfield', 'Ramos Mejia',
+]
+const ZONAS_NORTE = [
+  'San Isidro', 'Vicente Lopez', 'Martinez', 'Olivos', 'La Lucila', 'Munro',
+  'Florida', 'Boulogne', 'Beccar', 'Villa Adelina', 'Nordelta',
+  'Tigre', 'San Fernando', 'Don Torcuato', 'Pacheco', 'Garín',
+  'Pilar', 'Escobar', 'San Miguel', 'Malvinas Argentinas', 'José C. Paz',
+]
+const ZONAS_SUR = [
+  'Quilmes', 'Lanus', 'Avellaneda', 'Banfield', 'Lomas de Zamora',
+  'Adrogué', 'Bernal', 'Berazategui', 'Florencio Varela', 'Temperley',
+]
+const ZONAS_OESTE = [
+  'Moron', 'Ramos Mejia', 'San Justo', 'Merlo', 'Haedo', 'Castelar',
+  'Ituzaingo', 'Hurlingham', 'Ciudadela', 'Liniers',
 ]
 
 const TEMAS = [
@@ -68,10 +80,21 @@ export default function GruposPage() {
       <div className="card" style={{ marginBottom: 20 }}>
         <div style={{ marginBottom: 14 }}>
           <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>Zona</label>
+          <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginBottom: 4 }}>CABA</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-            {ZONAS.map(z => (
-              <button key={z} onClick={() => setZona(z)} style={chipStyle(zona === z)}>{z}</button>
-            ))}
+            {ZONAS_CABA.map(z => <button key={z} onClick={() => setZona(z)} style={chipStyle(zona === z)}>{z}</button>)}
+          </div>
+          <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginBottom: 4 }}>GBA Norte</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+            {ZONAS_NORTE.map(z => <button key={z} onClick={() => setZona(z)} style={chipStyle(zona === z)}>{z}</button>)}
+          </div>
+          <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginBottom: 4 }}>GBA Sur</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+            {ZONAS_SUR.map(z => <button key={z} onClick={() => setZona(z)} style={chipStyle(zona === z)}>{z}</button>)}
+          </div>
+          <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginBottom: 4 }}>GBA Oeste</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+            {ZONAS_OESTE.map(z => <button key={z} onClick={() => setZona(z)} style={chipStyle(zona === z)}>{z}</button>)}
           </div>
           <input value={zona} onChange={e => setZona(e.target.value)} placeholder="O escribí cualquier barrio / ciudad..." style={inputStyle} />
         </div>
