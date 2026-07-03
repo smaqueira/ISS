@@ -15,7 +15,7 @@ const ZONAS_ROTACION = [
 ]
 
 const RUBROS_ROTACION = [
-  'restaurante', 'parrilla', 'bar', 'cafeteria', 'hotel',
+  'restaurante', 'parrilla', 'hotel',
   'catering', 'bodegon', 'pizzeria', 'rotiseria', 'cantina',
 ]
 
