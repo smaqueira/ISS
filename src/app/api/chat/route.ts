@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ask } from '@/lib/ai/client'
+import { getBlueMarketProducts } from '@/lib/bluemarket'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -31,10 +32,16 @@ export async function POST(req: NextRequest) {
     }
 
     const db = await createClient()
-    const [{ data: dbProducts }, { data: settingsRows }] = await Promise.all([
-      db.from('products').select('name, description, price, unit, category').eq('active', true),
+    const [bmProducts, { data: settingsRows }] = await Promise.all([
+      getBlueMarketProducts(),
       db.from('settings').select('key, value').in('key', ['COMPANY_NAME', 'COMPANY_WHATSAPP', 'COMPANY_DESCRIPTION']),
     ])
+
+    let dbProducts = bmProducts
+    if (!dbProducts) {
+      const { data } = await db.from('products').select('name, description, price, unit, category').eq('active', true)
+      dbProducts = data
+    }
 
     // Si el sitio que llama manda su propio catálogo (ej: web del cliente), usarlo
     const products = (body.products && body.products.length > 0) ? body.products : dbProducts
