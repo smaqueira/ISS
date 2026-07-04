@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import ClientRow from '@/components/ui/ClientRow'
 import Link from 'next/link'
+import DeleteAllButton from '@/components/clients/DeleteAllButton'
 
 export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ type?: string; status?: string; origen?: string; q?: string }> }) {
   const filters = await searchParams
@@ -46,6 +47,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           <p style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>{total} en total · {hoyCount} ingresados hoy</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <DeleteAllButton total={total} />
           <Link href="/admin/clients/import" className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>📥 Importar CSV</Link>
           <Link href="/admin/clients/new" className="btn btn-primary">+ Agregar</Link>
         </div>
