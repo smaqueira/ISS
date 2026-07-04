@@ -10,16 +10,19 @@ export async function POST(req: NextRequest) {
   if (!code) return NextResponse.json({ error: 'code requerido' }, { status: 400 })
 
   const db = await createClient()
-  const [hashRow, phoneRow] = await Promise.all([
+  const [hashRow, phoneRow, sessionRow] = await Promise.all([
     db.from('settings').select('value').eq('key', 'TELEGRAM_PHONE_HASH').single(),
     db.from('settings').select('value').eq('key', 'TELEGRAM_PHONE').single(),
+    db.from('settings').select('value').eq('key', 'TELEGRAM_PARTIAL_SESSION').single(),
   ])
   const phoneCodeHash = hashRow.data?.value
   const phone = phoneRow.data?.value
+  const partialSession = sessionRow.data?.value || ''
   if (!phoneCodeHash || !phone) return NextResponse.json({ error: 'Primero enviá el código' }, { status: 400 })
 
   try {
-    const client = await freshClient()
+    // Reusamos la sesión parcial para mantener el mismo DC que usó sendCode
+    const client = await freshClient(partialSession)
     await client.invoke(new Api.auth.SignIn({ phoneNumber: phone, phoneCodeHash, phoneCode: code }))
     await saveSession(client)
     return NextResponse.json({ ok: true })

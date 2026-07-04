@@ -15,12 +15,15 @@ export async function POST(req: NextRequest) {
   try {
     const client = await freshClient()
     const { phoneCodeHash } = await client.sendCode({ apiId, apiHash }, phone)
+    // Guardamos la sesión parcial para que verify use el mismo DC
+    const partialSession = (client.session as import('telegram/sessions').StringSession).save()
     await client.disconnect()
 
     const db = await createClient()
     await Promise.all([
       db.from('settings').upsert({ key: 'TELEGRAM_PHONE_HASH', value: phoneCodeHash }),
       db.from('settings').upsert({ key: 'TELEGRAM_PHONE', value: phone }),
+      db.from('settings').upsert({ key: 'TELEGRAM_PARTIAL_SESSION', value: partialSession }),
     ])
 
     return NextResponse.json({ ok: true })
