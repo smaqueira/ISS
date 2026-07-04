@@ -8,9 +8,6 @@
  *   BLUEMARKET_TIENDA_SLUG  (default: "vitto-mare")
  */
 
-const BM_URL = process.env.BLUEMARKET_SUPABASE_URL
-const BM_KEY = process.env.BLUEMARKET_SUPABASE_ANON_KEY
-const BM_SLUG = process.env.BLUEMARKET_TIENDA_SLUG ?? 'vitto-mare'
 
 export interface BMProduct {
   id: string
@@ -37,6 +34,8 @@ export interface ISSProduct {
 }
 
 async function bmFetch<T>(path: string): Promise<T | null> {
+  const BM_URL = process.env.BLUEMARKET_SUPABASE_URL
+  const BM_KEY = process.env.BLUEMARKET_SUPABASE_ANON_KEY
   if (!BM_URL || !BM_KEY) return null
   try {
     const res = await fetch(`${BM_URL}/rest/v1/${path}`, {
@@ -52,6 +51,7 @@ async function bmFetch<T>(path: string): Promise<T | null> {
 
 /** Devuelve los productos activos de BlueMarket, o null si no disponible. */
 export async function getBlueMarketProducts(): Promise<ISSProduct[] | null> {
+  const BM_SLUG = process.env.BLUEMARKET_TIENDA_SLUG ?? 'vitto-mare'
   const tiendas = await bmFetch<{ id: string }[]>(
     `pescaderias?slug=eq.${BM_SLUG}&activa=eq.true&select=id`
   )
