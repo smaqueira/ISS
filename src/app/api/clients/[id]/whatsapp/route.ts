@@ -20,13 +20,13 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
   const descripcion = companyDesc || 'pescados y mariscos frescos para tu negocio'
   const catalogoUrl = `https://vittomare.com`
   const telefono = companyWhatsapp ? `+${companyWhatsapp.replace(/\D/g, '')}` : ''
-  const whatsapp = `¡Hola! ¿Cómo estás? Te escribo de *${nombre}* 🐟
+  const whatsapp = `Hola! Como estas? Te escribo de *${nombre}*.
 
 ${descripcion}.
 
 Trabajamos con restaurantes, hoteles y rotisarías de la zona — entrega puntual, cadena de frío garantizada y selección diaria del puerto.
 
-Mirá nuestros productos y precios acá 👉 ${catalogoUrl}
+Mira nuestros productos y precios aca: ${catalogoUrl}
 
 Calidad garantizada en cada entrega — si no quedas conforme, lo resolvemos. Hablamos?${telefono ? ` Tel: ${telefono}` : ''}`
 
