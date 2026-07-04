@@ -17,14 +17,20 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
   ])
 
   const nombre = companyName || 'nuestro equipo'
-  const descripcion = companyDesc || 'pescados y mariscos frescos para tu negocio'
+  const descripcion = companyDesc || 'pescados y mariscos frescos'
   const catalogoUrl = `https://vittomare.com`
   const telefono = companyWhatsapp ? `+${companyWhatsapp.replace(/\D/g, '')}` : ''
+  const esB2B = client.type === 'b2b'
+
+  const cuerpo = esB2B
+    ? `Trabajamos con restaurantes, hoteles y rotiserias de la zona — entrega puntual, cadena de frio garantizada y seleccion diaria del puerto.`
+    : `Contamos con entrega a domicilio, productos frescos seleccionados diariamente y cadena de frio garantizada.`
+
   const whatsapp = `Hola! Como estas? Te escribo de *${nombre}*.
 
 ${descripcion}.
 
-Trabajamos con restaurantes, hoteles y rotisarías de la zona — entrega puntual, cadena de frío garantizada y selección diaria del puerto.
+${cuerpo}
 
 Mira nuestros productos y precios aca: ${catalogoUrl}
 
