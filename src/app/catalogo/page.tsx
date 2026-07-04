@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import ChatWidget from '@/components/catalogo/ChatWidget'
 
 interface Product {
   id: string
@@ -30,7 +31,7 @@ export default function CatalogoPage() {
 
   useEffect(() => {
     fetch('/api/catalog').then(r => r.json()).then(setProducts)
-    fetch('/api/settings').then(r => r.json()).then((data: { key: string; value: string }[]) => {
+    fetch('/api/settings/public').then(r => r.json()).then((data: { key: string; value: string }[]) => {
       if (Array.isArray(data)) {
         const map = Object.fromEntries(data.map(r => [r.key, r.value]))
         setSettings(map)
@@ -179,6 +180,9 @@ export default function CatalogoPage() {
           {settings.COMPANY_INSTAGRAM && <span> · @{settings.COMPANY_INSTAGRAM}</span>}
         </div>
       </div>
+
+      {/* Chat con IA */}
+      <ChatWidget companyName={settings.COMPANY_NAME} />
     </div>
   )
 }

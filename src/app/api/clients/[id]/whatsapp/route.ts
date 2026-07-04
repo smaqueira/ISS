@@ -17,11 +17,14 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
 
   const nombre = companyName || 'nuestro equipo'
   const descripcion = companyDesc || 'productos de calidad para tu negocio'
+  const catalogoUrl = `${new URL(req.url).origin}/catalogo`
   const whatsapp = `Hola! ¿Cómo estás? Te escribo de *${nombre}*. ${descripcion}.
 
 Trabajamos con varios negocios de la zona, con entrega puntual y calidad constante — sabemos lo que cuesta encontrar un proveedor que cumpla.
 
-Si te interesa, te acercamos una muestra sin compromiso para que pruebes. ¿Te va? 🙌`
+Podés ver el catálogo con precios y chatear con nuestro asistente acá 👉 ${catalogoUrl}
+
+Y si te interesa, te acercamos una muestra sin compromiso para que pruebes. ¿Te va? 🙌`
 
   const phone = client.phone.replace(/\D/g, '')
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(whatsapp)}`
