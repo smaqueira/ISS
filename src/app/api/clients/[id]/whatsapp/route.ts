@@ -26,7 +26,7 @@ Trabajamos con restaurantes, hoteles y rotiserías de la zona — entrega puntua
 
 Mirá nuestros productos y precios acá 👉 ${catalogoUrl}
 
-Si querés, te mandamos una muestra sin compromiso para que pruebes la calidad. ¿Te interesa? 🙌`
+Calidad garantizada en cada entrega — si no quedás conforme, lo resolvemos. ¿Hablamos? 🙌`
 
   const phone = client.phone.replace(/\D/g, '')
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(whatsapp)}`
