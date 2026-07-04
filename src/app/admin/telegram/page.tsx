@@ -1,12 +1,11 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-type Tab = 'conexion' | 'chats' | 'buscar'
+type Tab = 'conexion' | 'chats'
 type ConnectStep = 'idle' | 'phone' | 'code' | 'done'
 
 interface Chat { id: string; name: string; type: 'user' | 'group' | 'channel'; unreadCount: number }
 interface Msg  { id: string; text: string; date: number; out: boolean }
-interface Group { id: string; title: string; type: string; username: string | null; link: string | null; participantsCount: number | null }
 
 const TG = '#0088cc'
 const tgBg = '#0088cc15'
@@ -26,10 +25,6 @@ export default function TelegramPage() {
   const [reply, setReply] = useState('')
   const [sendBusy, setSendBusy] = useState(false)
   const msgsEnd = useRef<HTMLDivElement>(null)
-
-  const [query, setQuery] = useState('')
-  const [groups, setGroups] = useState<Group[]>([])
-  const [searching, setSearching] = useState(false)
 
   const loadStatus = useCallback(async () => {
     const r = await fetch('/api/telegram/status')
@@ -73,7 +68,7 @@ export default function TelegramPage() {
   async function loadMsgs(chat: Chat) {
     setSelChat(chat); setMsgs([])
     const r = await fetch(`/api/telegram/messages?chatId=${chat.id}&type=${chat.type}`)
-    if (r.ok) { const d = await r.json(); setMsgs(d) }
+    if (r.ok) setMsgs(await r.json())
     setTimeout(() => msgsEnd.current?.scrollIntoView({ behavior: 'smooth' }), 100)
   }
 
@@ -92,14 +87,6 @@ export default function TelegramPage() {
     setSendBusy(false)
   }
 
-  async function searchGroups() {
-    if (!query.trim()) return
-    setSearching(true); setGroups([])
-    const r = await fetch(`/api/telegram/search?q=${encodeURIComponent(query)}`)
-    if (r.ok) setGroups(await r.json())
-    setSearching(false)
-  }
-
   const chip = (active: boolean) => ({
     padding: '6px 14px', borderRadius: 20, border: '1px solid var(--border)', cursor: 'pointer', fontSize: '0.8rem',
     background: active ? TG : 'var(--bg)', color: active ? '#fff' : 'var(--text)', fontWeight: active ? 600 : 400,
@@ -109,13 +96,13 @@ export default function TelegramPage() {
     <div>
       <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 4 }}>Telegram</h1>
       <p style={{ color: 'var(--muted)', fontSize: '0.84rem', marginBottom: 16 }}>
-        Chat embebido con MTProto — el número de empresa no necesita la app de Telegram instalada.
+        Chat embebido — respondé conversaciones desde el número de empresa sin abrir Telegram.
       </p>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {(['conexion', 'chats', 'buscar'] as Tab[]).map(t => (
+        {(['conexion', 'chats'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} style={chip(tab === t)}>
-            {t === 'conexion' ? '🔗 Conexión' : t === 'chats' ? '💬 Chats' : '🔍 Buscar grupos'}
+            {t === 'conexion' ? '🔗 Conexión' : '💬 Chats'}
           </button>
         ))}
       </div>
@@ -130,6 +117,10 @@ export default function TelegramPage() {
                 <div style={{ fontSize: '0.85rem' }}>{status.name}</div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>{status.phone}</div>
               </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 16 }}>
+                Para buscar y rastrear grupos de Telegram, usá la sección{' '}
+                <a href="/admin/grupos" style={{ color: TG, fontWeight: 600 }}>Grupos B2C → Telegram</a>.
+              </div>
               <button onClick={disconnect} disabled={busy} style={{ background: '#ef444420', color: '#ef4444', border: '1px solid #ef444440', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: '0.85rem' }}>
                 {busy ? 'Desconectando...' : '🔌 Desconectar'}
               </button>
@@ -137,7 +128,7 @@ export default function TelegramPage() {
           ) : step === 'code' ? (
             <>
               <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 12 }}>
-                Telegram te envió un código al número <strong>{phone}</strong>. Ingresalo abajo.
+                Telegram te envió un código al número <strong>{phone}</strong>. Ingresalo rápido antes de que expire.
               </div>
               <input value={code} onChange={e => setCode(e.target.value)} placeholder="12345"
                 style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text)', fontSize: '1rem', letterSpacing: 4, textAlign: 'center', marginBottom: 12 }} />
@@ -145,14 +136,14 @@ export default function TelegramPage() {
               <button onClick={sendCode} disabled={busy || !code} className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
                 {busy ? 'Verificando...' : '✅ Verificar código'}
               </button>
-              <button onClick={() => setStep('phone')} style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '0.8rem' }}>
+              <button onClick={() => { setStep('phone'); setErr('') }} style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '0.8rem' }}>
                 ← Cambiar número
               </button>
             </>
           ) : (
             <>
               <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginBottom: 12 }}>
-                Ingresá el número de teléfono de la empresa (con código de país).
+                Ingresá el número de teléfono de la empresa con código de país.
               </div>
               <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+54 9 11 1234 5678"
                 style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text)', fontSize: '0.95rem', marginBottom: 12 }} />
@@ -173,7 +164,6 @@ export default function TelegramPage() {
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 12, height: 'calc(100vh - 220px)', minHeight: 400 }}>
-            {/* Lista de chats */}
             <div className="card" style={{ padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
               <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border)', fontSize: '0.75rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1 }}>
                 Conversaciones
@@ -196,7 +186,6 @@ export default function TelegramPage() {
               </div>
             </div>
 
-            {/* Panel de mensajes */}
             <div className="card" style={{ padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {!selChat ? (
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted)', fontSize: '0.85rem' }}>
@@ -236,54 +225,6 @@ export default function TelegramPage() {
                 </>
               )}
             </div>
-          </div>
-        )
-      )}
-
-      {/* BUSCAR GRUPOS */}
-      {tab === 'buscar' && (
-        !status?.connected ? (
-          <div className="card" style={{ textAlign: 'center', color: 'var(--muted)', padding: 40 }}>
-            Primero conectá una cuenta en la pestaña Conexión.
-          </div>
-        ) : (
-          <div>
-            <div className="card" style={{ marginBottom: 16, display: 'flex', gap: 10 }}>
-              <input value={query} onChange={e => setQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && searchGroups()}
-                placeholder="Ej: pescaderia palermo, vecinos belgrano..."
-                style={{ flex: 1, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text)', fontSize: '0.9rem' }} />
-              <button onClick={searchGroups} disabled={searching || !query.trim()} className="btn btn-primary">
-                {searching ? 'Buscando...' : '🔍 Buscar'}
-              </button>
-            </div>
-
-            {groups.length > 0 && groups.map(g => (
-              <div key={g.id} className="card" style={{ marginBottom: 10, display: 'flex', gap: 14, alignItems: 'center' }}>
-                <div style={{ background: tgBg, color: TG, borderRadius: 8, padding: '8px 10px', fontSize: '1.2rem', flexShrink: 0 }}>
-                  {g.type === 'canal' ? '📢' : '👥'}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{g.title}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-                    {g.type}{g.participantsCount ? ` · ${g.participantsCount.toLocaleString()} miembros` : ''}
-                  </div>
-                  {g.username && <div style={{ fontSize: '0.72rem', color: TG }}>@{g.username}</div>}
-                </div>
-                {g.link && (
-                  <a href={g.link} target="_blank" rel="noreferrer">
-                    <button style={{ background: tgBg, color: TG, border: `1px solid ${TG}40`, borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                      ✈️ Abrir
-                    </button>
-                  </a>
-                )}
-              </div>
-            ))}
-
-            {groups.length === 0 && !searching && query && (
-              <div className="card" style={{ textAlign: 'center', color: 'var(--muted)', padding: 30, fontSize: '0.85rem' }}>
-                No se encontraron grupos. Probá con otro término.
-              </div>
-            )}
           </div>
         )
       )}
