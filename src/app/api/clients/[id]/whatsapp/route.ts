@@ -16,15 +16,17 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
   ])
 
   const nombre = companyName || 'nuestro equipo'
-  const descripcion = companyDesc || 'productos de calidad para tu negocio'
-  const catalogoUrl = `${new URL(req.url).origin}/catalogo`
-  const whatsapp = `Hola! ¿Cómo estás? Te escribo de *${nombre}*. ${descripcion}.
+  const descripcion = companyDesc || 'pescados y mariscos frescos para tu negocio'
+  const catalogoUrl = `https://vittomare.com`
+  const whatsapp = `Hola! ¿Cómo estás? Te escribo de *${nombre}* 🐟
 
-Trabajamos con varios negocios de la zona, con entrega puntual y calidad constante — sabemos lo que cuesta encontrar un proveedor que cumpla.
+${descripcion}.
 
-Podés ver el catálogo con precios y chatear con nuestro asistente acá 👉 ${catalogoUrl}
+Trabajamos con restaurantes, hoteles y rotiserías de la zona — entrega puntual, cadena de frío garantizada y selección diaria del puerto.
 
-Y si te interesa, te acercamos una muestra sin compromiso para que pruebes. ¿Te va? 🙌`
+Mirá nuestros productos y precios acá 👉 ${catalogoUrl}
+
+Si querés, te mandamos una muestra sin compromiso para que pruebes la calidad. ¿Te interesa? 🙌`
 
   const phone = client.phone.replace(/\D/g, '')
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(whatsapp)}`
