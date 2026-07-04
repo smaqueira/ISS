@@ -15,18 +15,28 @@ async function getKeys(): Promise<string[]> {
   return [k1, k2, k3].filter(Boolean)
 }
 
+// Valida y normaliza un teléfono argentino a formato wa.me (549 + área + número).
+// Devuelve undefined si no parece un teléfono real (precios, rangos, códigos, etc).
+export function normalizePhone(raw?: string | null): string | undefined {
+  if (!raw) return undefined
+  // Rechazar textos con símbolos de precio o rangos tipo "150-450"
+  if (/[$€]|Q\s?\d/.test(raw)) return undefined
+  const digits = raw.replace(/\D/g, '')
+  if (digits.length < 10 || digits.length > 13) return undefined
+  let n = digits
+  if (n.startsWith('54')) n = n.slice(2)
+  if (n.startsWith('9') && n.length > 10) n = n.slice(1)
+  if (n.startsWith('0')) n = n.slice(1)
+  // Un número argentino sin prefijos queda en 10 dígitos (área + abonado)
+  if (n.length !== 10) return undefined
+  return `549${n}`
+}
+
 // Teléfonos argentinos: +54 11 xxxx-xxxx, 011 xxxx xxxx, 11-xxxx-xxxx, etc.
 function extractPhone(text: string): string | undefined {
   const match = text.match(/(?:\+?54\s?)?(?:9\s?)?(?:0?11|0?2\d{2,3}|0?3\d{2,3})[\s.-]?\d{4}[\s.-]?\d{4}/)
   if (!match) return undefined
-  const digits = match[0].replace(/\D/g, '')
-  if (digits.length < 10) return undefined
-  // Normalizar a formato wa.me: 549 + área + número
-  let n = digits
-  if (n.startsWith('54')) n = n.slice(2)
-  if (n.startsWith('9')) n = n.slice(1)
-  if (n.startsWith('0')) n = n.slice(1)
-  return `549${n}`
+  return normalizePhone(match[0])
 }
 
 function extractInstagram(link: string, text: string): string | undefined {

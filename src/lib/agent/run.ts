@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { ask } from '@/lib/ai/client'
 import { searchPlaces } from '@/lib/prospecting/serper'
-import { enrichContact } from '@/lib/prospecting/enrich'
+import { enrichContact, normalizePhone } from '@/lib/prospecting/enrich'
 import { classifyLead } from '@/lib/ai/classify'
 import { generateFollowUp } from '@/lib/ai/followup'
 import { sendProposalEmail } from '@/lib/email/send'
@@ -71,6 +71,11 @@ export async function runMañana() {
       }))
       // Candidatos con buen score que no son duplicados
       const candidatos = results.filter(p => p.score >= 50 && !p.isDupe)
+
+      // Validar teléfonos de Serper (descarta precios, rangos y códigos que no son números reales)
+      for (const p of candidatos) {
+        p.phone = normalizePhone(p.phone)
+      }
 
       // Enriquecer los que no tienen contacto: buscar teléfono/IG/web en Google
       let enriquecidos = 0

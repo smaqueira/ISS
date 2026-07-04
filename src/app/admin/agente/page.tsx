@@ -37,6 +37,11 @@ export default function AgentePage() {
 
   const [lastResult, setLastResult] = useState<string | null>(null)
 
+  async function borrar(id: string) {
+    await fetch(`/api/clients/${id}`, { method: 'DELETE' })
+    setRecientes(prev => prev.filter(c => c.id !== id))
+  }
+
   async function runNow(turno: string) {
     setRunning(turno)
     setLastResult(null)
@@ -159,6 +164,10 @@ export default function AgentePage() {
             <span className={`badge badge-${c.type}`}>{c.type.toUpperCase()}</span>
             <div style={{ fontWeight: 800, fontSize: '1rem', color: c.score >= 75 ? '#22c55e' : c.score >= 50 ? '#eab308' : '#ef4444', minWidth: 32, textAlign: 'right' }}>{c.score}</div>
             <a href={`/admin/clients/${c.id}`} style={{ fontSize: '0.72rem', color: 'var(--accent)', textDecoration: 'none', whiteSpace: 'nowrap' }}>Ver →</a>
+            <button onClick={() => borrar(c.id)} title="Borrar prospecto"
+              style={{ background: 'transparent', color: '#ef4444', border: '1px solid #ef444430', borderRadius: 7, padding: '4px 8px', cursor: 'pointer', fontSize: '0.8rem', flexShrink: 0 }}>
+              🗑
+            </button>
           </div>
         )
         return (
