@@ -154,7 +154,7 @@ export default function GruposPage() {
   return (
     <div>
       <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 6 }}>Grupos B2C</h1>
-      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginBottom: 16 }}>Buscá grupos de WhatsApp y Facebook y hacé seguimiento de tu ingreso.</p>
+      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginBottom: 16 }}>Buscá grupos de WhatsApp, Facebook y Telegram y hacé seguimiento de tu ingreso.</p>
 
       {guardados.length > 0 && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>

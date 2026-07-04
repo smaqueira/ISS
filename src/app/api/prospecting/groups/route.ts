@@ -43,6 +43,8 @@ export async function POST(req: NextRequest) {
     `site:chat.whatsapp.com "${zona}"`,
     `grupo facebook "${zona}" ${temaStr}`,
     `"facebook.com/groups" "${zona}" ${temaStr}`,
+    `site:t.me "${zona}" ${temaStr}`,
+    `grupo telegram "${zona}" ${temaStr}`,
   ]
 
   const allResults: GroupResult[] = []
