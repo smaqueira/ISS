@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       db.from('settings').select('key, value').in('key', ['COMPANY_NAME', 'COMPANY_WHATSAPP', 'COMPANY_DESCRIPTION']),
     ])
 
-    let dbProducts = bmProducts
+    let dbProducts: { name: string; description?: string | null; price?: number | null; unit?: string | null; category?: string | null }[] | null = bmProducts
     if (!dbProducts) {
       const { data } = await db.from('products').select('name, description, price, unit, category').eq('active', true)
       dbProducts = data
