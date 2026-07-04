@@ -1,47 +1,50 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getConnectedClient } from '@/lib/telegram-client'
+import { Api } from 'telegram'
+import bigInt from 'big-integer'
 
-export async function GET() {
-  const db = await createClient()
+export const runtime = 'nodejs'
 
-  // Traer todos los chats únicos con su último mensaje
-  const { data } = await db
-    .from('telegram_messages')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(500)
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url)
+  const chatId = searchParams.get('chatId')
+  const type = searchParams.get('type') || 'user'
+  if (!chatId) return NextResponse.json({ error: 'chatId requerido' }, { status: 400 })
 
-  if (!data) return NextResponse.json([])
+  const client = await getConnectedClient()
+  if (!client) return NextResponse.json({ error: 'no conectado' }, { status: 401 })
 
-  // Agrupar por chat_id
-  const chatsMap = new Map<string, {
-    chat_id: string
-    from_name: string
-    is_group: boolean
-    last_message: string
-    last_at: string
-    unread: number
-    messages: typeof data
-  }>()
-
-  for (const msg of [...data].reverse()) {
-    if (!chatsMap.has(msg.chat_id)) {
-      chatsMap.set(msg.chat_id, {
-        chat_id: msg.chat_id,
-        from_name: msg.from_name,
-        is_group: msg.is_group,
-        last_message: msg.text,
-        last_at: msg.created_at,
-        unread: 0,
-        messages: [],
-      })
+  try {
+    let peer: Api.TypeInputPeer
+    if (type === 'group') {
+      peer = new Api.InputPeerChat({ chatId: bigInt(chatId) })
+    } else if (type === 'channel') {
+      peer = new Api.InputPeerChannel({ channelId: bigInt(chatId), accessHash: bigInt(0) })
+    } else {
+      peer = new Api.InputPeerUser({ userId: bigInt(chatId), accessHash: bigInt(0) })
     }
-    const chat = chatsMap.get(msg.chat_id)!
-    chat.messages.push(msg)
-    chat.last_message = msg.text
-    chat.last_at = msg.created_at
-    if (msg.direction === 'in' && !msg.read) chat.unread++
-  }
 
-  return NextResponse.json([...chatsMap.values()].sort((a, b) => b.last_at.localeCompare(a.last_at)))
+    const result = await client.invoke(new Api.messages.GetHistory({
+      peer, limit: 30, offsetId: 0, offsetDate: 0, addOffset: 0, maxId: 0, minId: 0, hash: bigInt(0),
+    }))
+
+    if (!('messages' in result)) return NextResponse.json([])
+
+    const me = await client.getMe() as Api.User
+    const myId = String(me.id)
+
+    const messages = (result.messages as Api.TypeMessage[])
+      .filter((m): m is Api.Message => m instanceof Api.Message)
+      .reverse()
+      .map(m => ({
+        id: String(m.id),
+        text: m.message,
+        date: m.date,
+        out: m.out || (m.fromId instanceof Api.PeerUser && String(m.fromId.userId) === myId),
+      }))
+
+    return NextResponse.json(messages)
+  } catch (e: unknown) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
+  }
 }
