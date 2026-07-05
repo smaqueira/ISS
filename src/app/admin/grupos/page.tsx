@@ -47,6 +47,10 @@ export default function GruposPage() {
   const [tgSaved, setTgSaved] = useState<Set<string>>(new Set())
   const [savingAll, setSavingAll] = useState(false)
   const [tgError, setTgError] = useState('')
+  const [showManual, setShowManual] = useState(false)
+  const [manualTitle, setManualTitle] = useState('')
+  const [manualLink, setManualLink] = useState('')
+  const [savingManual, setSavingManual] = useState(false)
 
   const loadGuardados = useCallback(async () => {
     const r = await fetch('/api/grupos')
@@ -106,6 +110,21 @@ export default function GruposPage() {
     setTgGroups(all)
     if (all.length === 0 && !tgError) setTgError('No se encontraron grupos. Probá con otra zona o tema.')
     setLoading(false)
+  }
+
+  async function guardarManual() {
+    if (!manualTitle.trim() || !manualLink.trim()) return
+    setSavingManual(true)
+    const link = manualLink.startsWith('http') ? manualLink : `https://t.me/${manualLink.replace('@', '')}`
+    await fetch('/api/grupos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ zona: zonaActual, tema, grupos: [{ title: manualTitle, link, platform: tab, snippet: 'agregado manualmente' }] }),
+    })
+    setManualTitle(''); setManualLink(''); setShowManual(false)
+    await loadGuardados()
+    setView('guardados')
+    setSavingManual(false)
   }
 
   async function guardarTgGrupo(g: { id: string; title: string; link: string | null; type: string }) {
@@ -297,6 +316,29 @@ export default function GruposPage() {
               background: p.color, border: 'none' }}>
             {loading ? 'Buscando...' : `${p.icon} Buscar grupos de ${p.label} en ${zonaActual || '...'}`}
           </button>
+
+          {/* Agregar manualmente */}
+          <div style={{ marginBottom: 12 }}>
+            <button onClick={() => setShowManual(v => !v)}
+              style={{ background: 'var(--bg)', color: 'var(--muted)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: '0.8rem' }}>
+              {showManual ? '✕ Cancelar' : '+ Agregar grupo manualmente'}
+            </button>
+          </div>
+
+          {showManual && (
+            <div className="card" style={{ marginBottom: 16, background: p.bg, border: `1px solid ${p.color}30` }}>
+              <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: 12 }}>Agregar grupo de {PLT[tab].label}</div>
+              <input value={manualTitle} onChange={e => setManualTitle(e.target.value)} placeholder="Nombre del grupo (ej: Vecinos Palermo)"
+                style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text)', fontSize: '0.85rem', marginBottom: 8 }} />
+              <input value={manualLink} onChange={e => setManualLink(e.target.value)}
+                placeholder={tab === 'telegram' ? 'Link o @username (ej: @vecinos_palermo)' : tab === 'whatsapp' ? 'https://chat.whatsapp.com/...' : 'https://facebook.com/groups/...'}
+                style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text)', fontSize: '0.85rem', marginBottom: 10 }} />
+              <button onClick={guardarManual} disabled={savingManual || !manualTitle.trim() || !manualLink.trim()}
+                style={{ background: p.color, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}>
+                {savingManual ? 'Guardando...' : '💾 Guardar grupo'}
+              </button>
+            </div>
+          )}
 
           {/* Error Telegram */}
           {tab === 'telegram' && tgError && tgGroups.length === 0 && (
