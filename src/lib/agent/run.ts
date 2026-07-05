@@ -257,14 +257,46 @@ Respondé SOLO un array JSON: [{"nombre":"...","mensaje":"..."}]`,
     actions.push(`😴 ${dormidos.length} reactivaciones redactadas`)
   }
 
-  // Briefing por Telegram: todo listo para copiar y pegar
+  // Plan del día: directivas explícitas con horarios, generado por IA
+  // a partir del material del día
+  let agenda = ''
+  if (briefing.length > 0) {
+    const materialResumen = [
+      candidatas.length ? `${candidatas.length} grupos para entrar (nombres: ${candidatas.map(c => c.title).join(', ')})` : null,
+      prospectos?.length ? `${prospectos.length} prospectos B2B para contactar (${prospectos.map(p => `${p.name} - ${p.rubro}`).join(', ')})` : null,
+      dormidos.length ? `${dormidos.length} clientes dormidos para reactivar (${dormidos.map(c => c.name).join(', ')})` : null,
+    ].filter(Boolean).join('\n')
+
+    const dia = new Date().toLocaleDateString('es-AR', { weekday: 'long', timeZone: 'America/Argentina/Buenos_Aires' })
+    agenda = await ask(
+      `Sos el jefe de ventas de una pescadería premium de Buenos Aires. Hoy es ${dia}. Tu vendedor tiene este material preparado:
+${materialResumen}
+
+Armale la AGENDA DEL DÍA: una lista de directivas explícitas con horario concreto y orden de prioridad. Pensá estratégicamente:
+- Los gastronómicos (B2B) atienden mejor de 10 a 12hs (antes del servicio de mediodía)
+- Los mensajes a clientes finales rinden más de 17 a 19hs (cuando piensan la cena)
+- Entrar a grupos conviene temprano y ESPERAR: no publicar nada el primer día
+- Si es jueves o viernes, priorizar todo lo B2C (el finde se come pescado)
+
+FORMATO: máximo 6 líneas, cada una "🕐 HH:MM — directiva concreta y accionable". Ordenadas por hora. Sin explicaciones extra, sin saludos.`,
+      350
+    ).catch(() => '')
+  }
+
+  // Briefing por Telegram: agenda arriba, material listo abajo
   if (briefing.length > 0) {
     await sendMessage([
       `🤖 *Agente — Turno ventas* 💰`,
-      `_Todo redactado y listo: copiá, pegá y mandá._`,
+      ``,
+      ...(agenda ? [`📋 *TU AGENDA DE HOY:*`, agenda, ``, `─────────────`, ``] : []),
+      `_Material listo para cada directiva — copiá, pegá y mandá:_`,
       ``,
       ...briefing,
     ].join('\n'))
+    if (agenda) {
+      await log(db, 'ventas', 'agenda', agenda.split('\n').slice(0, 3).join(' · '), 0)
+      actions.push('📋 Agenda del día con horarios enviada por Telegram')
+    }
   } else {
     actions.push('Sin material nuevo hoy — el directorio de comunidades y el CRM no tienen candidatos frescos')
   }
@@ -303,8 +335,8 @@ export async function runMediodía() {
   }
 
   const consejo = await ask(
-    `Sos un agente de ventas. El pipeline tiene: ${stats.nuevos} leads nuevos, ${stats.contactados} contactados, ${stats.interesados} interesados, ${stats.clientes} clientes activos.
-Dame UN consejo específico y accionable para hoy en máximo 1 oración. Sin saludos.`,
+    `Sos el jefe de ventas. El pipeline tiene: ${stats.nuevos} leads nuevos, ${stats.contactados} contactados, ${stats.interesados} interesados, ${stats.clientes} clientes activos.
+Dame UNA directiva explícita para esta tarde: QUÉ hacer, A QUIÉN (el segmento más urgente del pipeline) y A QUÉ HORA conviene. Formato: "🕐 HH:MM — [acción concreta]". Una sola línea, sin saludos ni explicaciones.`,
     80
   ).catch(() => null)
 
