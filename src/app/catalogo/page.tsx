@@ -97,6 +97,20 @@ export default function CatalogoPage() {
 
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '20px 16px' }}>
 
+        {/* Banner Vitto */}
+        <a href="https://t.me/vittomare_bot" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+          <div style={{ background: 'linear-gradient(135deg, #0088cc15, #0088cc25)', border: '1px solid #0088cc40', borderRadius: 14, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
+            <div style={{ background: '#0088cc', borderRadius: '50%', width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>✈️</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#e2e8f0' }}>Hablá con Vitto</div>
+              <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Consultá precios, disponibilidad y pedidos por Telegram</div>
+            </div>
+            <div style={{ background: '#0088cc', color: '#fff', borderRadius: 8, padding: '7px 14px', fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+              Chatear →
+            </div>
+          </div>
+        </a>
+
         {/* Productos */}
         {categories.map(cat => (
           <div key={cat} style={{ marginBottom: 28 }}>
