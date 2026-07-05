@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { botSend, vittoReply } from '@/lib/vitto-bot'
+import { botSend, vittoReply, vittoWelcome } from '@/lib/vitto-bot'
 import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
@@ -21,14 +21,22 @@ export async function POST(req: NextRequest) {
 
     // Comandos especiales
     if (text === '/start') {
-      await botSend(chatId, '¡Hola! 👋 Soy <b>Vitto</b>, tu asistente de Vitto Mare 🐟\n\nPreguntame por precios, disponibilidad o pedidos. ¡Estoy para ayudarte!')
+      const welcome = await vittoWelcome(msg.from?.first_name || 'amigo')
+      await botSend(chatId, welcome)
       return NextResponse.json({ ok: true })
     }
 
-    if (text === '/precios') {
+    if (text === '/precios' || text === '/catalogo') {
       const { getCatalogText } = await import('@/lib/vitto-bot')
       const catalogo = await getCatalogText()
-      await botSend(chatId, `📋 <b>Catálogo de hoy:</b>\n\n${catalogo}`)
+      await botSend(chatId, `📋 <b>Lo que tenemos hoy:</b>\n\n${catalogo}\n\n¿Qué te llevo? 🐟`)
+      return NextResponse.json({ ok: true })
+    }
+
+    if (text === '/ofertas') {
+      const { generateOfertaDelDia } = await import('@/lib/vitto-bot')
+      const oferta = await generateOfertaDelDia()
+      await botSend(chatId, oferta)
       return NextResponse.json({ ok: true })
     }
 
