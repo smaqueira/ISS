@@ -111,6 +111,20 @@ export default function CatalogoPage() {
           </div>
         </a>
 
+        {/* Banner Canal WhatsApp */}
+        <a href="https://whatsapp.com/channel/0029VbDMYoq8KMqmyZpDKN3e" target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+          <div style={{ background: 'linear-gradient(135deg, #25D36612, #25D36622)', border: '1px solid #25D36640', borderRadius: 14, padding: '12px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
+            <div style={{ background: '#25D366', borderRadius: '50%', width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>📣</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: '0.92rem', color: '#e2e8f0' }}>Canal de ofertas en WhatsApp</div>
+              <div style={{ fontSize: '0.76rem', color: '#94a3b8' }}>Las ofertas del día, antes que nadie</div>
+            </div>
+            <div style={{ background: '#25D366', color: '#fff', borderRadius: 8, padding: '7px 14px', fontSize: '0.8rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
+              Seguir →
+            </div>
+          </div>
+        </a>
+
         {/* Productos */}
         {categories.map(cat => (
           <div key={cat} style={{ marginBottom: 28 }}>

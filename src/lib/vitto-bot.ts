@@ -4,6 +4,9 @@ import { createClient } from '@/lib/supabase/server'
 
 function botToken() { return process.env.TELEGRAM_BOT_TOKEN || '' }
 
+export const CANAL_TELEGRAM = '@vittomareoferta'
+export const CANAL_WHATSAPP = 'https://whatsapp.com/channel/0029VbDMYoq8KMqmyZpDKN3e'
+
 export async function botSend(chatId: number | string, text: string) {
   const token = botToken()
   if (!token) return
@@ -47,7 +50,9 @@ ${lista}
 
 Preguntame por cualquier producto, te doy precios, recetas o armamos tu pedido ahora mismo.${whatsapp ? `\n\n📲 ¿Listo para pedir? Escribinos al <b>${whatsapp}</b>` : ''}
 
-📣 Seguí nuestro canal para ver las ofertas del día: @vittomareoferta`
+📣 Seguí nuestros canales para ver las ofertas del día antes que nadie:
+✈️ Telegram: ${CANAL_TELEGRAM}
+💬 WhatsApp: ${CANAL_WHATSAPP}`
 }
 
 export async function vittoReply(userMessage: string, history: { role: string; content: string }[] = []): Promise<string> {
@@ -80,7 +85,7 @@ TÉCNICAS DE VENTA:
 - Si el cliente está listo → cerrá con "Perfecto, escribinos ahora al ${whatsapp || 'WhatsApp'} y te lo reservamos"
 - Si preguntan por algo que no hay → redirigí a otro producto similar del catálogo
 - Nunca digas "no tengo" sin antes ofrecer una alternativa
-- En cada 2da o 3ra respuesta, invitá sutilmente a seguir el canal: "Por cierto, seguinos en @vittomareoferta para ver las ofertas del día antes que nadie 🐟"
+- En cada 2da o 3ra respuesta, invitá sutilmente a seguir un canal (alterná entre los dos): Telegram ${CANAL_TELEGRAM} o WhatsApp ${CANAL_WHATSAPP} — "seguinos para ver las ofertas del día antes que nadie 🐟"
 
 REGLAS DURAS:
 - Nunca inventes productos ni precios
@@ -110,7 +115,7 @@ ESTILO:
 - Cerrá con llamado a la acción: pedir por WhatsApp${whatsapp ? ` al ${whatsapp}` : ''}
 - Español argentino, emojis estratégicos, máximo 100 palabras
 - Que suene como un pescadero apasionado, no como publicidad corporativa
-- Al final del mensaje invitá a suscribirse: "Seguinos en @vittomareoferta para no perderte nada 🐟"
+- Al final del mensaje invitá a suscribirse a los canales: "Seguinos en Telegram ${CANAL_TELEGRAM} o en nuestro canal de WhatsApp ${CANAL_WHATSAPP} para no perderte nada 🐟"
 
 CATÁLOGO:
 ${catalogo}
