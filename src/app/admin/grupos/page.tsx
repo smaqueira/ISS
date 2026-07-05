@@ -93,22 +93,19 @@ export default function GruposPage() {
     setLoading(true)
     setTgGroups([])
     setTgError('')
-    // Búsqueda múltiple: zona sola + zona con tema para más resultados
-    const queries = [zonaActual, `${zonaActual} vecinos`, `${zonaActual} ${tema}`]
-    const seen = new Set<string>()
-    const all: typeof tgGroups = []
-    for (const q of queries) {
-      try {
-        const r = await fetch(`/api/telegram/search?q=${encodeURIComponent(q)}`)
-        const data = await r.json()
-        if (data.error) { setTgError(data.error); break }
-        for (const g of (Array.isArray(data) ? data : [])) {
-          if (!seen.has(g.id)) { seen.add(g.id); all.push(g) }
-        }
-      } catch { /* continuar */ }
+    try {
+      const r = await fetch(`/api/telegram/search?q=${encodeURIComponent(zonaActual)}`)
+      const data = await r.json()
+      if (data.error) {
+        setTgError(data.error)
+      } else if (Array.isArray(data) && data.length > 0) {
+        setTgGroups(data)
+      } else {
+        setTgError('No se encontraron grupos públicos para esta zona. Podés agregarlos manualmente.')
+      }
+    } catch (e) {
+      setTgError('Error de conexión. Verificá que Telegram esté conectado.')
     }
-    setTgGroups(all)
-    if (all.length === 0 && !tgError) setTgError('No se encontraron grupos. Probá con otra zona o tema.')
     setLoading(false)
   }
 
