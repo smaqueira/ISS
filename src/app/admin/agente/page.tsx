@@ -84,6 +84,21 @@ export default function AgentePage() {
       </p>
 
       {/* Estado hoy */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--muted)' }}>Resumen de hoy</div>
+        {todayLogs.length > 0 && (
+          <button
+            onClick={async () => {
+              if (!confirm('¿Resetear los contadores de hoy?')) return
+              await fetch('/api/agent/logs?hoy=1', { method: 'DELETE' })
+              await load()
+            }}
+            style={{ background: 'transparent', color: '#f97316', border: '1px solid #f9731630', borderRadius: 7, padding: '4px 11px', cursor: 'pointer', fontSize: '0.75rem' }}
+          >
+            ↺ Resetear hoy
+          </button>
+        )}
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
         <div className="card" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--accent)' }}>{totalImportadosHoy}</div>
