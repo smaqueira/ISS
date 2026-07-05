@@ -12,6 +12,7 @@ interface AgentLog {
 
 const TURNO_COLOR: Record<string, { bg: string; color: string; label: string; icon: string }> = {
   mañana:  { bg: '#f9731615', color: '#f97316', label: 'Mañana',  icon: '🌅' },
+  ventas:  { bg: '#22c55e15', color: '#22c55e', label: 'Ventas',  icon: '💰' },
   mediodia: { bg: '#eab30815', color: '#eab308', label: 'Mediodía', icon: '☀️' },
   tarde:   { bg: '#a855f715', color: '#a855f7', label: 'Tarde',   icon: '🌆' },
 }
@@ -128,6 +129,7 @@ export default function AgentePage() {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {[
             { id: 'manana', label: '🌅 Turno mañana', desc: 'Prospección + tareas' },
+            { id: 'ventas', label: '💰 Turno ventas', desc: 'Grupos + aperturas + reactivación' },
             { id: 'mediodia', label: '☀️ Turno mediodía', desc: 'Escalado + consejos IA' },
             { id: 'tarde', label: '🌆 Turno tarde', desc: 'Emails + inactivos' },
           ].map(t => (
@@ -145,6 +147,7 @@ export default function AgentePage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {[
             { hora: '8:00am', turno: 'mañana', icon: '🌅', acciones: ['Busca negocios nuevos en 2 zonas + 2 rubros rotando cada día', 'Importa al CRM los que tienen score ≥ 60 y teléfono o web', 'Genera tareas prioritarias del día', 'Manda briefing por Telegram'] },
+            { hora: '9:00am', turno: 'ventas', icon: '💰', acciones: ['Elige los 3 mejores grupos nuevos del directorio y redacta tu mensaje de presentación para cada uno', 'Redacta aperturas de WhatsApp personalizadas para los 3 mejores prospectos B2B', 'Detecta clientes que no compran hace 15+ días y redacta el mensaje de reactivación', 'Te manda todo por Telegram listo para copiar y pegar'] },
             { hora: '12:00pm', turno: 'mediodia', icon: '☀️', acciones: ['Detecta leads sin contactar por más de 2 días → urgente', 'Alerta sobre clientes interesados sin actividad reciente', 'La IA analiza el pipeline y da un consejo accionable'] },
             { hora: '6:00pm', turno: 'tarde', icon: '🌆', acciones: ['Envía emails automáticos de seguimiento (día 3 y día 7)', 'Marca como inactivos los que llevan 14+ días sin respuesta', 'Manda resumen del día por Telegram'] },
           ].map(t => (

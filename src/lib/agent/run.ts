@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { ask } from '@/lib/ai/client'
+import { ask, parseJSON } from '@/lib/ai/client'
 import { searchPlaces } from '@/lib/prospecting/serper'
 import { enrichContact, normalizePhone } from '@/lib/prospecting/enrich'
 import { classifyLead } from '@/lib/ai/classify'
@@ -147,6 +147,129 @@ export async function runMañana() {
   await sendMessage(resumen)
 
   return { actions, importados: totalImportados }
+}
+
+// TURNO VENTAS — 9am: comunidades + aperturas B2B + reactivación.
+// El agente piensa y redacta; el humano copia, pega y manda.
+export async function runVentas() {
+  const db = await createClient()
+  const actions: string[] = []
+  const briefing: string[] = []
+
+  // 1. COMUNIDADES: las 3 mejores del directorio donde todavía no estás
+  const [{ data: comunidades }, { data: gruposGuardados }] = await Promise.all([
+    db.from('communities').select('*').eq('status', 'activo')
+      .order('score', { ascending: false, nullsFirst: false })
+      .order('members', { ascending: false, nullsFirst: false }).limit(30),
+    db.from('grupos').select('link'),
+  ])
+  const linksGuardados = new Set((gruposGuardados || []).map(g => g.link))
+  const candidatas = (comunidades || []).filter(c => !linksGuardados.has(c.link)).slice(0, 3)
+
+  if (candidatas.length > 0) {
+    const lista = candidatas.map(c => `- "${c.title}" (${c.platform}, ${c.categoria || 'general'}${c.members ? `, ${c.members} miembros` : ''})`).join('\n')
+    const mensajes = await ask(
+      `Sos el dueño de una pescadería premium de Buenos Aires. Vas a entrar a estos grupos/comunidades y necesitás UN mensaje de presentación para cada uno, adaptado al contexto del grupo (no es lo mismo un grupo de vecinos que uno foodie).
+
+GRUPOS:
+${lista}
+
+REGLAS: máximo 50 palabras por mensaje, tono humano y de barrio (nada corporativo), presentate como vecino/emprendedor, ofrecé valor (frescura, delivery), sin links ni precios en el primer mensaje. Español argentino.
+
+Respondé SOLO un array JSON: [{"titulo":"nombre del grupo","mensaje":"..."}]`,
+      600
+    ).then(r => parseJSON<{ titulo: string; mensaje: string }[]>(r)).catch(() => [])
+
+    // Guardarlas en Grupos B2C como pendientes para que queden rastreadas
+    await db.from('grupos').insert(candidatas.map(c => ({
+      zona: c.ciudad || c.provincia || '', tema: c.categoria || 'sugerido por agente',
+      title: c.title, link: c.link, platform: c.platform,
+      snippet: 'sugerido por el agente de ventas', status: 'pendiente',
+    })))
+
+    briefing.push(`👥 *Entrá hoy a estos ${candidatas.length} grupos:*`)
+    for (const c of candidatas) {
+      const msg = mensajes.find(m => m.titulo === c.title)?.mensaje
+        || mensajes[candidatas.indexOf(c)]?.mensaje || ''
+      briefing.push(`\n🔗 ${c.title}${c.members ? ` (${c.members} miembros)` : ''}\n${c.link}${msg ? `\n📝 Mensaje listo:\n_${msg}_` : ''}`)
+    }
+    await log(db, 'ventas', 'comunidades', `${candidatas.length} grupos sugeridos con mensaje de presentación`, candidatas.length)
+    actions.push(`👥 ${candidatas.length} grupos nuevos sugeridos con mensaje listo`)
+  }
+
+  // 2. B2B: los 3 mejores prospectos nuevos con teléfono → apertura personalizada
+  const { data: prospectos } = await db.from('clients').select('*')
+    .eq('status', 'nuevo').not('phone', 'is', null)
+    .order('score', { ascending: false }).limit(3)
+
+  if (prospectos && prospectos.length > 0) {
+    const lista = prospectos.map(p => `- ${p.name} (${p.rubro || 'negocio'}, ${p.city || 'CABA'})`).join('\n')
+    const aperturas = await ask(
+      `Sos el dueño de una pescadería premium de Buenos Aires que vende al por mayor a gastronómicos. Redactá UN primer mensaje de WhatsApp para cada negocio, personalizado según su rubro y zona.
+
+NEGOCIOS:
+${lista}
+
+REGLAS: máximo 45 palabras, presentate con nombre de negocio, mencioná algo específico del rubro del cliente (ej: a una parrilla ofrecele opciones de pescado para la parrilla), cerrá con una pregunta fácil de responder. Sin precios. Español argentino, tuteo.
+
+Respondé SOLO un array JSON: [{"nombre":"nombre del negocio","mensaje":"..."}]`,
+      600
+    ).then(r => parseJSON<{ nombre: string; mensaje: string }[]>(r)).catch(() => [])
+
+    briefing.push(`\n💼 *Contactá hoy a estos ${prospectos.length} prospectos:*`)
+    for (const p of prospectos) {
+      const msg = aperturas.find(a => a.nombre === p.name)?.mensaje
+        || aperturas[prospectos.indexOf(p)]?.mensaje || ''
+      briefing.push(`\n🏪 ${p.name} (${p.rubro || 'negocio'}, score ${p.score})\n📱 ${p.phone}${msg ? `\n📝 Mensaje listo:\n_${msg}_` : ''}`)
+    }
+    await log(db, 'ventas', 'aperturas b2b', `${prospectos.length} aperturas redactadas: ${prospectos.map(p => p.name).join(', ')}`, prospectos.length)
+    actions.push(`💼 ${prospectos.length} aperturas B2B redactadas`)
+  }
+
+  // 3. REACTIVACIÓN: clientes que compraron y no volvieron en 15+ días
+  const { data: clientes } = await db.from('clients').select('*').eq('status', 'cliente')
+  const dormidos = (clientes || [])
+    .filter(c => c.phone && c.last_contact && daysSince(c.last_contact) >= 15)
+    .sort((a, b) => daysSince(b.last_contact) - daysSince(a.last_contact))
+    .slice(0, 3)
+
+  if (dormidos.length > 0) {
+    const lista = dormidos.map(c => `- ${c.name} (última compra hace ${daysSince(c.last_contact)} días)`).join('\n')
+    const reactivaciones = await ask(
+      `Sos el dueño de una pescadería premium. Estos clientes compraron y no volvieron. Redactá UN mensaje de WhatsApp corto para cada uno para reactivarlos sin sonar desesperado.
+
+CLIENTES:
+${lista}
+
+REGLAS: máximo 35 palabras, tono cercano (ya te conocen), preguntá cómo salió lo último que llevaron y mencioná que esta semana hay producto fresco recién llegado. Español argentino, tuteo.
+
+Respondé SOLO un array JSON: [{"nombre":"...","mensaje":"..."}]`,
+      450
+    ).then(r => parseJSON<{ nombre: string; mensaje: string }[]>(r)).catch(() => [])
+
+    briefing.push(`\n😴 *Reactivá a estos ${dormidos.length} clientes dormidos:*`)
+    for (const c of dormidos) {
+      const msg = reactivaciones.find(m => m.nombre === c.name)?.mensaje
+        || reactivaciones[dormidos.indexOf(c)]?.mensaje || ''
+      briefing.push(`\n👤 ${c.name} (hace ${daysSince(c.last_contact)} días)\n📱 ${c.phone}${msg ? `\n📝 Mensaje listo:\n_${msg}_` : ''}`)
+    }
+    await log(db, 'ventas', 'reactivación', `${dormidos.length} mensajes de reactivación: ${dormidos.map(c => c.name).join(', ')}`, dormidos.length)
+    actions.push(`😴 ${dormidos.length} reactivaciones redactadas`)
+  }
+
+  // Briefing por Telegram: todo listo para copiar y pegar
+  if (briefing.length > 0) {
+    await sendMessage([
+      `🤖 *Agente — Turno ventas* 💰`,
+      `_Todo redactado y listo: copiá, pegá y mandá._`,
+      ``,
+      ...briefing,
+    ].join('\n'))
+  } else {
+    actions.push('Sin material nuevo hoy — el directorio de comunidades y el CRM no tienen candidatos frescos')
+  }
+
+  return { actions }
 }
 
 // TURNO MEDIODÍA — 12pm: escalado de prioridades
