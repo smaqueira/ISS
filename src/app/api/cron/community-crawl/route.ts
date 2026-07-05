@@ -10,16 +10,26 @@ export const maxDuration = 60
 // Matriz de rastreo: cada ejecución avanza una celda (ciudad × categoría).
 // Con 1 corrida diaria cubre toda la matriz en ~3 meses y vuelve a empezar
 // (los grupos ya guardados solo se actualizan).
+// Foco: CABA + Gran Buenos Aires, temas afines a compra/venta de alimentos
 const CIUDADES = [
-  'Palermo', 'Recoleta', 'Belgrano', 'Caballito', 'Almagro', 'Villa Crespo', 'Flores', 'Nuñez',
-  'San Isidro', 'Vicente Lopez', 'Tigre', 'Pilar', 'Escobar', 'Quilmes', 'Lanus', 'Avellaneda',
-  'Moron', 'La Plata', 'Mar del Plata', 'Rosario', 'Cordoba', 'Mendoza', 'Tucuman', 'Salta',
-  'Neuquen', 'Bariloche', 'Santa Fe', 'Bahia Blanca', 'Buenos Aires', 'Argentina',
+  // CABA
+  'Palermo', 'Recoleta', 'Belgrano', 'Caballito', 'Almagro', 'Villa Crespo', 'Nuñez',
+  'Flores', 'Villa Urquiza', 'Villa Devoto', 'Colegiales', 'Saavedra', 'Barrio Norte',
+  'San Telmo', 'Puerto Madero', 'Boedo', 'Parque Patricios', 'Mataderos', 'Liniers', 'CABA',
+  // GBA Norte
+  'Vicente Lopez', 'Olivos', 'Martinez', 'San Isidro', 'Beccar', 'San Fernando', 'Tigre',
+  'Pacheco', 'Escobar', 'Pilar', 'Jose C Paz', 'San Miguel', 'Bella Vista',
+  // GBA Oeste
+  'Moron', 'Ramos Mejia', 'Haedo', 'Castelar', 'Ituzaingo', 'Merlo', 'Moreno', 'San Justo',
+  // GBA Sur
+  'Avellaneda', 'Lanus', 'Lomas de Zamora', 'Banfield', 'Temperley', 'Adrogue',
+  'Quilmes', 'Bernal', 'Berazategui', 'Florencio Varela', 'La Plata',
+  'Gran Buenos Aires', 'Zona Norte GBA', 'Zona Sur GBA', 'Zona Oeste GBA',
 ]
 const CATEGORIAS = [
-  'compra venta', 'vecinos', 'emprendedores', 'gastronomia', 'inmuebles', 'autos',
-  'mascotas', 'tecnologia', 'gaming', 'criptomonedas', 'inversiones', 'fitness',
-  'educacion', 'empleo', 'delivery comida',
+  'compra venta', 'mariscos', 'pescaderia', 'pescados y mariscos', 'gastronomia',
+  'delivery comida', 'foodie', 'vecinos', 'vecinos compras', 'emprendedores',
+  'ofertas barrio', 'mercado barrial', 'comida casera', 'almacen dietetica',
 ]
 
 async function searchSerper(query: string, apiKey: string) {
