@@ -107,7 +107,26 @@ async function crawl() {
     Promise.all(tgUsers.filter(u => !known.has(`https://t.me/${u}`)).slice(0, 12).map(verifyTelegram)),
     Promise.all(dcCodes.filter(c => !known.has(`https://discord.gg/${c}`)).slice(0, 10).map(verifyDiscord)),
   ])
-  const vivos = [...wa, ...tg, ...dc].filter((c): c is VerifiedCommunity => c !== null)
+  let vivos = [...wa, ...tg, ...dc].filter((c): c is VerifiedCommunity => c !== null)
+
+  // Rastreo en cadena: las descripciones de los grupos vivos suelen mencionar
+  // otros grupos ("canal hermano: @..."). Se descubren gratis, sin Serper.
+  const chainText = vivos.map(c => c.description).join('\n')
+  const chain = extractCodes(chainText)
+  const yaVistos = new Set([...vivos.map(v => v.link), ...known])
+  const chainCandidates = [
+    ...chain.waCodes.map(c => `https://chat.whatsapp.com/${c}`),
+    ...chain.tgUsers.map(u => `https://t.me/${u}`),
+    ...chain.dcCodes.map(c => `https://discord.gg/${c}`),
+  ].filter(l => !yaVistos.has(l))
+  if (chainCandidates.length) {
+    const { data: chainKnown } = await db.from('communities').select('link').in('link', chainCandidates)
+    const chainKnownSet = new Set((chainKnown || []).map(r => r.link))
+    const encadenados = await Promise.all(
+      chainCandidates.filter(l => !chainKnownSet.has(l)).slice(0, 10).map(verifyLink)
+    )
+    vivos = [...vivos, ...encadenados.filter((c): c is VerifiedCommunity => c !== null)]
+  }
 
   // 3. Clasificar con IA y guardar
   const clasificaciones = await clasificar(vivos)
@@ -134,6 +153,11 @@ async function crawl() {
     const { data, error } = await db.from('communities').upsert(rows, { onConflict: 'link' }).select()
     if (error) return { error: error.message }
     saved = data?.length || 0
+    // Primer snapshot de cada comunidad guardada (histórico de miembros)
+    const snaps = (data || [])
+      .filter(r => r.members != null)
+      .map(r => ({ community_id: r.id, members: r.members, status: 'activo' }))
+    if (snaps.length) await db.from('community_snapshots').insert(snaps)
   }
 
   // 4. Re-verificar los 8 más viejos para detectar caídos
@@ -148,6 +172,12 @@ async function crawl() {
       last_checked: new Date().toISOString(),
       ...(alive?.members ? { members: alive.members } : {}),
     }).eq('id', s.id)
+    // Snapshot de cada chequeo → curva de crecimiento en el tiempo
+    await db.from('community_snapshots').insert({
+      community_id: s.id,
+      members: alive?.members ?? null,
+      status: alive ? 'activo' : 'caido',
+    })
     if (!alive) caidos++
   }
 

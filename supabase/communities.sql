@@ -28,3 +28,14 @@ create index if not exists idx_communities_members on communities (members desc 
 -- Búsqueda full-text en español sobre título + descripción
 create index if not exists idx_communities_fts on communities
   using gin (to_tsvector('spanish', coalesce(title, '') || ' ' || coalesce(description, '')));
+
+-- Historial de miembros: un snapshot por chequeo → tendencias de crecimiento
+create table if not exists community_snapshots (
+  id uuid primary key default gen_random_uuid(),
+  community_id uuid references communities(id) on delete cascade,
+  members int,
+  status text not null,
+  checked_at timestamptz default now()
+);
+
+create index if not exists idx_snapshots_community on community_snapshots (community_id, checked_at desc);
