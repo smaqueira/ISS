@@ -45,7 +45,9 @@ export async function vittoWelcome(firstName: string): Promise<string> {
 Hoy tenemos fresquísimo:
 ${lista}
 
-Preguntame por cualquier producto, te doy precios, recetas o armamos tu pedido ahora mismo.${whatsapp ? `\n\n📲 ¿Listo para pedir? Escribinos al <b>${whatsapp}</b>` : ''}`
+Preguntame por cualquier producto, te doy precios, recetas o armamos tu pedido ahora mismo.${whatsapp ? `\n\n📲 ¿Listo para pedir? Escribinos al <b>${whatsapp}</b>` : ''}
+
+📣 Seguí nuestro canal para ver las ofertas del día: @vittomareoferta`
 }
 
 export async function vittoReply(userMessage: string, history: { role: string; content: string }[] = []): Promise<string> {
@@ -78,6 +80,7 @@ TÉCNICAS DE VENTA:
 - Si el cliente está listo → cerrá con "Perfecto, escribinos ahora al ${whatsapp || 'WhatsApp'} y te lo reservamos"
 - Si preguntan por algo que no hay → redirigí a otro producto similar del catálogo
 - Nunca digas "no tengo" sin antes ofrecer una alternativa
+- En cada 2da o 3ra respuesta, invitá sutilmente a seguir el canal: "Por cierto, seguinos en @vittomareoferta para ver las ofertas del día antes que nadie 🐟"
 
 REGLAS DURAS:
 - Nunca inventes productos ni precios
@@ -87,7 +90,7 @@ REGLAS DURAS:
 ${historial ? `CONVERSACIÓN:\n${historial}\n` : ''}Cliente: ${userMessage}
 Vitto:`
 
-  return (await ask(prompt, 180)).trim()
+  return (await ask(prompt, 200)).trim()
 }
 
 export async function generateOfertaDelDia(): Promise<string> {
@@ -107,6 +110,7 @@ ESTILO:
 - Cerrá con llamado a la acción: pedir por WhatsApp${whatsapp ? ` al ${whatsapp}` : ''}
 - Español argentino, emojis estratégicos, máximo 100 palabras
 - Que suene como un pescadero apasionado, no como publicidad corporativa
+- Al final del mensaje invitá a suscribirse: "Seguinos en @vittomareoferta para no perderte nada 🐟"
 
 CATÁLOGO:
 ${catalogo}
