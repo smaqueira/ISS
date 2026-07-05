@@ -39,12 +39,12 @@ export async function POST(req: NextRequest) {
   const temaStr = tema || 'vecinos compras'
 
   const queries = [
-    `grupo whatsapp "${zona}" ${temaStr} link invitación`,
-    `site:chat.whatsapp.com "${zona}"`,
-    `grupo facebook "${zona}" ${temaStr}`,
-    `"facebook.com/groups" "${zona}" ${temaStr}`,
-    `site:t.me "${zona}" ${temaStr}`,
-    `grupo telegram "${zona}" ${temaStr}`,
+    `grupo whatsapp "${zona}" ${temaStr} Argentina link invitación`,
+    `site:chat.whatsapp.com "${zona}" Argentina`,
+    `grupo facebook "${zona}" ${temaStr} Argentina`,
+    `"facebook.com/groups" "${zona}" ${temaStr} Argentina`,
+    `site:t.me "${zona}" ${temaStr} Argentina`,
+    `grupo telegram "${zona}" ${temaStr} Argentina`,
   ]
 
   const allResults: GroupResult[] = []
