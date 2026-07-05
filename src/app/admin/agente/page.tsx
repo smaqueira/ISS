@@ -200,7 +200,21 @@ export default function AgentePage() {
 
       {/* Log de actividad */}
       <div>
-        <div style={{ fontWeight: 700, marginBottom: 14, fontSize: '0.95rem' }}>Historial de actividad</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>Historial de actividad</div>
+          {logs.length > 0 && (
+            <button
+              onClick={async () => {
+                if (!confirm('¿Vaciar todo el historial de actividad?')) return
+                await fetch('/api/agent/logs', { method: 'DELETE' })
+                setLogs([])
+              }}
+              style={{ background: 'transparent', color: '#ef4444', border: '1px solid #ef444430', borderRadius: 7, padding: '5px 12px', cursor: 'pointer', fontSize: '0.78rem' }}
+            >
+              🗑 Vaciar historial
+            </button>
+          )}
+        </div>
 
         {loading && <div style={{ color: 'var(--muted)', textAlign: 'center', padding: 30 }}>Cargando...</div>}
 
