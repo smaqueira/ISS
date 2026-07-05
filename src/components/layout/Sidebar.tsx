@@ -10,6 +10,7 @@ const nav = [
   { href: '/admin/calendario', label: 'Calendario', icon: '📅' },
   { href: '/admin/instagram-dm', label: 'Instagram DMs', icon: '📸' },
   { href: '/admin/clients', label: 'Clientes', icon: '👥' },
+  { href: '/admin/seguimiento', label: 'Seguimiento', icon: '🔔' },
   { href: '/admin/orders', label: 'Pedidos', icon: '📦' },
   { href: '/admin/productos', label: 'Catálogo', icon: '🛍️' },
   { href: '/admin/content', label: 'Contenido', icon: '📱' },
