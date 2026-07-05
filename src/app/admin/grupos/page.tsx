@@ -278,8 +278,8 @@ export default function GruposPage() {
           borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: '0.83rem',
         }}>
           {serperAlert === 'agotado'
-            ? <>🚨 <b>Créditos de Serper agotados.</b> La búsqueda de Google no funciona hasta renovar. Entrá a <a href="https://serper.dev" target="_blank" rel="noreferrer" style={{ color: 'inherit', fontWeight: 700 }}>serper.dev</a>, creá una clave nueva (gratis, 2.500 búsquedas) y cargala en Configuración.</>
-            : <>⚠️ <b>Una o más claves de Serper se quedaron sin créditos.</b> La búsqueda sigue funcionando con las restantes, pero conviene renovar en <a href="https://serper.dev" target="_blank" rel="noreferrer" style={{ color: 'inherit', fontWeight: 700 }}>serper.dev</a>.</>}
+            ? <>🚨 <b>El sistema funciona bien — se agotaron los créditos de búsqueda (Serper).</b> No es una falla: la cuota gratuita de Google llegó a su límite. Entrá a <a href="https://serper.dev" target="_blank" rel="noreferrer" style={{ color: 'inherit', fontWeight: 700 }}>serper.dev</a>, creá una clave nueva (gratis, 2.500 búsquedas) y cargala en Configuración.</>
+            : <>⚠️ <b>Ojo: una o más claves de Serper se quedaron sin créditos.</b> No es una falla del sistema — la búsqueda sigue funcionando con las claves restantes, pero conviene renovar en <a href="https://serper.dev" target="_blank" rel="noreferrer" style={{ color: 'inherit', fontWeight: 700 }}>serper.dev</a>.</>}
         </div>
       )}
 
@@ -299,7 +299,9 @@ export default function GruposPage() {
 
           {resultados.length === 0 && (
             <div className="card" style={{ textAlign: 'center', color: 'var(--muted)', padding: 30, fontSize: '0.84rem' }}>
-              No se encontraron links vivos para esa zona/tema. Probá otro tema, otra zona cercana, o conseguí el link a mano y pegalo arriba.
+              {serperAlert === 'agotado'
+                ? 'La búsqueda no trajo nada porque no hay créditos de Serper — el sistema está bien, solo hay que renovar la clave.'
+                : 'No se encontraron links vivos para esa zona/tema. Probá otro tema, otra zona cercana, o conseguí el link a mano y pegalo arriba.'}
             </div>
           )}
 
