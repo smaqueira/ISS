@@ -46,6 +46,7 @@ export default function GruposPage() {
   const [tgConnected, setTgConnected] = useState(false)
   const [tgSaved, setTgSaved] = useState<Set<string>>(new Set())
   const [savingAll, setSavingAll] = useState(false)
+  const [tgError, setTgError] = useState('')
 
   const loadGuardados = useCallback(async () => {
     const r = await fetch('/api/grupos')
@@ -87,8 +88,23 @@ export default function GruposPage() {
     if (!zonaActual) return
     setLoading(true)
     setTgGroups([])
-    const r = await fetch(`/api/telegram/search?q=${encodeURIComponent(zonaActual + ' ' + tema)}`)
-    if (r.ok) setTgGroups(await r.json())
+    setTgError('')
+    // Búsqueda múltiple: zona sola + zona con tema para más resultados
+    const queries = [zonaActual, `${zonaActual} vecinos`, `${zonaActual} ${tema}`]
+    const seen = new Set<string>()
+    const all: typeof tgGroups = []
+    for (const q of queries) {
+      try {
+        const r = await fetch(`/api/telegram/search?q=${encodeURIComponent(q)}`)
+        const data = await r.json()
+        if (data.error) { setTgError(data.error); break }
+        for (const g of (Array.isArray(data) ? data : [])) {
+          if (!seen.has(g.id)) { seen.add(g.id); all.push(g) }
+        }
+      } catch { /* continuar */ }
+    }
+    setTgGroups(all)
+    if (all.length === 0 && !tgError) setTgError('No se encontraron grupos. Probá con otra zona o tema.')
     setLoading(false)
   }
 
@@ -281,6 +297,13 @@ export default function GruposPage() {
               background: p.color, border: 'none' }}>
             {loading ? 'Buscando...' : `${p.icon} Buscar grupos de ${p.label} en ${zonaActual || '...'}`}
           </button>
+
+          {/* Error Telegram */}
+          {tab === 'telegram' && tgError && tgGroups.length === 0 && (
+            <div style={{ background: '#ef444415', border: '1px solid #ef444430', borderRadius: 8, padding: '12px 16px', marginBottom: 12, fontSize: '0.83rem', color: '#ef4444' }}>
+              ⚠️ {tgError}
+            </div>
+          )}
 
           {/* Resultados Telegram */}
           {tab === 'telegram' && tgGroups.length > 0 && (
