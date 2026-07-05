@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getSetting } from '@/lib/settings'
 import { ask, parseJSON } from '@/lib/ai/client'
 import { verifyWhatsApp, verifyTelegram, verifyDiscord, verifyLink, extractCodes, VerifiedCommunity } from '@/lib/community-verify'
+import { huntLinks, getSerperKeys } from '@/lib/link-hunt'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -31,17 +32,6 @@ const CATEGORIAS = [
   'delivery comida', 'foodie', 'vecinos', 'vecinos compras', 'emprendedores',
   'ofertas barrio', 'mercado barrial', 'comida casera', 'almacen dietetica',
 ]
-
-async function searchSerper(query: string, apiKey: string) {
-  const res = await fetch('https://google.serper.dev/search', {
-    method: 'POST',
-    headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ q: query, gl: 'ar', hl: 'es', num: 20 }),
-  })
-  if (!res.ok) return []
-  const data = await res.json()
-  return data.organic || []
-}
 
 interface Clasificacion {
   link: string
@@ -76,10 +66,7 @@ Respondé SOLO un array JSON: [{"link":"...","categoria":"...","provincia":null,
 async function crawl() {
   const db = await createClient()
 
-  const [k1, k2, k3] = await Promise.all([
-    getSetting('SERPER_API_KEY'), getSetting('SERPER_API_KEY_2'), getSetting('SERPER_API_KEY_3'),
-  ])
-  const keys = [k1, k2, k3].filter(Boolean) as string[]
+  const keys = await getSerperKeys()
   if (!keys.length) return { error: 'Sin claves Serper' }
 
   // Cursor de la matriz guardado en settings
@@ -90,18 +77,17 @@ async function crawl() {
   const ciudad = CIUDADES[cell % CIUDADES.length]
   const categoria = CATEGORIAS[Math.floor(cell / CIUDADES.length) % CATEGORIAS.length]
 
-  // 1. Buscar links en Google para esta celda
+  // 1. Buscar en Google (queries naturales — los operadores site:/"" ya no
+  //    devuelven nada) y entrar a cada página resultado a extraer links
   const queries = [
-    `site:chat.whatsapp.com "${ciudad}" ${categoria}`,
-    `"chat.whatsapp.com" grupo "${ciudad}" ${categoria}`,
-    `site:t.me "${ciudad}" ${categoria}`,
-    `site:discord.gg OR site:discord.com "${ciudad}" ${categoria}`,
+    `grupo whatsapp ${categoria} ${ciudad} link`,
+    `grupos de whatsapp ${categoria} ${ciudad} unirse`,
+    `grupo telegram ${categoria} ${ciudad} link`,
+    `servidor discord ${categoria} ${ciudad}`,
   ]
-  const searches = await Promise.all(queries.map((q, i) => searchSerper(q, keys[i % keys.length]).catch(() => [])))
-  const allText = searches.flat().map((r: { link?: string; title?: string; snippet?: string }) =>
-    `${r.link || ''} ${r.title || ''} ${r.snippet || ''}`).join('\n')
+  const hunt = await huntLinks(queries, keys, 12)
 
-  const { waCodes, tgUsers, dcCodes } = extractCodes(allText)
+  const { waCodes, tgUsers, dcCodes } = extractCodes(hunt.text)
 
   // 2. Verificar (solo los que no están ya en la base)
   const candidates = [
@@ -194,7 +180,7 @@ async function crawl() {
   // 5. Avanzar cursor
   await db.from('settings').upsert({ key: 'COMMUNITY_CRAWL_CURSOR', value: String(cursor + 1) }, { onConflict: 'key' })
 
-  return { celda: `${ciudad} × ${categoria}`, encontrados: candidates.length, verificados: vivos.length, guardados: saved, caidos }
+  return { celda: `${ciudad} × ${categoria}`, encontrados: candidates.length, verificados: vivos.length, guardados: saved, caidos, serper: hunt.serper }
 }
 
 // Cron diario (protegido)
