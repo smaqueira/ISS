@@ -7,13 +7,17 @@ export const runtime = 'nodejs'
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const q = searchParams.get('q')
+  const global = searchParams.get('global') === '1'
   if (!q) return NextResponse.json({ error: 'q requerido' }, { status: 400 })
 
   const client = await getConnectedClient()
   if (!client) return NextResponse.json({ error: 'no conectado' }, { status: 401 })
 
+  // Para búsqueda global limitamos a Argentina agregando el término
+  const query = global ? `${q} Argentina` : q
+
   try {
-    const result = await client.invoke(new Api.contacts.Search({ q, limit: 20 }))
+    const result = await client.invoke(new Api.contacts.Search({ q: query, limit: 25 }))
 
     const groups = result.chats
       .filter((c): c is Api.Channel | Api.Chat => c instanceof Api.Channel || c instanceof Api.Chat)

@@ -47,6 +47,7 @@ export default function GruposPage() {
   const [tgSaved, setTgSaved] = useState<Set<string>>(new Set())
   const [savingAll, setSavingAll] = useState(false)
   const [tgError, setTgError] = useState('')
+  const [globalQuery, setGlobalQuery] = useState('')
   const [showManual, setShowManual] = useState(false)
   const [manualTitle, setManualTitle] = useState('')
   const [manualLink, setManualLink] = useState('')
@@ -88,22 +89,24 @@ export default function GruposPage() {
     setView('guardados')
   }
 
-  async function buscarTelegram() {
-    if (!zonaActual) return
+  async function buscarTelegram(query?: string) {
+    const q = query || zonaActual
+    if (!q) return
     setLoading(true)
     setTgGroups([])
     setTgError('')
     try {
-      const r = await fetch(`/api/telegram/search?q=${encodeURIComponent(zonaActual)}`)
+      const isGlobal = !!query
+      const r = await fetch(`/api/telegram/search?q=${encodeURIComponent(q)}${isGlobal ? '&global=1' : ''}`)
       const data = await r.json()
       if (data.error) {
         setTgError(data.error)
       } else if (Array.isArray(data) && data.length > 0) {
         setTgGroups(data)
       } else {
-        setTgError('No se encontraron grupos públicos para esta zona. Podés agregarlos manualmente.')
+        setTgError('No se encontraron grupos. Probá con otro término o agregá manualmente.')
       }
-    } catch (e) {
+    } catch {
       setTgError('Error de conexión. Verificá que Telegram esté conectado.')
     }
     setLoading(false)
@@ -305,8 +308,32 @@ export default function GruposPage() {
             </div>
           )}
 
+          {/* Buscador global solo para Telegram */}
+          {tab === 'telegram' && (
+            <div className="card" style={{ marginBottom: 12, padding: '12px 14px', background: '#0088cc08', border: '1px solid #0088cc25' }}>
+              <div style={{ fontSize: '0.72rem', color: '#0088cc', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, fontWeight: 600 }}>
+                🔍 Búsqueda global — grupos de Argentina
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  value={globalQuery}
+                  onChange={e => setGlobalQuery(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && buscarTelegram(globalQuery)}
+                  placeholder='Ej: "pescadería", "vecinos recoleta", "gastronomia BA"...'
+                  style={{ flex: 1, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text)', fontSize: '0.85rem' }}
+                />
+                <button
+                  onClick={() => buscarTelegram(globalQuery)}
+                  disabled={loading || !globalQuery.trim() || !tgConnected}
+                  style={{ background: '#0088cc', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  {loading ? '...' : '✈️ Buscar'}
+                </button>
+              </div>
+            </div>
+          )}
+
           <button
-            onClick={tab === 'telegram' ? buscarTelegram : buscarWAFB}
+            onClick={tab === 'telegram' ? () => buscarTelegram() : buscarWAFB}
             disabled={loading || !zonaActual || (tab === 'telegram' && !tgConnected)}
             className="btn btn-primary"
             style={{ width: '100%', justifyContent: 'center', padding: 12, marginBottom: 16,
