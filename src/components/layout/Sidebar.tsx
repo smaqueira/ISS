@@ -15,6 +15,7 @@ const nav = [
   { href: '/admin/broadcast', label: 'Broadcast', icon: '📣' },
   { href: '/admin/prospecting', label: 'Prospección', icon: '🔍' },
   { href: '/admin/grupos', label: 'Grupos B2C', icon: '👥' },
+  { href: '/admin/comunidades', label: 'Comunidades', icon: '🌐' },
   { href: '/admin/telegram', label: 'Telegram', icon: '✈️' },
   { href: '/admin/ayuda', label: 'Ayuda', icon: '📖' },
   { href: '/admin/settings', label: 'Configuración', icon: '⚙️' },
