@@ -7,6 +7,7 @@ const nav = [
   { href: '/admin/vender', label: 'Vender', icon: '💰' },
   { href: '/admin/agente', label: 'Agente IA', icon: '🤖' },
   { href: '/admin/marketing', label: 'Marketing IA', icon: '📣' },
+  { href: '/admin/instagram-dm', label: 'Instagram DMs', icon: '📸' },
   { href: '/admin/clients', label: 'Clientes', icon: '👥' },
   { href: '/admin/orders', label: 'Pedidos', icon: '📦' },
   { href: '/admin/productos', label: 'Catálogo', icon: '🛍️' },

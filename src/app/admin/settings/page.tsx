@@ -21,6 +21,14 @@ const GROUPS = [
     ],
   },
   {
+    title: '📸 Instagram DMs',
+    keys: [
+      { key: 'INSTAGRAM_ACCESS_TOKEN', label: 'Access Token (Page)', placeholder: 'EAABsbCS...' },
+      { key: 'INSTAGRAM_PAGE_ID', label: 'Page ID', placeholder: '123456789' },
+      { key: 'INSTAGRAM_VERIFY_TOKEN', label: 'Verify Token (lo elegís vos)', placeholder: 'mi_token_secreto_123' },
+    ],
+  },
+  {
     title: '💬 Telegram',
     keys: [
       { key: 'TELEGRAM_BOT_TOKEN', label: 'Bot Token', placeholder: '123456:ABC...' },
