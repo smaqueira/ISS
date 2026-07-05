@@ -13,12 +13,19 @@ interface GroupResult {
   verified: boolean
 }
 
+// status de créditos por clave: se marca agotada si Serper devuelve 403/429
+const exhaustedKeys = new Set<string>()
+
 async function searchSerper(query: string, apiKey: string) {
   const res = await fetch('https://google.serper.dev/search', {
     method: 'POST',
     headers: { 'X-API-KEY': apiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({ q: query, gl: 'ar', hl: 'es', num: 20 }),
   })
+  if (res.status === 403 || res.status === 429) {
+    exhaustedKeys.add(apiKey)
+    return []
+  }
   if (!res.ok) return []
   const data = await res.json()
   return data.organic || []
@@ -201,6 +208,11 @@ export async function POST(req: NextRequest) {
     stats: {
       linksEncontrados: waCodes.length + tgUsers.length + tgPrivate.length + fbResults.length,
       verificados: results.filter(r => r.verified).length,
+    },
+    serper: {
+      clavesTotal: keys.length,
+      clavesAgotadas: keys.filter(k => exhaustedKeys.has(k)).length,
+      sinCreditos: keys.every(k => exhaustedKeys.has(k)),
     },
   })
 }

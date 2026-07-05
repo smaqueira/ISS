@@ -58,6 +58,7 @@ export default function GruposPage() {
   const [busy, setBusy] = useState<Record<string, boolean>>({})
   const [resultados, setResultados] = useState<Resultado[]>([])
   const [searchStats, setSearchStats] = useState<{ linksEncontrados: number; verificados: number } | null>(null)
+  const [serperAlert, setSerperAlert] = useState<'agotado' | 'parcial' | null>(null)
   const [searchDone, setSearchDone] = useState(false)
   const [savedLinks, setSavedLinks] = useState<Set<string>>(new Set())
   const [filtro, setFiltro] = useState<Platform | 'todos'>('todos')
@@ -99,6 +100,9 @@ export default function GruposPage() {
       const data = await r.json()
       setResultados(data.results || [])
       setSearchStats(data.stats || null)
+      if (data.serper?.sinCreditos) setSerperAlert('agotado')
+      else if (data.serper?.clavesAgotadas > 0) setSerperAlert('parcial')
+      else setSerperAlert(null)
     } catch { /* mostrar vacío */ }
     setSearchDone(true)
     setLoading(false)
@@ -264,6 +268,20 @@ export default function GruposPage() {
           </div>
         )}
       </div>
+
+      {/* Alerta de créditos Serper */}
+      {serperAlert && (
+        <div style={{
+          background: serperAlert === 'agotado' ? '#ef444415' : '#f59e0b15',
+          border: `1px solid ${serperAlert === 'agotado' ? '#ef444440' : '#f59e0b40'}`,
+          color: serperAlert === 'agotado' ? '#ef4444' : '#f59e0b',
+          borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: '0.83rem',
+        }}>
+          {serperAlert === 'agotado'
+            ? <>🚨 <b>Créditos de Serper agotados.</b> La búsqueda de Google no funciona hasta renovar. Entrá a <a href="https://serper.dev" target="_blank" rel="noreferrer" style={{ color: 'inherit', fontWeight: 700 }}>serper.dev</a>, creá una clave nueva (gratis, 2.500 búsquedas) y cargala en Configuración.</>
+            : <>⚠️ <b>Una o más claves de Serper se quedaron sin créditos.</b> La búsqueda sigue funcionando con las restantes, pero conviene renovar en <a href="https://serper.dev" target="_blank" rel="noreferrer" style={{ color: 'inherit', fontWeight: 700 }}>serper.dev</a>.</>}
+        </div>
+      )}
 
       {/* RESULTADOS */}
       {searchDone && (
