@@ -10,6 +10,25 @@ function getDb() {
   )
 }
 
+export async function GET() {
+  const db = getDb()
+  const testEmail = 'debug@test.com'
+  const { data: client } = await db.from('clients').select('id').eq('email', testEmail).single()
+  let clientId = client?.id
+  if (!clientId) {
+    const { data: nc, error: ce } = await db.from('clients').insert({
+      name: 'Debug Test', email: testEmail, type: 'b2c', status: 'nuevo', score: 50, channel: 'email',
+    }).select('id').single()
+    if (ce) return NextResponse.json({ step: 'client_insert', error: ce.message })
+    clientId = nc?.id
+  }
+  const { error: ie } = await db.from('interactions').insert({
+    client_id: clientId, channel: 'email', type: 'mensaje', notes: '📧 Test debug\n\nMensaje de prueba', ai_generated: false,
+  })
+  if (ie) return NextResponse.json({ step: 'interaction_insert', error: ie.message })
+  return NextResponse.json({ ok: true, clientId })
+}
+
 export async function POST(req: NextRequest) {
   const update = await req.json()
   const msg = update.message
