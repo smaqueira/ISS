@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   const bodyStart = afterAsunto.indexOf('\n')
   const body = bodyStart > -1 ? afterAsunto.slice(bodyStart).trim() : ''
 
-  const db = await createClient()
+  const db = createAdminClient()
 
   const { data: client } = await db
     .from('clients')
