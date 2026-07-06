@@ -15,6 +15,7 @@ interface CalendarItem {
   tematica: string
   hook: string
   cta: string
+  producto: string | null
   notas: string | null
   status: 'pendiente' | 'publicado' | 'saltado'
 }
@@ -59,7 +60,6 @@ export default function CalendarioPage() {
   const [items, setItems] = useState<CalendarItem[]>([])
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
-  const [productos, setProductos] = useState('')
   const [selected, setSelected] = useState<CalendarItem | null>(null)
   const [notas, setNotas] = useState('')
   const [savingNotas, setSavingNotas] = useState(false)
@@ -81,7 +81,7 @@ export default function CalendarioPage() {
     const res = await fetch('/api/marketing/calendar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ weekStart, productos }),
+      body: JSON.stringify({ weekStart }),
     })
     const data = await res.json()
     setItems(Array.isArray(data) ? data : [])
@@ -114,7 +114,8 @@ export default function CalendarioPage() {
 
   function goToMarketing(item: CalendarItem) {
     const task = item.audiencia === 'b2b' ? 'copy_whatsapp' : item.canal.includes('Instagram') ? 'copy_instagram_caption' : 'copy_whatsapp'
-    router.push(`/admin/marketing?task=${task}&idea=${encodeURIComponent(item.tematica)}`)
+    const idea = item.producto ? `${item.producto} — ${item.tematica}` : item.tematica
+    router.push(`/admin/marketing?task=${task}&idea=${encodeURIComponent(idea)}&producto=${encodeURIComponent(item.producto || '')}`)
   }
 
   const weekStart = currentMonday.toISOString().split('T')[0]
@@ -167,20 +168,15 @@ export default function CalendarioPage() {
 
       {/* Generador */}
       <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 20, marginBottom: 24 }}>
-        <div style={{ fontWeight: 600, marginBottom: 12 }}>
-          {items.length === 0 ? '✨ Generá el plan de esta semana' : '🔄 Regenerar plan'}
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <input
-            value={productos}
-            onChange={e => setProductos(e.target.value)}
-            placeholder="Productos destacados esta semana (opcional) — ej: langostinos, vieiras, merluza"
-            style={{
-              flex: 1, padding: '10px 14px', borderRadius: 8,
-              border: '1px solid var(--border)', background: 'var(--bg)',
-              color: 'var(--text)', fontSize: '0.88rem',
-            }}
-          />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div>
+            <div style={{ fontWeight: 600, marginBottom: 4 }}>
+              {items.length === 0 ? '✨ Generá el plan de esta semana' : '🔄 Regenerar plan'}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+              La IA lee tu catálogo actual y asigna un producto por día según audiencia y canal
+            </div>
+          </div>
           <button
             onClick={generate}
             disabled={generating}
@@ -192,9 +188,6 @@ export default function CalendarioPage() {
           >
             {generating ? '⏳ Generando...' : '✨ Generar semana'}
           </button>
-        </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 8 }}>
-          La IA considera: día de la semana, estación del año, audiencia óptima por día y canal recomendado
         </div>
       </div>
 
@@ -252,7 +245,7 @@ export default function CalendarioPage() {
 
                 {/* Contenido */}
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
                     <span style={{
                       fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20,
                       background: `${audColor}20`, color: audColor,
@@ -263,6 +256,14 @@ export default function CalendarioPage() {
                       {CANAL_ICON[item.canal] || '📱'} {item.canal}
                     </span>
                     <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>· {item.tipo}</span>
+                    {item.producto && (
+                      <span style={{
+                        fontSize: '0.7rem', fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+                        background: '#f9731620', color: 'var(--accent)',
+                      }}>
+                        🐟 {item.producto}
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 2 }}>{item.tematica}</div>
                   {item.hook && (
@@ -350,6 +351,20 @@ export default function CalendarioPage() {
                 </span>
               ))}
             </div>
+
+            {/* Producto asignado */}
+            {selected.producto && (
+              <div style={{
+                background: '#f9731615', borderRadius: 10, padding: '12px 16px',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}>
+                <span style={{ fontSize: '1.2rem' }}>🐟</span>
+                <div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--muted)', marginBottom: 2 }}>PRODUCTO DEL DÍA</div>
+                  <div style={{ fontWeight: 700, color: 'var(--accent)' }}>{selected.producto}</div>
+                </div>
+              </div>
+            )}
 
             {/* Contenido */}
             <div>

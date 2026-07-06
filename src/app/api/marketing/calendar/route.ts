@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ask } from '@/lib/ai/client'
+import { getBlueMarketProducts } from '@/lib/bluemarket'
 
 export const runtime = 'nodejs'
 export const maxDuration = 45
@@ -46,6 +47,7 @@ interface CalendarItem {
   tematica: string
   hook: string
   cta: string
+  producto: string
   status: 'pendiente' | 'publicado' | 'saltado'
   id?: string
 }
@@ -71,13 +73,17 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const db = await createClient()
-  const { weekStart, productos } = await req.json()
+  const { weekStart } = await req.json()
 
   // Obtener settings del negocio
   const { data: settings } = await db.from('settings').select('key, value').in('key', ['COMPANY_NAME', 'COMPANY_DESCRIPTION'])
   const settingsMap = Object.fromEntries((settings || []).map((s: { key: string; value: string }) => [s.key, s.value]))
   const negocio = settingsMap['COMPANY_NAME'] || 'Vitto Mare'
   const descripcion = settingsMap['COMPANY_DESCRIPTION'] || 'Pescados y mariscos frescos en Buenos Aires'
+
+  // Obtener productos reales del catálogo
+  const bmProducts = await getBlueMarketProducts()
+  const productosDisponibles = bmProducts?.map(p => p.name) || []
 
   const startDate = new Date(weekStart + 'T12:00:00')
   const month = startDate.getMonth() + 1
@@ -89,27 +95,36 @@ export async function POST(req: NextRequest) {
     const date = new Date(startDate.getTime() + i * 86400000)
     const dayNum = date.getDay()
     const logic = DAY_LOGIC[dayNum]
+    // Asignar un producto rotando por el catálogo
+    const producto = productosDisponibles.length > 0
+      ? productosDisponibles[i % productosDisponibles.length]
+      : ''
     return {
       fecha: date.toISOString().split('T')[0],
       dia_num: dayNum,
       dia_semana: ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'][dayNum],
+      producto,
       ...logic,
     }
   })
 
+  const catalogoTexto = productosDisponibles.length > 0
+    ? `Catálogo actual (${productosDisponibles.length} productos): ${productosDisponibles.join(', ')}.`
+    : 'Catálogo no disponible — usá productos típicos de pescadería premium.'
+
   // Generar contenido con IA para cada día
   const prompt = `Sos el director de marketing de "${negocio}" — ${descripcion}.
 Estamos en ${season} en Argentina. ${seasonTip}
-${productos ? `Productos disponibles esta semana: ${productos}` : ''}
+${catalogoTexto}
 
-Generá el plan de contenido para 7 días con este esquema exacto.
+Generá el plan de contenido para 7 días. Cada día tiene un producto asignado — el contenido debe girar en torno a ese producto específico.
 Para cada día devolvé un JSON con estos campos:
-- tematica: tema concreto del contenido (15 palabras max)
-- hook: primera línea del post, el gancho (20 palabras max, que genere curiosidad o urgencia)
+- tematica: tema concreto del contenido mencionando el producto (15 palabras max)
+- hook: primera línea del post, el gancho (20 palabras max, que genere curiosidad o urgencia, menciona el producto)
 - cta: llamada a la acción corta (10 palabras max)
 
 Días y contexto:
-${days.map(d => `${d.dia_semana} (${d.fecha}): audiencia ${d.audiencia}, canal ${d.canal}, tipo "${d.tipo}". ${d.razon}`).join('\n')}
+${days.map(d => `${d.dia_semana} (${d.fecha}): producto "${d.producto || 'pescado fresco'}", audiencia ${d.audiencia}, canal ${d.canal}, tipo "${d.tipo}". ${d.razon}`).join('\n')}
 
 Respondé SOLO con un array JSON de 7 objetos en el mismo orden. Sin texto adicional. Sin markdown.
 Ejemplo: [{"tematica":"...","hook":"...","cta":"..."},...]`
