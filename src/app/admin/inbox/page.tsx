@@ -60,14 +60,21 @@ export default function InboxPage() {
   const [reply, setReply] = useState('')
   const [generando, setGenerando] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    load()
+    syncEmail().then(() => load())
     const iv = setInterval(load, 30000)
     return () => clearInterval(iv)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtro])
+
+  async function syncEmail() {
+    setSyncing(true)
+    try { await fetch('/api/sync/email', { method: 'POST' }) } catch {}
+    setSyncing(false)
+  }
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -154,6 +161,9 @@ export default function InboxPage() {
                 {totalUnread}
               </span>
             )}
+            <button onClick={() => syncEmail().then(() => load())} title="Sincronizar emails" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--muted)', padding: 4 }}>
+              {syncing ? '⏳' : '🔄'}
+            </button>
           </div>
 
           {/* Filtros de canal */}

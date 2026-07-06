@@ -21,6 +21,13 @@ const GROUPS = [
     ],
   },
   {
+    title: '📬 Inbox de Gmail (recibir emails)',
+    keys: [
+      { key: 'GMAIL_USER', label: 'Gmail del negocio', placeholder: 'hola.vittomare@gmail.com' },
+      { key: 'GMAIL_APP_PASSWORD', label: 'Contraseña de aplicación Gmail', placeholder: 'xxxx xxxx xxxx xxxx' },
+    ],
+  },
+  {
     title: '📸 Instagram DMs',
     keys: [
       { key: 'INSTAGRAM_ACCESS_TOKEN', label: 'Access Token (Page)', placeholder: 'EAABsbCS...' },
