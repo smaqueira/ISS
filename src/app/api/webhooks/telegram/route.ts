@@ -373,6 +373,50 @@ export async function POST(req: NextRequest) {
   const textLower = text.toLowerCase()
   const chatId = String(msg.chat.id)
 
+  // Detectar emails reenviados por ImprovMX
+  // Formato: "📩 Nuevo mail en Vitto Mare\n\nDe: Sebastian Maqueira(smaqueira@gmail.com)\nAsunto: xxx\ncuerpo"
+  const fromMatch = text.match(/De:\s*([^(\n]*)\(([\w.+%-]+@[\w.-]+\.[a-z]{2,})\)/i)
+  const subjectMatch = text.match(/Asunto:\s*([^\n]+)/i)
+  if (fromMatch) {
+    const rawFrom = fromMatch[1].trim()
+    const fromEmail = fromMatch[2].toLowerCase()
+    const subject = subjectMatch?.[1]?.trim() || '(sin asunto)'
+    const asuntoIdx = text.indexOf('Asunto:')
+    const afterAsunto = asuntoIdx > -1 ? text.slice(asuntoIdx) : ''
+    const bodyStart = afterAsunto.indexOf('\n')
+    const body = bodyStart > -1 ? afterAsunto.slice(bodyStart).trim() : ''
+
+    if (fromEmail) {
+      const { data: client } = await db.from('clients').select('id, name').eq('email', fromEmail).single()
+      if (client) {
+        await db.from('interactions').insert({
+          client_id: client.id,
+          channel: 'email',
+          type: 'mensaje',
+          notes: `📧 ${subject}\n\n${body.slice(0, 500)}`,
+          ai_generated: false,
+        })
+        await db.from('clients').update({ last_contact: new Date().toISOString(), status: 'contactado' }).eq('id', client.id)
+      } else {
+        // Cliente nuevo — crearlo automáticamente
+        const newName = rawFrom.replace(/<.*>/, '').trim() || fromEmail
+        const { data: newClient } = await db.from('clients').insert({
+          name: newName, email: fromEmail, type: 'b2c', status: 'nuevo', score: 60, channel: 'email',
+        }).select('id').single()
+        if (newClient) {
+          await db.from('interactions').insert({
+            client_id: newClient.id,
+            channel: 'email',
+            type: 'mensaje',
+            notes: `📧 ${subject}\n\n${body.slice(0, 500)}`,
+            ai_generated: false,
+          })
+        }
+      }
+    }
+    // No cortamos — dejamos que el bot también muestre el mensaje normalmente
+  }
+
   // Flujo para agregar cliente
   if (pendingClients[chatId]) {
     const state = pendingClients[chatId]
