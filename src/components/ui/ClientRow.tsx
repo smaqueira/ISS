@@ -1,11 +1,21 @@
 'use client'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import type { Client } from '@/lib/types'
 import { waLink } from '@/lib/utils'
 
 interface Props { client: Client }
 
 export default function ClientRow({ client }: Props) {
+  const router = useRouter()
+
+  async function handleDelete(e: React.MouseEvent) {
+    e.preventDefault()
+    if (!confirm(`¿Eliminar a ${client.name}?`)) return
+    await fetch(`/api/clients/${client.id}`, { method: 'DELETE' })
+    router.refresh()
+  }
+
   return (
     <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -33,6 +43,9 @@ export default function ClientRow({ client }: Props) {
             📱
           </a>
         )}
+        <button onClick={handleDelete} className="btn btn-ghost" style={{ padding: '6px 10px', color: '#ef4444', opacity: 0.6 }} title="Eliminar">
+          🗑️
+        </button>
         <Link href={`/admin/clients/${client.id}`} className="btn btn-ghost" style={{ padding: '6px 10px' }}>
           →
         </Link>
