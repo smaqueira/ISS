@@ -1,60 +1,81 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { classifyMessage } from '@/lib/ai/classify'
-import { generateAutoReply } from '@/lib/ai/autoreply'
-import { sendProposalEmail } from '@/lib/email/send'
+import { createClient } from '@supabase/supabase-js'
 import { sendMessage } from '@/lib/telegram/send'
 
-// Resend webhook — captura respuestas de clientes a nuestros emails
+export const runtime = 'nodejs'
+
+function getDb() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+}
+
+// Resend inbound webhook — captura emails entrantes a hola@vittomare.com
 export async function POST(req: NextRequest) {
   const payload = await req.json()
 
-  const fromEmail = payload.from?.email || payload.sender
+  // Resend inbound format
+  const fromEmail = (payload.from?.email || payload.from || '').toLowerCase().trim()
+  const fromName = payload.from?.name || fromEmail
+  const subject = payload.subject || '(sin asunto)'
   const body = payload.text || payload.plain || ''
-  const subject = payload.subject || ''
 
-  if (!fromEmail || !body) return NextResponse.json({ ok: true })
+  if (!fromEmail) return NextResponse.json({ ok: true })
 
-  // Ignorar si dice "no gracias"
-  if (/no gracias|desuscribir|unsubscribe/i.test(body)) {
-    const db = await createClient()
-    const { data: client } = await db.from('clients').select('id').eq('email', fromEmail).single()
-    if (client) {
-      await db.from('clients').update({ status: 'inactivo' }).eq('id', client.id)
-      await db.from('interactions').insert({ client_id: client.id, channel: 'email', type: 'respuesta', notes: 'Cliente pidió no ser contactado. Estado: inactivo.', ai_generated: false })
-    }
+  // Ignorar emails de noreply / notificaciones automáticas
+  if (/noreply|no-reply|mailer-daemon|postmaster/i.test(fromEmail)) {
     return NextResponse.json({ ok: true })
   }
 
-  const db = await createClient()
-  const { data: client } = await db.from('clients').select('*').eq('email', fromEmail).single()
-  if (!client) return NextResponse.json({ ok: true })
+  const db = getDb()
 
-  // Clasificar con IA
-  const classification = await classifyMessage(body)
+  // Buscar o crear cliente
+  let clientId: string
+  let clientName: string
 
-  // Registrar interacción
+  const { data: existing } = await db
+    .from('clients')
+    .select('id, name')
+    .eq('email', fromEmail)
+    .single()
+
+  if (existing) {
+    clientId = existing.id
+    clientName = existing.name
+    await db.from('clients').update({
+      last_contact: new Date().toISOString(),
+      status: 'contactado',
+    }).eq('id', clientId)
+  } else {
+    const { data: newClient } = await db.from('clients').insert({
+      name: fromName,
+      email: fromEmail,
+      type: 'b2c',
+      status: 'nuevo',
+      score: 60,
+      channel: 'email',
+    }).select('id, name').single()
+
+    if (!newClient) return NextResponse.json({ ok: true })
+    clientId = newClient.id
+    clientName = newClient.name
+  }
+
+  // Guardar interacción
+  const notes = `📧 ${subject}${body ? '\n\n' + body.slice(0, 500) : ''}`
   await db.from('interactions').insert({
-    client_id: client.id, channel: 'email', type: 'respuesta',
-    notes: `Respuesta recibida — ${classification.type}: "${body.slice(0, 200)}"`,
+    client_id: clientId,
+    channel: 'email',
+    type: 'mensaje',
+    notes,
     ai_generated: false,
   })
 
-  // Actualizar estado
-  const newStatus = classification.type === 'compra' ? 'interesado' : 'contactado'
-  await db.from('clients').update({ status: newStatus, last_contact: new Date().toISOString() }).eq('id', client.id)
-
-  // Alerta Telegram si es compra
-  if (classification.type === 'compra') {
-    await sendMessage(`🔥 *${client.name}* quiere comprar!\n\nMensaje: _"${body.slice(0, 150)}"_\n\nEmail: ${fromEmail}`)
-  }
-
-  // Auto-responder si es consulta o reclamo
-  if (['consulta', 'reclamo'].includes(classification.type)) {
-    const reply = await generateAutoReply({ client_name: client.name, message: body, type: classification.type, urgency: classification.urgency })
-    await sendProposalEmail({ to: fromEmail, client_name: client.name, subject: `Re: ${subject}`, body: reply })
-    await db.from('interactions').insert({ client_id: client.id, channel: 'email', type: 'respuesta_auto', notes: `Auto-respuesta enviada: ${reply.slice(0, 150)}`, ai_generated: true })
-  }
+  // Notificar por Telegram
+  await sendMessage(
+    `📩 *Nuevo mail en Vitto Mare*\n\nDe: ${clientName} (${fromEmail})\nAsunto: ${subject}${body ? '\n\n_' + body.slice(0, 200).replace(/[_*[\]()~`>#+=|{}.!-]/g, '\\$&') + '_' : ''}`
+  )
 
   return NextResponse.json({ ok: true })
 }
