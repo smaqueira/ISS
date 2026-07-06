@@ -59,7 +59,7 @@ export async function getBlueMarketProducts(): Promise<ISSProduct[] | null> {
   if (!tiendaId) return null
 
   const productos = await bmFetch<BMProduct[]>(
-    `productos?pescaderia_id=eq.${tiendaId}&disponible=eq.true` +
+    `productos?pescaderia_id=eq.${tiendaId}&disponible=eq.true&stock=gt.0` +
     `&select=id,nombre,descripcion,precio,unidad,categoria,foto_url,destacado` +
     `&order=destacado.desc,nombre.asc`
   )
