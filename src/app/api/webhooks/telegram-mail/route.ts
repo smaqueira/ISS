@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
+
+function getDb() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+}
 
 export async function POST(req: NextRequest) {
   const update = await req.json()
@@ -24,7 +31,7 @@ export async function POST(req: NextRequest) {
   const bodyStart = afterAsunto.indexOf('\n')
   const body = bodyStart > -1 ? afterAsunto.slice(bodyStart).trim() : ''
 
-  const db = createAdminClient()
+  const db = getDb()
 
   const { data: client } = await db
     .from('clients')
