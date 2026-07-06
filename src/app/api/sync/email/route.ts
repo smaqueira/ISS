@@ -51,7 +51,7 @@ export async function POST() {
       if (!from) continue
 
       const fromEmail = (from.address || '').toLowerCase()
-      const fromName = [from.name, from.mailbox, from.host].filter(Boolean).join(' ') || fromEmail
+      const fromName = from.name || fromEmail
       const subject = msg.envelope?.subject || '(sin asunto)'
 
       // Ignorar noreply y sistemas
