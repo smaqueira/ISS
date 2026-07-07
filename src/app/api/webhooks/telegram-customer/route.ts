@@ -96,6 +96,24 @@ No inventés precios ni productos que no estén en el catálogo.`,
   await sendMessage(token, chatId, reply, buttons)
 }
 
+async function notifyAdmin(fromName: string, message: string) {
+  const db = getDb()
+  const { data: tokenRow } = await db.from('settings').select('value').eq('key', 'TELEGRAM_BOT_TOKEN').single()
+  const { data: chatRow } = await db.from('settings').select('value').eq('key', 'TELEGRAM_CHAT_ID').single()
+  const token = tokenRow?.value
+  const chatId = chatRow?.value
+  if (!token || !chatId) return
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: `📩 *Nueva consulta en vittomare\\_bot*\n\n👤 *${fromName}*\n💬 ${message.slice(0, 200)}`,
+      parse_mode: 'Markdown',
+    }),
+  })
+}
+
 async function saveInteraction(fromName: string, fromUsername: string, message: string) {
   const db = getDb()
   const identifier = fromUsername ? `@${fromUsername}` : fromName
@@ -183,8 +201,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // Guardar interacción en el inbox
-  await saveInteraction(fromName, fromUsername, text)
+  // Guardar interacción en el inbox y notificar al admin
+  await Promise.all([
+    saveInteraction(fromName, fromUsername, text),
+    notifyAdmin(fromName, text),
+  ])
 
   // Responder con IA para cualquier otra consulta
   await respondWithAI(token, chatId, text)
