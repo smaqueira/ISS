@@ -12,87 +12,167 @@ function getDb() {
   )
 }
 
+const BUSINESS_CONTEXT = `
+NEGOCIO: Vitto Mare
+RUBRO: Pescadería premium con delivery en Buenos Aires (CABA y GBA)
+PROPUESTA DE VALOR: Pescado y mariscos de calidad restaurante, seleccionados a diario, con cadena de frío garantizada y entrega en el día.
+DUEÑO/OPERADOR: Sebastian Maqueira — enfocado en desarrollo del sistema, la operación la hace otra persona.
+ETAPA: Lanzamiento / primeros clientes. Sistema recién construido.
+
+SEGMENTOS:
+- B2B (restaurantes, hoteles, catering, sushi bars, pescaderías minoristas) → ticket alto, recurrencia semanal
+- B2C (familias, foodies, amantes del sushi) → ticket medio, recurrencia quincenal/mensual
+
+PRODUCTOS TÍPICOS: langostinos, salmón, mariscos, pescados del día, productos para sushi
+PRECIO PROMEDIO ESTIMADO: $5.000-$50.000 ARS por pedido (varía según producto y cantidad)
+ZONA DE ENTREGA: CABA y GBA
+
+CANALES DE VENTA ACTUALES:
+- vittomare.com → catálogo + formulario de pedido en /pedir
+- @vittomare_bot (Telegram) → bot de atención al cliente con IA
+- @ventas_vitto_bot (Telegram) → bot interno para el dueño (gestión de leads, tareas)
+- Email hola@vittomare.com → captura automática al inbox
+- WhatsApp → solo links (sin API aún)
+- Instagram → pendiente cuenta profesional
+
+SISTEMA ISS (app.vittomare.com):
+- Inbox unificado de todos los canales
+- CRM de clientes con score y fidelización automática
+- Generación de propuestas y cotizaciones con IA
+- Catálogo conectado a BlueMarket (sistema de inventario)
+- Lista de precios compartible (link, PDF, imagen)
+- Broadcast por Telegram
+- Agente prospector de B2B
+- Crons diarios (mañana/mediodía/tarde) con tareas de ventas
+- Seguimiento automático de clientes sin contacto
+
+COMPETENCIA: Pescaderías tradicionales sin sistema digital, apps de delivery genéricas (Rappi, PedidosYa) con márgenes muy bajos.
+VENTAJA COMPETITIVA: Calidad premium + sistema digital propio + atención personalizada + cadena de frío garantizada.
+
+OBJETIVO ACTUAL: Conseguir los primeros 20 clientes B2B recurrentes y 100 clientes B2C activos.
+MÉTRICA CLAVE: Pedidos recurrentes semanales (B2B) y pedidos mensuales (B2C).
+`
+
 export async function GET() {
   const db = getDb()
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
 
-  // Recolectar datos del sistema
+  // Recolectar datos del sistema en paralelo
+  const today = new Date().toISOString().split('T')[0]
+  const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString()
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
+
   const [
     { count: totalClients },
     { count: nuevos },
     { count: contactados },
     { count: cerrados },
     { count: frios },
+    { count: b2b },
+    { count: b2c },
+    { count: clientsThisWeek },
     { data: byChannel },
     { data: recentInteractions },
+    { data: topClients },
     { data: settings },
     { data: orders },
+    { data: previousAnalysis },
   ] = await Promise.all([
     db.from('clients').select('*', { count: 'exact', head: true }),
     db.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'nuevo'),
     db.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'contactado'),
     db.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'cerrado'),
     db.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'frio'),
-    db.from('interactions').select('channel').limit(500),
-    db.from('interactions').select('created_at, channel, type').order('created_at', { ascending: false }).limit(100),
-    db.from('settings').select('key, value').in('key', ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_CUSTOMER_BOT_TOKEN', 'GMAIL_USER', 'COMPANY_WHATSAPP', 'GROQ_API_KEY']),
-    db.from('orders').select('status').limit(100),
+    db.from('clients').select('*', { count: 'exact', head: true }).eq('type', 'b2b'),
+    db.from('clients').select('*', { count: 'exact', head: true }).eq('type', 'b2c'),
+    db.from('clients').select('*', { count: 'exact', head: true }).gte('created_at', sevenDaysAgo),
+    db.from('interactions').select('channel, type, created_at').gte('created_at', thirtyDaysAgo).limit(1000),
+    db.from('interactions').select('created_at, channel, type, notes').order('created_at', { ascending: false }).limit(50),
+    db.from('clients').select('name, score, status, type, rubro, last_contact').order('score', { ascending: false }).limit(5),
+    db.from('settings').select('key, value').in('key', [
+      'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CUSTOMER_BOT_TOKEN',
+      'GMAIL_USER', 'COMPANY_WHATSAPP', 'GROQ_API_KEY',
+      'COMPANY_NAME', 'RESEND_API_KEY',
+    ]),
+    db.from('orders').select('status, created_at').gte('created_at', thirtyDaysAgo),
+    db.from('settings').select('value').eq('key', 'LAST_MEJORAS_ANALYSIS').single(),
   ])
 
-  // Calcular métricas
+  // Métricas de canales (últimos 30 días)
   const channelCounts: Record<string, number> = {}
+  const typeCounts: Record<string, number> = {}
+  const activityByDay: Record<string, number> = {}
+
   for (const i of byChannel || []) {
     channelCounts[i.channel] = (channelCounts[i.channel] || 0) + 1
+    typeCounts[i.type] = (typeCounts[i.type] || 0) + 1
+    const day = i.created_at?.split('T')[0]
+    if (day) activityByDay[day] = (activityByDay[day] || 0) + 1
   }
 
-  const configuredKeys = (settings || []).map(s => s.key)
+  const avgDailyActivity = Object.keys(activityByDay).length > 0
+    ? Math.round(Object.values(activityByDay).reduce((a, b) => a + b, 0) / Object.keys(activityByDay).length)
+    : 0
+
+  const configuredKeys = (settings || []).filter(s => s.value && s.value !== '').map(s => s.key)
   const hasGmail = configuredKeys.includes('GMAIL_USER')
   const hasWhatsApp = configuredKeys.includes('COMPANY_WHATSAPP')
   const hasCustomerBot = configuredKeys.includes('TELEGRAM_CUSTOMER_BOT_TOKEN')
   const hasGroq = configuredKeys.includes('GROQ_API_KEY')
+  const hasResend = configuredKeys.includes('RESEND_API_KEY')
 
   const ordersByStatus: Record<string, number> = {}
   for (const o of orders || []) {
     ordersByStatus[o.status] = (ordersByStatus[o.status] || 0) + 1
   }
 
-  // Actividad reciente (últimas 48hs)
-  const twoDaysAgo = new Date(Date.now() - 48 * 3600 * 1000).toISOString()
-  const recentActivity = (recentInteractions || []).filter(i => i.created_at > twoDaysAgo).length
+  const conversionRate = totalClients ? Math.round(((cerrados || 0) / totalClients) * 100) : 0
+  const contactRate = totalClients ? Math.round(((contactados || 0) / totalClients) * 100) : 0
 
-  const systemContext = `
-ESTADO ACTUAL DEL SISTEMA ISS (Intelligent Sales System) de Vitto Mare:
+  // Tipos de interacción más frecuentes
+  const topTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]).slice(0, 5)
+
+  // Top clientes por score
+  const topClientsText = (topClients || []).map(c =>
+    `  - ${c.name} (${c.type?.toUpperCase()}, score: ${c.score}, estado: ${c.status}${c.rubro ? `, rubro: ${c.rubro}` : ''})`
+  ).join('\n')
+
+  const systemState = `
+MÉTRICAS DEL SISTEMA (últimos 30 días):
 
 CLIENTES:
-- Total: ${totalClients || 0}
-- Nuevos (sin contactar): ${nuevos || 0}
-- Contactados: ${contactados || 0}
-- Cerrados/ganados: ${cerrados || 0}
-- Fríos (sin contacto +30 días): ${frios || 0}
+- Total acumulado: ${totalClients || 0} (${b2b || 0} B2B + ${b2c || 0} B2C)
+- Nuevos esta semana: ${clientsThisWeek || 0}
+- Sin contactar: ${nuevos || 0} → oportunidad inmediata
+- Contactados activos: ${contactados || 0}
+- Cerrados/ganados: ${cerrados || 0} (${conversionRate}% conversión)
+- Fríos: ${frios || 0} → clientes a reactivar
+- Tasa de contacto: ${contactRate}%
 
-CANALES DE ENTRADA (total interacciones):
-${Object.entries(channelCounts).map(([k, v]) => `- ${k}: ${v} interacciones`).join('\n') || '- Sin datos todavía'}
+TOP 5 LEADS POR SCORE:
+${topClientsText || '- Sin datos'}
 
-ACTIVIDAD RECIENTE (últimas 48hs): ${recentActivity} interacciones
+ACTIVIDAD POR CANAL (30 días):
+${Object.entries(channelCounts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `- ${k}: ${v} interacciones`).join('\n') || '- Sin actividad registrada'}
 
-PEDIDOS:
-${Object.entries(ordersByStatus).map(([k, v]) => `- ${k}: ${v}`).join('\n') || '- Sin pedidos registrados'}
+TIPOS DE INTERACCIÓN MÁS FRECUENTES:
+${topTypes.map(([k, v]) => `- ${k}: ${v}`).join('\n') || '- Sin datos'}
 
-CONFIGURACIÓN ACTIVA:
-- Gmail conectado: ${hasGmail ? 'SÍ' : 'NO'}
-- WhatsApp configurado: ${hasWhatsApp ? 'SÍ' : 'NO'}
-- Bot cliente (vittomare_bot): ${hasCustomerBot ? 'SÍ' : 'NO'}
-- IA (Groq): ${hasGroq ? 'SÍ' : 'NO'}
+ACTIVIDAD PROMEDIO DIARIA: ${avgDailyActivity} interacciones/día
 
-CANALES DISPONIBLES:
-- Telegram admin bot (ventas_vitto_bot): activo
-- Telegram cliente bot (vittomare_bot): activo
-- Email (ImprovMX + Gmail): activo
-- Web (vittomare.com): activa con formulario de pedido
-- WhatsApp API: NO conectado (solo links)
-- Instagram DMs: NO conectado (pendiente cuenta)
+PEDIDOS (30 días):
+${Object.entries(ordersByStatus).map(([k, v]) => `- ${k}: ${v}`).join('\n') || '- Sin pedidos en el sistema'}
 
-CRÉDITOS GRATUITOS RESTANTES: todo el stack es free tier actualmente.
+CONFIGURACIÓN:
+- Gmail (captura emails): ${hasGmail ? '✅ activo' : '❌ no configurado'}
+- WhatsApp Business API: ${hasWhatsApp ? '✅ activo' : '❌ pendiente — canal principal bloqueado'}
+- Bot cliente vittomare_bot: ${hasCustomerBot ? '✅ activo' : '❌ no configurado'}
+- IA Groq: ${hasGroq ? '✅ activo' : '❌ no configurado'}
+- Resend (email outbound): ${hasResend ? '✅ activo' : '❌ no configurado'}
+- Instagram DMs: ❌ pendiente cuenta profesional
+
+ANÁLISIS ANTERIOR:
+${previousAnalysis?.value ? `Último análisis: ${previousAnalysis.value.slice(0, 300)}...` : 'Primer análisis — sin historial previo'}
 `
 
   const completion = await groq.chat.completions.create({
@@ -100,34 +180,51 @@ CRÉDITOS GRATUITOS RESTANTES: todo el stack es free tier actualmente.
     messages: [
       {
         role: 'system',
-        content: `Sos un consultor experto en sistemas de ventas y automatización para pymes argentinas.
-Analizás el estado real del sistema y proponés mejoras concretas, priorizadas por impacto y facilidad de implementación.
-Respondé en español, con formato claro. Sé específico y accionable. No repitas datos que ya se ven en el estado.
-Organizá las propuestas en: CRÍTICO (hacer hoy), ALTO IMPACTO (esta semana), OPTIMIZACIONES (cuando haya tiempo).
-Para cada mejora: qué es, por qué importa, cómo implementarla (en términos de negocio, no código).`,
+        content: `Sos un consultor senior de negocios y ventas especializado en pymes de alimentación premium en Argentina.
+Conocés en profundidad el negocio de Vitto Mare y su sistema de ventas ISS.
+
+${BUSINESS_CONTEXT}
+
+TU ROL:
+- Analizás los datos reales del sistema cada vez que te consultan
+- Identificás patrones, cuellos de botella y oportunidades concretas
+- Proponés acciones específicas para el negocio de pescados premium en CABA/GBA
+- Priorizás por impacto en ventas reales (pedidos B2B recurrentes y B2C activos)
+- Sos directo, concreto y conocés las limitaciones del free tier
+
+FORMATO DE RESPUESTA:
+Usá exactamente estas 3 secciones:
+🔴 CRÍTICO (hacer esta semana para no perder ventas)
+🟡 ALTO IMPACTO (próximas 2 semanas, mejora significativa)
+🟢 OPTIMIZACIONES (cuando haya tiempo)
+
+Para cada ítem: nombre corto → explicación de 1-2 líneas enfocada en el impacto en ventas/clientes de Vitto Mare específicamente.
+Máximo 4 ítems por sección. Sé específico sobre Vitto Mare, no genérico.`,
       },
       {
         role: 'user',
-        content: `Analizá este estado del sistema y proponé las mejoras más impactantes:\n\n${systemContext}`,
+        content: `Analizá este estado actual y dame las recomendaciones más impactantes para Vitto Mare hoy:\n\n${systemState}`,
       },
     ],
-    max_tokens: 1500,
+    max_tokens: 1800,
+    temperature: 0.4,
   })
 
   const analysis = completion.choices[0]?.message?.content || 'No se pudo generar el análisis.'
 
+  // Guardar resumen del análisis para la próxima vez
+  await db.from('settings').upsert({
+    key: 'LAST_MEJORAS_ANALYSIS',
+    value: `[${today}] ${analysis.slice(0, 500)}`,
+  })
+
   return NextResponse.json({
     ok: true,
     metrics: {
-      totalClients,
-      nuevos,
-      contactados,
-      cerrados,
-      frios,
-      channelCounts,
-      recentActivity,
-      ordersByStatus,
-      configured: { hasGmail, hasWhatsApp, hasCustomerBot, hasGroq },
+      totalClients, nuevos, contactados, cerrados, frios,
+      b2b, b2c, clientsThisWeek, conversionRate, contactRate,
+      channelCounts, avgDailyActivity, ordersByStatus,
+      configured: { hasGmail, hasWhatsApp, hasCustomerBot, hasGroq, hasResend },
     },
     analysis,
     ts: new Date().toISOString(),
