@@ -6,6 +6,7 @@
     { "path": "/api/cron/morning-broadcast",   "schedule": "0 11 * * *" },
     { "path": "/api/cron/community-crawl",     "schedule": "0 6 * * *" },
     { "path": "/api/cron/ventas",              "schedule": "0 12 * * *" },
-    { "path": "/api/cron/followup",            "schedule": "0 9 * * *" }
+    { "path": "/api/cron/followup",            "schedule": "0 9 * * *" },
+    { "path": "/api/cron/setup-webhooks",      "schedule": "0 9 * * *" }
   ]
 }
