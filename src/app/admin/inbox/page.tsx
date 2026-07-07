@@ -50,6 +50,16 @@ const FILTROS = [
   { id: 'whatsapp', label: 'WhatsApp', icon: '💬' },
   { id: 'instagram', label: 'Instagram', icon: '📸' },
   { id: 'email', label: 'Email', icon: '📧' },
+  { id: 'telegram', label: 'Telegram', icon: '✈️' },
+]
+
+const QUICK_REPLIES = [
+  { label: '💰 Precios', text: 'Hola! Te paso nuestra lista de precios actualizada: https://app.vittomare.com/lista-precios 🐟' },
+  { label: '📦 Pedido', text: 'Hola! Para hacer tu pedido necesito: producto, cantidad y dirección de entrega. ¿Qué te gustaría pedir?' },
+  { label: '🕐 Horarios', text: 'Hola! Nuestros horarios de entrega son de lunes a sábado de 9 a 18hs. Los pedidos se confirman por WhatsApp.' },
+  { label: '✅ Confirmado', text: 'Tu pedido quedó confirmado! Te avisamos cuando esté en camino. Gracias por elegirnos 🙏' },
+  { label: '🚚 En camino', text: 'Tu pedido está en camino! Llegará en aproximadamente 30-60 minutos. Cualquier consulta escribinos.' },
+  { label: '🐟 Stock hoy', text: 'Hola! Hoy tenemos disponible producto fresco del día. ¿Qué te interesa? Te paso los precios.' },
 ]
 
 export default function InboxPage() {
@@ -347,6 +357,23 @@ export default function InboxPage() {
 
           {/* Panel de respuesta */}
           <div style={{ borderTop: '1px solid var(--border)', background: 'var(--surface)', padding: '14px 18px' }}>
+            {/* Quick replies */}
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
+              {QUICK_REPLIES.map(qr => (
+                <button
+                  key={qr.label}
+                  onClick={() => setReply(qr.text)}
+                  style={{
+                    padding: '4px 10px', borderRadius: 20, border: '1px solid var(--border)',
+                    cursor: 'pointer', background: 'var(--bg)', color: 'var(--text)',
+                    fontSize: '0.72rem', fontWeight: 500,
+                  }}
+                >
+                  {qr.label}
+                </button>
+              ))}
+            </div>
+
             <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center' }}>
               <button
                 onClick={() => generarRespuesta(selected)}

@@ -141,23 +141,52 @@ export async function POST(req: NextRequest) {
 
   const textLower = text.toLowerCase()
   const isGreeting = ['hola', 'hi', 'hello', '/start', 'buenas', 'buen dia', 'buenos dias'].some(s => textLower.startsWith(s))
+  const isPrices = ['precio', 'lista', 'cuanto', 'cuánto', 'vale', 'cuesta', 'costa'].some(s => textLower.includes(s))
+  const isOrder = ['pedir', 'pedido', 'quiero', 'necesito', 'comprar', 'llevar', 'encargar'].some(s => textLower.includes(s))
+
+  const whatsapp = await getWhatsApp()
+  const waLink = whatsapp ? `https://wa.me/${whatsapp}` : null
 
   if (isGreeting) {
-    const whatsapp = await getWhatsApp()
-    const waLink = whatsapp ? `https://wa.me/${whatsapp}` : null
-    const buttons = waLink ? [[{ text: '💬 Hacer un pedido por WhatsApp', url: waLink }]] : undefined
     await sendMessage(
       token, chatId,
-      `¡Hola ${fromName}! 👋 Bienvenido a *Vitto Mare* 🐟\n\nSoy el asistente virtual. Podés preguntarme sobre nuestros productos, precios y disponibilidad.\n\n¿En qué te puedo ayudar?`,
-      buttons
+      `¡Hola ${fromName}! 👋 Bienvenido a *Vitto Mare* 🐟\n\nSoy el asistente virtual. Podés preguntarme sobre productos, precios y disponibilidad, o hacer tu pedido directamente.\n\n¿En qué te puedo ayudar?`,
+      [
+        [{ text: '🛒 Ver catálogo y precios', url: 'https://vittomare.com/productos' }],
+        ...(waLink ? [[{ text: '💬 Hacer un pedido por WhatsApp', url: waLink }]] : []),
+      ]
     )
+    return NextResponse.json({ ok: true })
+  }
+
+  if (isPrices) {
+    await sendMessage(
+      token, chatId,
+      `Acá tenés nuestra lista de precios actualizada con el stock de hoy 👇`,
+      [
+        [{ text: '💰 Ver lista de precios', url: 'https://app.vittomare.com/lista-precios' }],
+        [{ text: '🐟 Ver catálogo completo', url: 'https://vittomare.com/productos' }],
+        ...(waLink ? [[{ text: '💬 Consultar por WhatsApp', url: waLink }]] : []),
+      ]
+    )
+    await saveInteraction(fromName, fromUsername, text)
+    return NextResponse.json({ ok: true })
+  }
+
+  if (isOrder) {
+    await sendMessage(
+      token, chatId,
+      `¡Perfecto! Para hacer tu pedido lo más rápido es por WhatsApp 💬\n\nMandanos un mensaje con:\n• Producto y cantidad\n• Dirección de entrega\n• Horario preferido\n\n¡Y listo! 🚀`,
+      waLink ? [[{ text: '💬 Hacer pedido por WhatsApp', url: waLink }]] : undefined
+    )
+    await saveInteraction(fromName, fromUsername, text)
     return NextResponse.json({ ok: true })
   }
 
   // Guardar interacción en el inbox
   await saveInteraction(fromName, fromUsername, text)
 
-  // Responder con IA
+  // Responder con IA para cualquier otra consulta
   await respondWithAI(token, chatId, text)
 
   return NextResponse.json({ ok: true })
