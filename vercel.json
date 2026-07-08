@@ -8,6 +8,7 @@
     { "path": "/api/cron/ventas",              "schedule": "0 12 * * *" },
     { "path": "/api/cron/followup",            "schedule": "0 9 * * *" },
     { "path": "/api/cron/setup-webhooks",      "schedule": "0 9 * * *" },
-    { "path": "/api/cron/fidelizacion",        "schedule": "0 3 * * *" }
+    { "path": "/api/cron/fidelizacion",        "schedule": "0 3 * * *" },
+    { "path": "/api/cron/prospecting",         "schedule": "0 7 * * *" }
   ]
 }
