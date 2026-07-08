@@ -53,9 +53,19 @@ OBJETIVO ACTUAL: Conseguir los primeros 20 clientes B2B recurrentes y 100 client
 MÉTRICA CLAVE: Pedidos recurrentes semanales (B2B) y pedidos mensuales (B2C).
 `
 
+async function getGroqKey(db: ReturnType<typeof getDb>): Promise<string> {
+  const { data } = await db.from('settings').select('key, value').in('key', ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4'])
+  for (const k of ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4']) {
+    const row = (data || []).find(r => r.key === k)
+    if (row?.value) return row.value
+  }
+  return process.env.GROQ_API_KEY || ''
+}
+
 export async function GET() {
   const db = getDb()
-  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
+  const apiKey = await getGroqKey(db)
+  const groq = new Groq({ apiKey })
 
   // Recolectar datos del sistema en paralelo
   const today = new Date().toISOString().split('T')[0]
