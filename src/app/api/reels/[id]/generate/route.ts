@@ -16,8 +16,8 @@ async function getGroqKey(): Promise<string> {
   return data?.value || process.env.GROQ_API_KEY || ''
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   let job
 
   try {

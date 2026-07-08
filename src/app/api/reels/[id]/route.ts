@@ -3,28 +3,31 @@ import { getReel, updateReel, deleteReel } from '@/lib/reels/db'
 
 export const runtime = 'nodejs'
 
-export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
-    const reel = await getReel(params.id)
+    const reel = await getReel(id)
     return NextResponse.json(reel)
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 404 })
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
     const body = await req.json()
-    const reel = await updateReel(params.id, body)
+    const reel = await updateReel(id, body)
     return NextResponse.json(reel)
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
-    await deleteReel(params.id)
+    await deleteReel(id)
     return NextResponse.json({ ok: true })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })
