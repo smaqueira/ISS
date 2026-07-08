@@ -8,6 +8,7 @@ const GROUPS = [
     label: 'Diario',
     items: [
       { href: '/admin',            label: 'Hoy',         icon: '⚡' },
+      { href: '/admin/asistente',  label: 'Asistente',   icon: '🧠' },
       { href: '/admin/inbox',      label: 'Inbox',       icon: '📥' },
       { href: '/admin/vender',     label: 'Vender',      icon: '💰' },
       { href: '/admin/orders',     label: 'Pedidos',     icon: '📦' },
