@@ -12,8 +12,13 @@ async function getGroqKey(): Promise<string> {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
-  const { data } = await db.from('settings').select('value').eq('key', 'GROQ_API_KEY').single()
-  return data?.value || process.env.GROQ_API_KEY || ''
+  const { data } = await db.from('settings').select('key, value').in('key', ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4'])
+  const keys = ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4']
+  for (const k of keys) {
+    const row = (data || []).find(r => r.key === k)
+    if (row?.value) return row.value
+  }
+  return process.env.GROQ_API_KEY || ''
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
