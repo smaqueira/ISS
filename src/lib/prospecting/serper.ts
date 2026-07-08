@@ -30,7 +30,7 @@ export async function searchPlaces(query: string, city: string): Promise<PlaceRe
         body: JSON.stringify({ q: `${query} ${city}`, gl: 'ar', hl: 'es', num: 20 }),
       })
 
-      if (!res.ok) continue
+      if (!res.ok || res.status === 429 || res.status === 403) continue
 
       const data = await res.json()
       if (!data.places) return []
