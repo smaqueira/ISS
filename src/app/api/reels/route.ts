@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
     })
     return NextResponse.json(reels)
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    const msg = err instanceof Error ? err.message : JSON.stringify(err)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
 
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
     })
     return NextResponse.json(reel, { status: 201 })
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 })
+    const msg = err instanceof Error ? err.message : JSON.stringify(err)
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
