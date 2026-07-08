@@ -36,7 +36,7 @@ export async function GET() {
   const errors: string[] = []
 
   try {
-    const places = await searchPlaces(rubro, 'Buenos Aires')
+    const places = await searchPlaces(rubro, 'Buenos Aires Argentina CABA GBA')
 
     if (!places.length) {
       return NextResponse.json({ ok: true, rubro, imported: 0, message: 'Sin resultados de búsqueda' })
@@ -50,6 +50,14 @@ export async function GET() {
     for (const place of places) {
       // Solo importar si tiene teléfono o sitio web (para poder contactar)
       if (!place.phone && !place.website) {
+        skipped++
+        continue
+      }
+
+      // Filtrar estrictamente por Buenos Aires Argentina
+      const addr = (place.address || '').toLowerCase()
+      const esBuenosAires = addr.includes('buenos aires') || addr.includes('caba') || addr.includes('capital federal') || addr.includes('b.a.')
+      if (!esBuenosAires) {
         skipped++
         continue
       }
