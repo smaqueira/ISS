@@ -54,7 +54,7 @@ export default async function AdminPage() {
         <MetricCard label="Ventas del mes" value={formatARS(revenue)} icon="💰" color="var(--accent)"
           sub={revenueChange != null ? `${revenueChange >= 0 ? '+' : ''}${revenueChange}% vs mes anterior` : `${pending} pedidos activos`} />
         <MetricCard label="Clientes activos" value={cl.filter(c => c.status === 'cliente').length} icon="✅" color="#22c55e"
-          sub={`B2B: ${b2bClients} · B2C: ${b2cClients}`} />
+          sub={`Empresas: ${b2bClients} · Particulares: ${b2cClients}`} />
         <MetricCard label="Leads nuevos (7d)" value={newThisWeek} icon="🎯" color="#3b82f6"
           sub={`${cl.filter(c => c.status === 'nuevo').length} sin contactar`} />
         <MetricCard label="Tasa de conversión" value={`${convRate}%`} icon="📈" color="#a855f7"

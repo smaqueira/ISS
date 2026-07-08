@@ -69,7 +69,7 @@ export default function MejorasPage() {
           {/* KPIs principales */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 10, marginBottom: 16 }}>
             {[
-              { label: 'Total clientes', value: m.totalClients, color: 'var(--accent)', sub: `${m.b2b} B2B · ${m.b2c} B2C` },
+              { label: 'Total clientes', value: m.totalClients, color: 'var(--accent)', sub: `${m.b2b} Empresas · ${m.b2c} Particulares` },
               { label: 'Nuevos esta semana', value: m.clientsThisWeek, color: '#8b5cf6', sub: 'últimos 7 días' },
               { label: 'Sin contactar', value: m.nuevos, color: '#f59e0b', sub: 'oportunidad inmediata' },
               { label: 'Contactados', value: m.contactados, color: '#22c55e', sub: `${m.contactRate}% del total` },

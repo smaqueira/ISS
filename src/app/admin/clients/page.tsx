@@ -62,8 +62,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         <Link href="/admin/clients?status=interesado" style={chipStyle(activeFilter === 'interesado')}>Interesados</Link>
         <Link href="/admin/clients?status=cliente" style={chipStyle(activeFilter === 'cliente')}>Clientes</Link>
         <Link href="/admin/clients?status=inactivo" style={chipStyle(activeFilter === 'inactivo')}>Inactivos</Link>
-        <Link href="/admin/clients?type=b2b" style={chipStyle(activeFilter === 'b2b')}>B2B</Link>
-        <Link href="/admin/clients?type=b2c" style={chipStyle(activeFilter === 'b2c')}>B2C</Link>
+        <Link href="/admin/clients?type=b2b" style={chipStyle(activeFilter === 'b2b')}>Empresas</Link>
+        <Link href="/admin/clients?type=b2c" style={chipStyle(activeFilter === 'b2c')}>Particulares</Link>
       </div>
 
       {/* Buscador */}
