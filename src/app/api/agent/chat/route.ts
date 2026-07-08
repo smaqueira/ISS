@@ -99,7 +99,7 @@ TOP LEADS POR SCORE:
 ${topLeadsText || '- Sin datos'}
 
 PEDIDOS (30 días):
-- Pendientes/confirmados: ${(pendingOrders as { count: number | null }).count || 0}
+- Pendientes/confirmados: ${(pendingOrders as unknown as { count: number | null }).count || 0}
 - Últimos: ${(recentOrders || []).map(o => `${o.status} $${o.total || '?'}`).join(', ') || 'ninguno'}
 `
 
