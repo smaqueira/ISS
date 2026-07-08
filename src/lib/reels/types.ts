@@ -23,6 +23,7 @@ export interface ReelScript {
   musica_sugerida: string
   subtitulos: string[]
   prompt_video: string     // prompt para IA generadora de video
+  fliki_script?: string   // script formateado para Fliki.ai
 }
 
 export interface Reel {

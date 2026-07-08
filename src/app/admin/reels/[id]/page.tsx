@@ -224,7 +224,7 @@ export default function ReelEditorPage() {
                 </div>
               </div>
 
-              <div>
+              <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: '0.72rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Prompt para video IA (Kling / Pika / Runway)</div>
                 <div style={{
                   background: '#3b82f610', border: '1px solid #3b82f630', borderRadius: 8,
@@ -233,6 +233,26 @@ export default function ReelEditorPage() {
                   {reel.script.prompt_video}
                 </div>
               </div>
+
+              {reel.script.fliki_script && (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Script para Fliki.ai</div>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(reel.script!.fliki_script!); alert('¡Copiado! Pegalo en Fliki.') }}
+                      style={{ fontSize: '0.7rem', padding: '3px 10px', borderRadius: 6, border: '1px solid #8b5cf6', background: '#8b5cf610', color: '#8b5cf6', cursor: 'pointer' }}
+                    >
+                      📋 Copiar para Fliki
+                    </button>
+                  </div>
+                  <div style={{
+                    background: '#8b5cf610', border: '1px solid #8b5cf630', borderRadius: 8,
+                    padding: '10px 14px', fontSize: '0.78rem', fontFamily: 'monospace', lineHeight: 1.9, whiteSpace: 'pre-wrap',
+                  }}>
+                    {reel.script.fliki_script}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

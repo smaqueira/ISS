@@ -55,10 +55,22 @@ Respondé ÚNICAMENTE con un JSON válido con esta estructura exacta (sin markdo
   "voz_sugerida": "descripción del tono/estilo de voz",
   "musica_sugerida": "género y energía de la música",
   "subtitulos": ["línea 1", "línea 2", "..."],
-  "prompt_video": "prompt en inglés para herramientas de generación de video IA (Kling, Pika, Runway)"
+  "prompt_video": "prompt en inglés para herramientas de generación de video IA (Kling, Pika, Runway)",
+  "fliki_script": "script formateado para Fliki.ai usando tags [Scene] y [Visual: ...] por cada escena, en español"
 }
 
-Las escenas deben sumar exactamente ${duracion} segundos. Generá entre 3 y 6 escenas.`
+Las escenas deben sumar exactamente ${duracion} segundos. Generá entre 3 y 6 escenas.
+
+Para fliki_script usá este formato exacto:
+[Scene]
+[Visual: descripción en inglés de lo que se ve]
+Texto narrado de la escena en español.
+
+[Scene]
+[Visual: descripción en inglés]
+Texto narrado en español.
+
+(una sección [Scene] por cada escena)`
 
   try {
     const completion = await groq.chat.completions.create({
