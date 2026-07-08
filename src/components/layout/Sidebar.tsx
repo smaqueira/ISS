@@ -38,6 +38,7 @@ const GROUPS = [
       { href: '/admin/grupos',      label: 'Grupos B2C',  icon: '👥' },
       { href: '/admin/comunidades', label: 'Comunidades', icon: '🌐' },
       { href: '/admin/telegram',    label: 'Telegram',    icon: '✈️' },
+      { href: '/admin/sistema',      label: 'Sistema',        icon: '⚙️' },
       { href: '/admin/mejoras',      label: 'Agente Mejoras', icon: '🔮' },
       { href: '/admin/ayuda',       label: 'Ayuda',       icon: '📖' },
       { href: '/admin/settings',    label: 'Configuración',icon: '⚙️' },
