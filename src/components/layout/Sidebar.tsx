@@ -21,6 +21,7 @@ const GROUPS = [
     items: [
       { href: '/admin/agente',      label: 'Agente IA',     icon: '🤖' },
       { href: '/admin/broadcast',   label: 'Broadcast',     icon: '📣' },
+      { href: '/admin/reels',       label: 'Reels IA',      icon: '🎬' },
       { href: '/admin/calendario',  label: 'Calendario',    icon: '📅' },
       { href: '/admin/marketing',   label: 'Marketing IA',  icon: '✨' },
       { href: '/admin/images',      label: 'Imágenes IA',   icon: '🎨' },
