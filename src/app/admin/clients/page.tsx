@@ -4,7 +4,7 @@ import ClientsAccordion from '@/components/clients/ClientsAccordion'
 import Link from 'next/link'
 import DeleteAllButton from '@/components/clients/DeleteAllButton'
 
-export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ type?: string; status?: string; origen?: string; q?: string; vista?: string }> }) {
+export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ type?: string; status?: string; origen?: string; q?: string; vista?: string; tag?: string }> }) {
   const filters = await searchParams
   const db = await createClient()
 
@@ -20,6 +20,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     }
     if (filters.origen === 'agente') return !!c.score && c.status === 'nuevo'
     if (filters.origen === 'manual') return !c.score || c.score === 0
+    if (filters.tag) return (c.tags || []).includes(filters.tag)
     return true
   })
 
@@ -29,7 +30,9 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const hoy = new Date().toISOString().split('T')[0]
   const hoyCount = (allClients || []).filter(c => c.created_at?.startsWith(hoy)).length
 
-  const activeFilter = filters.vista === 'zona' ? 'zona' : filters.vista === 'rubro' ? 'rubro' : (filters.origen || filters.type || filters.status || 'todos')
+  const activeFilter = filters.vista === 'zona' ? 'zona' : filters.vista === 'rubro' ? 'rubro' : (filters.tag || filters.origen || filters.type || filters.status || 'todos')
+  const listoCount = (allClients || []).filter(c => (c.tags || []).includes('listo')).length
+  const sinDatosCount = (allClients || []).filter(c => (c.tags || []).includes('sin_datos')).length
 
   function groupBy(key: 'city' | 'rubro', fallback: string) {
     return Object.entries(
@@ -81,6 +84,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         <Link href="/admin/clients?status=inactivo" style={chipStyle(activeFilter === 'inactivo')}>Inactivos</Link>
         <Link href="/admin/clients?type=b2b" style={chipStyle(activeFilter === 'b2b')}>Empresas</Link>
         <Link href="/admin/clients?type=b2c" style={chipStyle(activeFilter === 'b2c')}>Particulares</Link>
+        <Link href="/admin/clients?tag=listo" style={chipStyle(activeFilter === 'listo')}>✅ Listos ({listoCount})</Link>
+        <Link href="/admin/clients?tag=sin_datos" style={chipStyle(activeFilter === 'sin_datos')}>⚠️ Sin datos ({sinDatosCount})</Link>
         <Link href="/admin/clients?vista=zona" style={chipStyle(activeFilter === 'zona')}>📍 Por zona</Link>
         <Link href="/admin/clients?vista=rubro" style={chipStyle(activeFilter === 'rubro')}>🏷️ Por rubro</Link>
       </div>

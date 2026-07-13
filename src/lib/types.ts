@@ -18,6 +18,7 @@ export interface Client {
   score: number
   channel?: Channel
   notes?: string
+  tags?: string[]
   last_contact?: string
   next_followup?: string
   created_at: string
