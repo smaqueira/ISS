@@ -84,7 +84,7 @@ export default function AsistenteWidget() {
           }}>
             <span style={{ fontSize: '1.2rem' }}>🧠</span>
             <div>
-              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Asistente Vitto Mare</div>
+              <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Asistente IA</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Datos en tiempo real</div>
             </div>
             {messages.length > 0 && (

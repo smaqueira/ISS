@@ -10,7 +10,7 @@ const SUGERENCIAS = [
   '¿Qué hago hoy?',
   '¿Qué clientes tengo que contactar?',
   '¿Cómo van las ventas esta semana?',
-  'Redactame un mensaje de seguimiento para un restaurante',
+  'Redactame un mensaje de seguimiento para un lead',
   '¿Qué leads tienen más chances de cerrar?',
   'Dame ideas para conseguir clientes B2B esta semana',
 ]
@@ -53,7 +53,7 @@ export default function AsistentePage() {
 
       {/* Header */}
       <div style={{ marginBottom: 16, flexShrink: 0 }}>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 4 }}>🧠 Asistente Vitto Mare</h1>
+        <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 4 }}>🧠 Asistente IA</h1>
         <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
           Tu asistente personal. Conoce el negocio, tus clientes y el sistema en tiempo real.
         </p>
@@ -71,7 +71,7 @@ export default function AsistentePage() {
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>🧠</div>
             <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 6 }}>¡Hola Sebastian!</div>
             <div style={{ color: 'var(--muted)', fontSize: '0.88rem', marginBottom: 24 }}>
-              Soy tu asistente de Vitto Mare. Conozco tus clientes, pedidos y el negocio.<br />
+              Soy tu asistente. Conozco tus clientes, pedidos y el negocio en tiempo real.<br />
               Preguntame lo que necesites.
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
@@ -157,7 +157,7 @@ export default function AsistentePage() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
-          placeholder="Preguntame algo sobre Vitto Mare..."
+          placeholder="Preguntame algo sobre el negocio..."
           style={{
             flex: 1, padding: '10px 14px', borderRadius: 24,
             border: '1px solid var(--border)', background: 'var(--surface)',

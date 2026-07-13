@@ -1,22 +1,12 @@
 import Groq from 'groq-sdk'
 import type { GenerateReelInput, ReelScript } from './types'
 
-const VITTO_CONTEXT = `
-Sos un experto en marketing de contenido para redes sociales, especializado en negocios de gastronomía y alimentos premium en Argentina.
-Trabajás para Vitto Mare, una pescadería premium con delivery en Buenos Aires (CABA y GBA).
-
-SOBRE VITTO MARE:
-- Productos: langostinos, salmón, mariscos, pescados del día, productos para sushi
-- Propuesta de valor: calidad de restaurante, selección diaria, cadena de frío garantizada, entrega en el día
-- Tono: premium pero cercano, confiable, fresco, argentino
-- Competencia se diferencia por: calidad superior, sistema propio, atención personalizada
-- Segmento: foodie urbano CABA/GBA + restaurantes/sushi bars
-
+const REELS_INSTRUCTIONS = `
 PARA REELS:
 - Gancho de 3 segundos: debe capturar atención inmediatamente con una pregunta, dato impactante o afirmación audaz
 - Duración típica: 15-30 segundos para máximo engagement
 - Hashtags en español + inglés para mayor alcance
-- CTA siempre apuntando a WhatsApp o vittomare.com
+- CTA siempre apuntando a WhatsApp o la web del negocio
 - Música: sugerir géneros populares en TikTok/Reels (no usar nombres con copyright)
 `
 
@@ -26,8 +16,11 @@ export interface AIScriptResult {
   error?: string
 }
 
-export async function generateReelScript(input: GenerateReelInput, apiKey: string): Promise<AIScriptResult> {
+export async function generateReelScript(input: GenerateReelInput, apiKey: string, businessContext?: string): Promise<AIScriptResult> {
   const groq = new Groq({ apiKey })
+  const systemContext = businessContext
+    ? `Sos un experto en marketing de contenido para redes sociales.\n\nSobre el negocio:\n${businessContext}\n${REELS_INSTRUCTIONS}`
+    : `Sos un experto en marketing de contenido para redes sociales.\n${REELS_INSTRUCTIONS}`
 
   const duracion = input.duracion_objetivo || 30
 
@@ -76,7 +69,7 @@ Texto narrado en español.
     const completion = await groq.chat.completions.create({
       model: 'llama-3.3-70b-versatile',
       messages: [
-        { role: 'system', content: VITTO_CONTEXT },
+        { role: 'system', content: systemContext },
         { role: 'user', content: prompt },
       ],
       max_tokens: 2000,

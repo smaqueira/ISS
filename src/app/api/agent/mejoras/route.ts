@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Groq from 'groq-sdk'
+import { getBusinessConfig } from '@/lib/business-context'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -11,47 +12,6 @@ function getDb() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
 }
-
-const BUSINESS_CONTEXT = `
-NEGOCIO: Vitto Mare
-RUBRO: Pescadería premium con delivery en Buenos Aires (CABA y GBA)
-PROPUESTA DE VALOR: Pescado y mariscos de calidad restaurante, seleccionados a diario, con cadena de frío garantizada y entrega en el día.
-DUEÑO/OPERADOR: Sebastian Maqueira — enfocado en desarrollo del sistema, la operación la hace otra persona.
-ETAPA: Lanzamiento / primeros clientes. Sistema recién construido.
-
-SEGMENTOS:
-- B2B (restaurantes, hoteles, catering, sushi bars, pescaderías minoristas) → ticket alto, recurrencia semanal
-- B2C (familias, foodies, amantes del sushi) → ticket medio, recurrencia quincenal/mensual
-
-PRODUCTOS TÍPICOS: langostinos, salmón, mariscos, pescados del día, productos para sushi
-PRECIO PROMEDIO ESTIMADO: $5.000-$50.000 ARS por pedido (varía según producto y cantidad)
-ZONA DE ENTREGA: CABA y GBA
-
-CANALES DE VENTA ACTUALES:
-- vittomare.com → catálogo + formulario de pedido en /pedir
-- @vittomare_bot (Telegram) → bot de atención al cliente con IA
-- @ventas_vitto_bot (Telegram) → bot interno para el dueño (gestión de leads, tareas)
-- Email hola@vittomare.com → captura automática al inbox
-- WhatsApp → solo links (sin API aún)
-- Instagram → pendiente cuenta profesional
-
-SISTEMA ISS (app.vittomare.com):
-- Inbox unificado de todos los canales
-- CRM de clientes con score y fidelización automática
-- Generación de propuestas y cotizaciones con IA
-- Catálogo conectado a BlueMarket (sistema de inventario)
-- Lista de precios compartible (link, PDF, imagen)
-- Broadcast por Telegram
-- Agente prospector de B2B
-- Crons diarios (mañana/mediodía/tarde) con tareas de ventas
-- Seguimiento automático de clientes sin contacto
-
-COMPETENCIA: Pescaderías tradicionales sin sistema digital, apps de delivery genéricas (Rappi, PedidosYa) con márgenes muy bajos.
-VENTAJA COMPETITIVA: Calidad premium + sistema digital propio + atención personalizada + cadena de frío garantizada.
-
-OBJETIVO ACTUAL: Conseguir los primeros 20 clientes B2B recurrentes y 100 clientes B2C activos.
-MÉTRICA CLAVE: Pedidos recurrentes semanales (B2B) y pedidos mensuales (B2C).
-`
 
 async function getGroqKey(db: ReturnType<typeof getDb>): Promise<string> {
   const { data } = await db.from('settings').select('key, value').in('key', ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4'])
@@ -64,7 +24,7 @@ async function getGroqKey(db: ReturnType<typeof getDb>): Promise<string> {
 
 export async function GET() {
   const db = getDb()
-  const apiKey = await getGroqKey(db)
+  const [apiKey, biz] = await Promise.all([getGroqKey(db), getBusinessConfig(db)])
   const groq = new Groq({ apiKey })
 
   // Recolectar datos del sistema en paralelo
@@ -190,16 +150,17 @@ ${previousAnalysis?.value ? `Último análisis: ${previousAnalysis.value.slice(0
     messages: [
       {
         role: 'system',
-        content: `Sos un consultor senior de negocios y ventas especializado en pymes de alimentación premium en Argentina.
-Conocés en profundidad el negocio de Vitto Mare y su sistema de ventas ISS.
+        content: `Sos un consultor senior de negocios y ventas para pymes en Argentina.
+Conocés en profundidad el negocio de ${biz.name} y su sistema de ventas ISS.
 
-${BUSINESS_CONTEXT}
+CONTEXTO DEL NEGOCIO:
+${biz.description}
 
 TU ROL:
 - Analizás los datos reales del sistema cada vez que te consultan
 - Identificás patrones, cuellos de botella y oportunidades concretas
-- Proponés acciones específicas para el negocio de pescados premium en CABA/GBA
-- Priorizás por impacto en ventas reales (pedidos B2B recurrentes y B2C activos)
+- Proponés acciones específicas para el negocio según su contexto
+- Priorizás por impacto en ventas reales (clientes activos y recurrentes)
 - Sos directo, concreto y conocés las limitaciones del free tier
 
 FORMATO DE RESPUESTA:
@@ -208,12 +169,12 @@ Usá exactamente estas 3 secciones:
 🟡 ALTO IMPACTO (próximas 2 semanas, mejora significativa)
 🟢 OPTIMIZACIONES (cuando haya tiempo)
 
-Para cada ítem: nombre corto → explicación de 1-2 líneas enfocada en el impacto en ventas/clientes de Vitto Mare específicamente.
-Máximo 4 ítems por sección. Sé específico sobre Vitto Mare, no genérico.`,
+Para cada ítem: nombre corto → explicación de 1-2 líneas enfocada en el impacto concreto para este negocio.
+Máximo 4 ítems por sección. Sé específico, no genérico.`,
       },
       {
         role: 'user',
-        content: `Analizá este estado actual y dame las recomendaciones más impactantes para Vitto Mare hoy:\n\n${systemState}`,
+        content: `Analizá este estado actual y dame las recomendaciones más impactantes para ${biz.name} hoy:\n\n${systemState}`,
       },
     ],
     max_tokens: 1800,

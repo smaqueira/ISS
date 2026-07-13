@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import ClientRow from '@/components/ui/ClientRow'
+import ClientsAccordion from '@/components/clients/ClientsAccordion'
 import Link from 'next/link'
 import DeleteAllButton from '@/components/clients/DeleteAllButton'
 
-export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ type?: string; status?: string; origen?: string; q?: string }> }) {
+export default async function ClientsPage({ searchParams }: { searchParams: Promise<{ type?: string; status?: string; origen?: string; q?: string; vista?: string }> }) {
   const filters = await searchParams
   const db = await createClient()
 
@@ -28,7 +29,19 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const hoy = new Date().toISOString().split('T')[0]
   const hoyCount = (allClients || []).filter(c => c.created_at?.startsWith(hoy)).length
 
-  const activeFilter = filters.origen || filters.type || filters.status || 'todos'
+  const activeFilter = filters.vista === 'zona' ? 'zona' : (filters.origen || filters.type || filters.status || 'todos')
+
+  // Agrupado por zona para la vista acordeón
+  const grouped = Object.entries(
+    clients.reduce<Record<string, typeof clients>>((acc, c) => {
+      const zona = c.city?.trim() || 'Sin zona'
+      if (!acc[zona]) acc[zona] = []
+      acc[zona].push(c)
+      return acc
+    }, {})
+  )
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([zona, cls]) => ({ zona, clients: cls }))
 
   const chipStyle = (active: boolean) => ({
     display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -64,6 +77,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         <Link href="/admin/clients?status=inactivo" style={chipStyle(activeFilter === 'inactivo')}>Inactivos</Link>
         <Link href="/admin/clients?type=b2b" style={chipStyle(activeFilter === 'b2b')}>Empresas</Link>
         <Link href="/admin/clients?type=b2c" style={chipStyle(activeFilter === 'b2c')}>Particulares</Link>
+        <Link href="/admin/clients?vista=zona" style={chipStyle(activeFilter === 'zona')}>📍 Por zona</Link>
       </div>
 
       {/* Buscador */}
@@ -81,7 +95,10 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
             }
           </div>
         )}
-        {clients.map(c => <ClientRow key={c.id} client={c} />)}
+        {filters.vista === 'zona'
+          ? <ClientsAccordion grouped={grouped} />
+          : clients.map(c => <ClientRow key={c.id} client={c} />)
+        }
       </div>
     </div>
   )

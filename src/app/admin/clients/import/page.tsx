@@ -19,21 +19,42 @@ export default function ImportPage() {
   const [done, setDone] = useState<{ imported: number; skipped: number } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
+  function splitCSVLine(line: string): string[] {
+    const result: string[] = []
+    let current = ''
+    let inQuotes = false
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i]
+      if (ch === '"') {
+        inQuotes = !inQuotes
+      } else if ((ch === ',' || ch === ';') && !inQuotes) {
+        result.push(current.trim())
+        current = ''
+      } else {
+        current += ch
+      }
+    }
+    result.push(current.trim())
+    return result
+  }
+
   function parseCSV(text: string): PreviewRow[] {
     const lines = text.trim().split('\n').filter(l => l.trim())
     if (lines.length < 2) return []
 
-    const header = lines[0].split(/[,;]/).map(h => h.trim().toLowerCase().replace(/[^a-z]/g, ''))
+    const header = splitCSVLine(lines[0]).map(h => h.toLowerCase().replace(/[^a-z]/g, ''))
 
     const colMap: Record<string, number> = {}
     const aliases: Record<string, string[]> = {
-      name:  ['nombre', 'name', 'razon', 'empresa', 'negocio', 'cliente'],
-      phone: ['telefono', 'phone', 'cel', 'celular', 'whatsapp', 'movil', 'tel'],
-      email: ['email', 'mail', 'correo'],
-      city:  ['ciudad', 'city', 'zona', 'barrio', 'localidad'],
-      type:  ['tipo', 'type', 'segmento'],
-      rubro: ['rubro', 'categoria', 'categoria', 'categoria', 'giro'],
-      notes: ['notas', 'notes', 'observaciones', 'comentarios'],
+      name:      ['nombre', 'name', 'razon', 'empresa', 'negocio', 'cliente'],
+      phone:     ['telefono', 'phone', 'cel', 'celular', 'movil', 'tel'],
+      whatsapp:  ['whatsapp'],
+      email:     ['email', 'mail', 'correo'],
+      city:      ['ciudad', 'city', 'zona', 'barrio', 'localidad'],
+      type:      ['tipo', 'type', 'segmento'],
+      rubro:     ['rubro', 'categoria', 'giro'],
+      notes:     ['notas', 'notes', 'observaciones', 'comentarios'],
+      web:       ['instagramweb', 'instagram', 'web', 'sitio'],
     }
     for (const [key, aliasList] of Object.entries(aliases)) {
       for (const alias of aliasList) {
@@ -43,20 +64,23 @@ export default function ImportPage() {
     }
 
     return lines.slice(1).map(line => {
-      const cols = line.split(/[,;]/).map(c => c.trim().replace(/^["']|["']$/g, ''))
+      const cols = splitCSVLine(line)
       const name = colMap.name !== undefined ? cols[colMap.name] : cols[0]
-      const phone = colMap.phone !== undefined ? cols[colMap.phone] : undefined
+      const phone = (colMap.phone !== undefined ? cols[colMap.phone] : undefined)
+                 || (colMap.whatsapp !== undefined ? cols[colMap.whatsapp] : undefined)
       const email = colMap.email !== undefined ? cols[colMap.email] : undefined
       const city = colMap.city !== undefined ? cols[colMap.city] : undefined
       const typeRaw = colMap.type !== undefined ? cols[colMap.type]?.toLowerCase() : ''
       const type = typeRaw?.includes('b2b') || typeRaw?.includes('negocio') || typeRaw?.includes('empresa') ? 'b2b' : 'b2c'
       const rubro = colMap.rubro !== undefined ? cols[colMap.rubro] : undefined
-      const notes = colMap.notes !== undefined ? cols[colMap.notes] : undefined
+      const webVal = colMap.web !== undefined ? cols[colMap.web] : undefined
+      const notesBase = colMap.notes !== undefined ? cols[colMap.notes] : undefined
+      const notes = [notesBase, webVal && webVal !== 'No disponible' ? `Web: ${webVal}` : ''].filter(Boolean).join(' | ') || undefined
 
       const valid = !!name?.trim()
       const error = !valid ? 'Falta nombre' : (!phone && !email) ? 'Sin teléfono ni email' : undefined
 
-      return { name: name?.trim() || '', phone: phone?.trim(), email: email?.trim(), city: city?.trim(), type, rubro: rubro?.trim(), notes: notes?.trim(), valid: !!name?.trim(), error }
+      return { name: name?.trim() || '', phone: phone?.trim() || undefined, email: email?.trim() || undefined, city: city?.trim(), type, rubro: rubro?.trim(), notes: notes?.trim(), valid: !!name?.trim(), error }
     }).filter(r => r.name)
   }
 

@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 export async function POST(req: NextRequest) {
   const { rows } = await req.json()
-  if (!rows?.length) return NextResponse.json({ imported: 0, skipped: 0 })
+  if (!rows?.length) return NextResponse.json({ imported: 0, skipped: 0, debug: 'empty rows' })
 
-  const db = await createClient()
+  const db = createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
   const { data: existing } = await db.from('clients').select('name, phone')
   const existingNames = new Set((existing || []).map(c => c.name?.toLowerCase().trim()))
   const existingPhones = new Set((existing || []).map(c => c.phone).filter(Boolean))
@@ -29,7 +32,7 @@ export async function POST(req: NextRequest) {
       rubro: row.rubro || null,
       notes: row.notes || null,
       status: 'nuevo',
-      channel: 'importado',
+      channel: null,
       tags: [],
     })
 
@@ -37,6 +40,8 @@ export async function POST(req: NextRequest) {
       imported++
       existingNames.add(row.name?.toLowerCase().trim())
       if (row.phone) existingPhones.add(row.phone)
+    } else if (imported === 0 && skipped === 0) {
+      return NextResponse.json({ imported: 0, skipped: 0, firstError: error.message, firstRow: row.name })
     }
   }
 

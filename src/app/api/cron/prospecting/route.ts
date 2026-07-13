@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { searchPlaces } from '@/lib/prospecting/serper'
 import { classifyLead } from '@/lib/ai/classify'
 import { createClient } from '@supabase/supabase-js'
+import { getBusinessConfig } from '@/lib/business-context'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -13,30 +14,20 @@ function getDb() {
   )
 }
 
-// Rubros a prospectar rotativamente — cada día busca uno diferente
-const RUBROS_B2B = [
-  'restaurante de pescados y mariscos',
-  'sushi bar',
-  'hotel con restaurante',
-  'catering empresarial',
-  'pescadería mayorista',
-  'restoran de comida marina',
-  'delivery de comida premium',
-]
-
 export async function GET() {
   const db = getDb()
+  const biz = await getBusinessConfig(db)
 
   // Rotar el rubro según el día del mes
   const diaDelMes = new Date().getDate()
-  const rubro = RUBROS_B2B[diaDelMes % RUBROS_B2B.length]
+  const rubro = biz.rubrosProspectar[diaDelMes % biz.rubrosProspectar.length]
 
   let imported = 0
   let skipped = 0
   const errors: string[] = []
 
   try {
-    const places = await searchPlaces(rubro, 'Buenos Aires Argentina CABA GBA')
+    const places = await searchPlaces(rubro, biz.zona)
 
     if (!places.length) {
       return NextResponse.json({ ok: true, rubro, imported: 0, message: 'Sin resultados de búsqueda' })
@@ -54,10 +45,11 @@ export async function GET() {
         continue
       }
 
-      // Filtrar estrictamente por Buenos Aires Argentina
+      // Filtrar por zona configurada
       const addr = (place.address || '').toLowerCase()
-      const esBuenosAires = addr.includes('buenos aires') || addr.includes('caba') || addr.includes('capital federal') || addr.includes('b.a.')
-      if (!esBuenosAires) {
+      const zonaTokens = biz.zona.toLowerCase().split(/\s+/).filter(t => t.length > 3)
+      const esDeLaZona = zonaTokens.some(t => addr.includes(t))
+      if (!esDeLaZona) {
         skipped++
         continue
       }
@@ -119,7 +111,7 @@ export async function GET() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: chatId,
-            text: `🎯 *Prospección automática*\n\n+${imported} nuevos leads B2B agregados hoy\nRubro: _${rubro}_\n\nEntran con teléfono o web listos para contactar. Revisalos en /admin/clients`,
+            text: `🎯 *Prospección automática* — ${biz.name}\n\n+${imported} nuevos leads B2B agregados hoy\nRubro: _${rubro}_\nZona: ${biz.zona}\n\nEntran con teléfono o web listos para contactar. Revisalos en /admin/clients`,
             parse_mode: 'Markdown',
           }),
         })

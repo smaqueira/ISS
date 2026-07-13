@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Groq from 'groq-sdk'
+import { getBusinessConfig } from '@/lib/business-context'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -21,14 +22,11 @@ async function getGroqKey(db: ReturnType<typeof getDb>): Promise<string> {
   return process.env.GROQ_API_KEY || ''
 }
 
-const SYSTEM_PROMPT = `Sos el asistente personal de Sebastian Maqueira, dueño de Vitto Mare.
+function buildSystemPrompt(bizName: string, bizDescription: string): string {
+  return `Sos el asistente personal de Sebastian Maqueira, dueño de ${bizName}.
 
-SOBRE VITTO MARE:
-- Pescadería premium con delivery en Buenos Aires (CABA y GBA)
-- Productos: langostinos, salmón, mariscos, pescados del día, sushi
-- Segmentos: B2B (restaurantes, hoteles, sushi bars) y B2C (familias, foodies)
-- Canales: vittomare.com, Telegram @vittomare_bot, WhatsApp, email
-- Sistema ISS: CRM, inbox, cotizaciones, reels, prospección automática
+SOBRE EL NEGOCIO:
+${bizDescription}
 
 TU ROL:
 - Asistís a Sebastian en su día a día operativo y comercial
@@ -46,13 +44,14 @@ Si Sebastian pregunta qué hacer hoy, priorizá:
 2. Clientes fríos a reactivar
 3. Pedidos pendientes
 4. Leads con score alto sin cerrar`
+}
 
 export async function POST(req: NextRequest) {
   const { messages } = await req.json()
   if (!messages?.length) return NextResponse.json({ error: 'messages requerido' }, { status: 400 })
 
   const db = getDb()
-  const apiKey = await getGroqKey(db)
+  const [apiKey, biz] = await Promise.all([getGroqKey(db), getBusinessConfig(db)])
   if (!apiKey) return NextResponse.json({ error: 'GROQ_API_KEY no configurada' }, { status: 400 })
 
   // Contexto real del sistema
@@ -103,7 +102,7 @@ PEDIDOS (30 días):
 - Últimos: ${(recentOrders || []).map(o => `${o.status} $${o.total || '?'}`).join(', ') || 'ninguno'}
 `
 
-  const systemContent = SYSTEM_PROMPT.replace('{CONTEXT}', context)
+  const systemContent = buildSystemPrompt(biz.name, biz.description).replace('{CONTEXT}', context)
 
   const groq = new Groq({ apiKey })
   const completion = await groq.chat.completions.create({

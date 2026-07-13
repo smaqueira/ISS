@@ -2,16 +2,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getReel, updateReel, createJob, updateJob } from '@/lib/reels/db'
 import { generateReelScript, generateHashtags } from '@/lib/reels/ai'
+import { getBusinessConfig } from '@/lib/business-context'
 import type { GenerateReelInput } from '@/lib/reels/types'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-async function getGroqKey(): Promise<string> {
-  const db = createClient(
+function getDb() {
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   )
+}
+
+async function getGroqKey(db: ReturnType<typeof getDb>): Promise<string> {
   const { data } = await db.from('settings').select('key, value').in('key', ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4'])
   const keys = ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4']
   for (const k of keys) {
@@ -38,7 +42,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     // Marcar el reel como generando
     await updateReel(id, { estado: 'generando' })
 
-    const apiKey = await getGroqKey()
+    const db = getDb()
+    const [apiKey, biz] = await Promise.all([getGroqKey(db), getBusinessConfig(db)])
     if (!apiKey) {
       await updateJob(job.id, { estado: 'error', error: 'GROQ_API_KEY no configurada' })
       await updateReel(id, { estado: 'error' })
@@ -58,7 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const [scriptResult, hashtags] = await Promise.all([
-      generateReelScript(input, apiKey),
+      generateReelScript(input, apiKey, biz.description),
       generateHashtags(input.producto_nombre, input.categoria, apiKey),
     ])
 

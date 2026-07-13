@@ -4,6 +4,15 @@ import { createClient } from '@/lib/supabase/client'
 
 const GROUPS = [
   {
+    title: '🏠 Negocio (afecta toda la IA del sistema)',
+    keys: [
+      { key: 'BUSINESS_NAME', label: 'Nombre del negocio', placeholder: 'SmartDom', hint: 'Aparece en el asistente, mejoras y notificaciones' },
+      { key: 'BUSINESS_DESCRIPTION', label: 'Descripción del negocio (para la IA)', placeholder: 'Empresa de domótica, audio distribuido y casas inteligentes en Buenos Aires.\nInstalamos sistemas KNX, Control4 y Sonos en residencias premium y corporativos.\nSegmentos: B2B (desarrolladoras, constructoras) y B2C (hogares premium).', multiline: true, hint: 'Describí el negocio, productos, propuesta de valor y segmentos. Cuanto más detalle, mejor responde la IA.' },
+      { key: 'BUSINESS_RUBROS_PROSPECTAR', label: 'Rubros a prospectar (uno por línea)', placeholder: 'desarrolladora inmobiliaria\nconstructora de viviendas premium\narquitecto de interiores\nhotel boutique\nempresa de seguridad electrónica', multiline: true, hint: 'El sistema rotará entre estos rubros diariamente para buscar nuevos clientes' },
+      { key: 'BUSINESS_ZONA', label: 'Zona geográfica de búsqueda', placeholder: 'Buenos Aires Argentina', hint: 'Ciudad o región donde buscás clientes (usada en la prospección automática)' },
+    ],
+  },
+  {
     title: '🤖 Inteligencia Artificial (Groq)',
     keys: [
       { key: 'GROQ_API_KEY_1', label: 'Groq API Key 1', placeholder: 'gsk_...' },
@@ -142,16 +151,27 @@ export default function SettingsPage() {
       {GROUPS.map(group => (
         <div key={group.title} className="card" style={{ marginBottom: 16 }}>
           <div style={{ fontWeight: 700, marginBottom: 16, fontSize: '0.95rem' }}>{group.title}</div>
-          {group.keys.map(({ key, label, placeholder }) => (
+          {group.keys.map(({ key, label, placeholder, multiline, hint } : { key: string; label: string; placeholder: string; multiline?: boolean; hint?: string }) => (
             <div key={key} style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 5 }}>{label}</label>
-              <input
-                type={key.includes('KEY') || key.includes('TOKEN') ? 'password' : 'text'}
-                value={values[key] || ''}
-                onChange={e => setValues(prev => ({ ...prev, [key]: e.target.value }))}
-                placeholder={placeholder}
-                style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text)', fontSize: '0.85rem' }}
-              />
+              {multiline ? (
+                <textarea
+                  value={values[key] || ''}
+                  onChange={e => setValues(prev => ({ ...prev, [key]: e.target.value }))}
+                  placeholder={placeholder}
+                  rows={4}
+                  style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text)', fontSize: '0.85rem', resize: 'vertical', fontFamily: 'inherit' }}
+                />
+              ) : (
+                <input
+                  type={key.includes('KEY') || key.includes('TOKEN') ? 'password' : 'text'}
+                  value={values[key] || ''}
+                  onChange={e => setValues(prev => ({ ...prev, [key]: e.target.value }))}
+                  placeholder={placeholder}
+                  style={{ width: '100%', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '9px 12px', color: 'var(--text)', fontSize: '0.85rem' }}
+                />
+              )}
+              {hint && <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 4 }}>{hint}</div>}
             </div>
           ))}
         </div>
