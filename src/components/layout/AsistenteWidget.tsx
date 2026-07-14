@@ -40,9 +40,13 @@ export default function AsistenteWidget() {
         body: JSON.stringify({ messages: newMessages }),
       })
       const data = await res.json()
-      setMessages(m => [...m, { role: 'assistant', content: data.reply || 'Sin respuesta.' }])
-    } catch {
-      setMessages(m => [...m, { role: 'assistant', content: 'Error al conectar.' }])
+      if (!res.ok) {
+        setMessages(m => [...m, { role: 'assistant', content: `❌ ${data.error || `Error ${res.status}`}` }])
+      } else {
+        setMessages(m => [...m, { role: 'assistant', content: data.reply || 'Sin respuesta.' }])
+      }
+    } catch (e) {
+      setMessages(m => [...m, { role: 'assistant', content: `❌ Error al conectar: ${e}` }])
     }
     setLoading(false)
   }
