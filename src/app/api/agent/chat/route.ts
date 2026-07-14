@@ -107,7 +107,7 @@ PEDIDOS (30 días):
 
   const groq = new Groq({ apiKey })
   const completion = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
+    model: 'llama3-70b-8192',
     messages: [
       { role: 'system', content: systemContent },
       ...messages,
