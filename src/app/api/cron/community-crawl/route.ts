@@ -157,8 +157,10 @@ async function crawl() {
   }
 
   // 4. Re-verificar los 8 más viejos para detectar caídos
+  // Excluye gruposwsp (son redirects, no links directos de WA/TG/DC)
   const { data: stale } = await db.from('communities')
     .select('id, link').eq('status', 'activo')
+    .not('link', 'ilike', '%gruposwsp%')
     .order('last_checked', { ascending: true }).limit(8)
   let caidos = 0
   for (const s of stale || []) {
