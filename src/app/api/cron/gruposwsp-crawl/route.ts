@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getSerperKeys, searchSerper } from '@/lib/link-hunt'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-// Términos de búsqueda relevantes para Vitto Mare (gastronomía, ventas, negocios)
 const TERMINOS = [
   'ventas', 'negocios', 'emprendedores', 'gastronomia', 'delivery',
   'compras', 'mayorista', 'distribuidores', 'restaurantes', 'almacen',
@@ -12,141 +12,78 @@ const TERMINOS = [
   'foodie', 'cocina', 'catering', 'fiambres', 'gourmet',
 ]
 
-// Categorías del sitio con rutas conocidas
-const CATEGORIAS_URL = [
-  'compra-y-venta',
-  'emprendedores-y-negocios',
-  'gastronomia',
-  'ventas',
-]
-
-interface GrupoExtraido {
-  nombre: string
-  slug: string
-  url_interna: string
-  categoria_sitio: string
-  publico: boolean
-  termino: string
-}
-
 function slugToNombre(slug: string): string {
-  return slug
-    .split('-')
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ')
+  return slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 
-function extraerGrupos(html: string, termino: string): GrupoExtraido[] {
-  const grupos: GrupoExtraido[] = []
-  const vistos = new Set<string>()
-
-  // Extraer todos los /grupo/ID-slug del HTML — funciona con cualquier estructura
-  const regex = /\/grupo\/(\d+)-([a-z0-9\-]+)/g
-  let match
-  while ((match = regex.exec(html)) !== null) {
-    const url_interna = `/grupo/${match[1]}-${match[2]}`
-    if (vistos.has(url_interna)) continue
-    vistos.add(url_interna)
-
-    // Buscar el nombre real cerca del link en el HTML (ventana de 300 chars)
-    const pos = match.index
-    const ventana = html.substring(pos, pos + 400)
-    // Intentar extraer texto entre tags después del href
-    const textoMatch = ventana.match(/>([^<]{3,80})</)
-    const nombre = textoMatch
-      ? textoMatch[1].replace(/[^\w\sÀ-ɏ🇦🇷🤝💬🔒🌐]/g, '').trim()
-      : slugToNombre(match[2])
-
-    if (!nombre || nombre.length < 3) continue
-
-    grupos.push({
-      nombre: nombre || slugToNombre(match[2]),
-      slug: match[2],
-      url_interna,
-      categoria_sitio: termino,
-      publico: !ventana.includes('🔒') && !ventana.includes('Privado'),
-      termino,
-    })
-  }
-
-  return grupos
-}
-
-async function fetchGrupos(url: string, termino: string): Promise<GrupoExtraido[]> {
-  try {
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'es-AR,es;q=0.9',
-      },
-      signal: AbortSignal.timeout(10000),
-    })
-    if (!res.ok) return []
-    const html = await res.text()
-
-    // Verificar rate limit
-    if (html.includes("session limit") || html.includes("Too Many Requests")) {
-      console.warn(`Rate limit en ${url}`)
-      return []
-    }
-
-    return extraerGrupos(html, termino)
-  } catch (e) {
-    console.error(`Error fetching ${url}:`, e)
-    return []
-  }
+// Extrae /grupo/ID-slug de una URL o snippet de Google
+function extraerSlugDeUrl(url: string): { id: string; slug: string } | null {
+  const m = url.match(/\/grupo\/(\d+)-([a-z0-9-]+)/)
+  return m ? { id: m[1], slug: m[2] } : null
 }
 
 async function crawl() {
   const db = await createClient()
 
-  // Cursor para rotar por términos (no gastar todos de una)
+  const keys = await getSerperKeys()
+  if (!keys.length) return { error: 'Sin claves Serper configuradas' }
+  const key = keys[0]
+
+  // Cursor para rotar por términos
   const { data: cursorRow } = await db.from('settings').select('value').eq('key', 'GRUPOSWSP_CURSOR').single()
   const cursor = parseInt(cursorRow?.value || '0', 10)
   const termino = TERMINOS[cursor % TERMINOS.length]
 
-  const urls = [
-    `https://gruposwsp.com/?q=${encodeURIComponent(termino)}&pais=AR`,
-    `https://gruposwsp.com/?q=${encodeURIComponent(termino + ' argentina')}&pais=AR`,
+  // Buscar en Google con Serper — gruposwsp bloquea fetches directos desde Vercel
+  const queries = [
+    `site:gruposwsp.com/grupo ${termino}`,
+    `site:gruposwsp.com ${termino} argentina grupo whatsapp`,
   ]
 
-  // Esperar entre requests para no quemar rate limit
-  const grupos: GrupoExtraido[] = []
-  for (const url of urls) {
-    const found = await fetchGrupos(url, termino)
-    grupos.push(...found)
-    await new Promise(r => setTimeout(r, 2000))
+  const vistos = new Set<string>()
+  const grupos: { nombre: string; url_interna: string; termino: string }[] = []
+
+  for (const q of queries) {
+    const results = await searchSerper(q, key)
+    for (const r of results) {
+      const url = r.link || ''
+      const parsed = extraerSlugDeUrl(url)
+      if (!parsed) continue
+      const url_interna = `/grupo/${parsed.id}-${parsed.slug}`
+      if (vistos.has(url_interna)) continue
+      vistos.add(url_interna)
+      // Nombre desde título del resultado, o derivado del slug
+      const nombre = r.title
+        ? r.title.replace(/\s*[-|].*$/, '').trim()
+        : slugToNombre(parsed.slug)
+      if (nombre.length < 3) continue
+      grupos.push({ nombre, url_interna, termino })
+    }
   }
 
-  // Deduplicar por url_interna
-  const vistos = new Set<string>()
-  const unicos = grupos.filter(g => {
-    if (vistos.has(g.url_interna)) return false
-    vistos.add(g.url_interna)
-    return true
-  })
+  if (!grupos.length) {
+    await db.from('settings').upsert({ key: 'GRUPOSWSP_CURSOR', value: String(cursor + 1) }, { onConflict: 'key' })
+    return { termino, encontrados: 0, nuevos: 0, info: 'Google no devolvió resultados de gruposwsp' }
+  }
 
-  // Verificar cuáles ya están guardados
-  const links = unicos.map(g => `https://gruposwsp.com${g.url_interna}`)
+  // Filtrar ya guardados
+  const links = grupos.map(g => `https://gruposwsp.com${g.url_interna}`)
   const { data: existing } = await db.from('communities').select('link').in('link', links)
   const yaGuardados = new Set((existing || []).map(r => r.link))
-
-  const nuevos = unicos.filter(g => !yaGuardados.has(`https://gruposwsp.com${g.url_interna}`))
+  const nuevos = grupos.filter(g => !yaGuardados.has(`https://gruposwsp.com${g.url_interna}`))
 
   if (!nuevos.length) {
     await db.from('settings').upsert({ key: 'GRUPOSWSP_CURSOR', value: String(cursor + 1) }, { onConflict: 'key' })
     return { termino, encontrados: grupos.length, nuevos: 0, info: 'todos ya guardados' }
   }
 
-  // Guardar en communities — el link es la URL de gruposwsp que hace redirect a WA
   const rows = nuevos.map(g => ({
     title: g.nombre,
     description: '',
     link: `https://gruposwsp.com${g.url_interna}`,
     platform: 'whatsapp',
     members: null,
-    categoria: g.categoria_sitio,
+    categoria: g.termino,
     provincia: 'Buenos Aires',
     ciudad: null,
     idioma: 'es',
