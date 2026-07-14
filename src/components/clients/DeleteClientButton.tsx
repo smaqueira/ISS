@@ -1,10 +1,11 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
-export default function DeleteClientButton({ id }: { id: string }) {
+export default function DeleteClientButton({ id, name }: { id: string; name?: string }) {
   const router = useRouter()
-  const [confirm, setConfirm] = useState(false)
+  const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
 
   async function handleDelete() {
@@ -13,18 +14,18 @@ export default function DeleteClientButton({ id }: { id: string }) {
     router.push('/admin/clients')
   }
 
-  if (confirm) return (
-    <div style={{ display: 'flex', gap: 8 }}>
-      <button onClick={handleDelete} disabled={loading} className="btn" style={{ background: '#ef4444', color: 'white', padding: '6px 14px' }}>
-        {loading ? 'Borrando...' : '¿Confirmás?'}
-      </button>
-      <button onClick={() => setConfirm(false)} className="btn btn-ghost">Cancelar</button>
-    </div>
-  )
-
   return (
-    <button onClick={() => setConfirm(true)} className="btn btn-ghost" style={{ color: '#ef4444', borderColor: '#ef444440' }}>
-      🗑 Borrar
-    </button>
+    <>
+      <button onClick={() => setOpen(true)} className="btn btn-ghost" style={{ color: '#ef4444', borderColor: '#ef444440' }}>
+        🗑 Borrar
+      </button>
+      <ConfirmModal
+        open={open}
+        message={name ? `¿Borrar a "${name}"? Esta acción no se puede deshacer.` : '¿Borrar este registro? Esta acción no se puede deshacer.'}
+        loading={loading}
+        onConfirm={handleDelete}
+        onCancel={() => setOpen(false)}
+      />
+    </>
   )
 }
