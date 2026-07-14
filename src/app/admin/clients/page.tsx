@@ -20,6 +20,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
     }
     if (filters.origen === 'agente') return !!c.score && c.status === 'nuevo'
     if (filters.origen === 'manual') return !c.score || c.score === 0
+    if (filters.tag === 'sin_clasificar') return !(c.tags || []).includes('listo') && !(c.tags || []).includes('sin_datos')
     if (filters.tag) return (c.tags || []).includes(filters.tag)
     return true
   })
@@ -33,6 +34,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   const activeFilter = filters.vista === 'zona' ? 'zona' : filters.vista === 'rubro' ? 'rubro' : (filters.tag || filters.origen || filters.type || filters.status || 'todos')
   const listoCount = (allClients || []).filter(c => (c.tags || []).includes('listo')).length
   const sinDatosCount = (allClients || []).filter(c => (c.tags || []).includes('sin_datos')).length
+  const sinClasificarCount = (allClients || []).filter(c => !(c.tags || []).includes('listo') && !(c.tags || []).includes('sin_datos')).length
 
   function groupBy(key: 'city' | 'rubro', fallback: string) {
     return Object.entries(
@@ -86,6 +88,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
         <Link href="/admin/clients?type=b2c" style={chipStyle(activeFilter === 'b2c')}>Particulares</Link>
         <Link href="/admin/clients?tag=listo" style={chipStyle(activeFilter === 'listo')}>✅ Listos ({listoCount})</Link>
         <Link href="/admin/clients?tag=sin_datos" style={chipStyle(activeFilter === 'sin_datos')}>⚠️ Sin datos ({sinDatosCount})</Link>
+        <Link href="/admin/clients?tag=sin_clasificar" style={chipStyle(activeFilter === 'sin_clasificar')}>❓ Sin clasificar ({sinClasificarCount})</Link>
         <Link href="/admin/clients?vista=zona" style={chipStyle(activeFilter === 'zona')}>📍 Por zona</Link>
         <Link href="/admin/clients?vista=rubro" style={chipStyle(activeFilter === 'rubro')}>🏷️ Por rubro</Link>
       </div>
