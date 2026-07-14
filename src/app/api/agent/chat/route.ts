@@ -61,19 +61,11 @@ export async function POST(req: NextRequest) {
   const sieteDias = new Date(Date.now() - 7 * 86400000).toISOString()
 
   const [
-    { count: totalClients },
-    { count: nuevos },
-    { count: frios },
-    { count: b2b },
-    { count: b2c },
-    { count: clientsThisWeek },
-    { data: topLeads },
-    { data: recentOrders },
-    { data: pendingOrders },
+    r1, r2, r3, r4, r5, r6, r7, r8, r9
   ] = await Promise.all([
     db.from('clients').select('*', { count: 'exact', head: true }),
     db.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'nuevo'),
-    db.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'frio'),
+    db.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'inactivo'),
     db.from('clients').select('*', { count: 'exact', head: true }).eq('type', 'b2b'),
     db.from('clients').select('*', { count: 'exact', head: true }).eq('type', 'b2c'),
     db.from('clients').select('*', { count: 'exact', head: true }).gte('created_at', sieteDias),
@@ -81,6 +73,15 @@ export async function POST(req: NextRequest) {
     db.from('orders').select('status, created_at, total').gte('created_at', treintaDias).order('created_at', { ascending: false }).limit(5),
     db.from('orders').select('*', { count: 'exact', head: true }).in('status', ['pendiente', 'confirmado']),
   ])
+  const totalClients = r1.count
+  const nuevos = r2.count
+  const frios = r3.count
+  const b2b = r4.count
+  const b2c = r5.count
+  const clientsThisWeek = r6.count
+  const topLeads = r7.data
+  const recentOrders = r8.data
+  const pendingOrders = r9.count
 
   const topLeadsText = (topLeads || []).map(c =>
     `  - ${c.name} (${c.type}, score: ${c.score}, estado: ${c.status}${c.rubro ? `, rubro: ${c.rubro}` : ''}${c.phone ? `, tel: ${c.phone}` : ''})`
@@ -99,7 +100,7 @@ TOP LEADS POR SCORE:
 ${topLeadsText || '- Sin datos'}
 
 PEDIDOS (30 días):
-- Pendientes/confirmados: ${(pendingOrders as unknown as { count: number | null }).count || 0}
+- Pendientes/confirmados: ${pendingOrders || 0}
 - Últimos: ${(recentOrders || []).map(o => `${o.status} $${o.total || '?'}`).join(', ') || 'ninguno'}
 `
 
