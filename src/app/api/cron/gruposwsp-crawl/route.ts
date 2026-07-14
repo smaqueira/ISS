@@ -34,10 +34,11 @@ async function crawl() {
   const cursor = parseInt(cursorRow?.value || '0', 10)
   const termino = TERMINOS[cursor % TERMINOS.length]
 
-  // Buscar en Google con Serper — gruposwsp bloquea fetches directos desde Vercel
+  // Buscar en Google con Serper — buscamos páginas que MENCIONAN/LINKEAN a gruposwsp
+  // (site: no funciona porque Google no indexa bien gruposwsp.com)
   const queries = [
-    `site:gruposwsp.com/grupo ${termino}`,
-    `site:gruposwsp.com ${termino} argentina grupo whatsapp`,
+    `"gruposwsp.com/grupo" ${termino} argentina`,
+    `gruposwsp.com grupo whatsapp ${termino} argentina link unirse`,
   ]
 
   const vistos = new Set<string>()
