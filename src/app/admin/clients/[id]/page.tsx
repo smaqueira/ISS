@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { formatARS, formatDate, waLink } from '@/lib/utils'
 import DeleteClientButton from '@/components/clients/DeleteClientButton'
 import WhatsAppButton from '@/components/clients/WhatsAppButton'
+import BackButton from '@/components/ui/BackButton'
 
 type Params = Promise<{ id: string }>
 
@@ -20,7 +21,7 @@ export default async function ClientDetailPage({ params }: { params: Params }) {
   return (
     <div style={{ maxWidth: 700 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <Link href="/admin/clients" style={{ color: 'var(--muted)', textDecoration: 'none', fontSize: '0.85rem' }}>← Clientes</Link>
+        <BackButton />
         <span style={{ color: 'var(--border)' }}>/</span>
         <h1 style={{ fontSize: '1.3rem', fontWeight: 700 }}>{client.name}</h1>
         <span className={`badge badge-${client.type}`}>{client.type.toUpperCase()}</span>
