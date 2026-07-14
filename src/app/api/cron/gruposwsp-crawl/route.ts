@@ -29,57 +29,44 @@ interface GrupoExtraido {
   termino: string
 }
 
+function slugToNombre(slug: string): string {
+  return slug
+    .split('-')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
+
 function extraerGrupos(html: string, termino: string): GrupoExtraido[] {
   const grupos: GrupoExtraido[] = []
+  const vistos = new Set<string>()
 
-  // Extraer bloques de grupo: busca los href /grupo/[id]-[slug]
-  const regex = /href="(\/grupo\/(\d+)-([^"]+))"/g
-  const nombresRegex = /<[^>]+class="[^"]*(?:card-title|grupo-nombre|nombre|title)[^"]*"[^>]*>([^<]+)</g
-
-  // Extraer todos los hrefs de grupos
-  const hrefs: { url: string; id: string; slug: string }[] = []
+  // Extraer todos los /grupo/ID-slug del HTML — funciona con cualquier estructura
+  const regex = /\/grupo\/(\d+)-([a-z0-9\-]+)/g
   let match
   while ((match = regex.exec(html)) !== null) {
-    hrefs.push({ url: match[1], id: match[2], slug: match[3] })
-  }
+    const url_interna = `/grupo/${match[1]}-${match[2]}`
+    if (vistos.has(url_interna)) continue
+    vistos.add(url_interna)
 
-  // Extraer nombres desde los títulos/h3/h4 cercanos a los hrefs
-  // Método alternativo: buscar el patrón completo de cada tarjeta
-  const cardRegex = /href="(\/grupo\/\d+-[^"]+)"[^>]*>[\s\S]{0,500}?<(?:h[234]|span|div)[^>]*class="[^"]*(?:title|name|nombre)[^"]*"[^>]*>([\s\S]+?)<\/(?:h[234]|span|div)>/g
-  while ((match = cardRegex.exec(html)) !== null) {
-    const url = match[1]
-    const nombre = match[2].replace(/<[^>]+>/g, '').trim()
-    if (nombre && url) {
-      const partes = url.split('/grupo/')[1]?.split('-')
-      const slug = partes?.slice(1).join('-') || ''
-      grupos.push({
-        nombre,
-        slug,
-        url_interna: url,
-        categoria_sitio: termino,
-        publico: html.includes('Público') || !html.includes('🔒'),
-        termino,
-      })
-    }
-  }
+    // Buscar el nombre real cerca del link en el HTML (ventana de 300 chars)
+    const pos = match.index
+    const ventana = html.substring(pos, pos + 400)
+    // Intentar extraer texto entre tags después del href
+    const textoMatch = ventana.match(/>([^<]{3,80})</)
+    const nombre = textoMatch
+      ? textoMatch[1].replace(/[^\w\sÀ-ɏ🇦🇷🤝💬🔒🌐]/g, '').trim()
+      : slugToNombre(match[2])
 
-  // Si el método anterior no encontró nada, usar enfoque más simple
-  if (grupos.length === 0) {
-    // Buscar todos los links de grupos y asumir el texto cercano como nombre
-    const simpleRegex = /href="(\/grupo\/(\d+)-([^"]+))"[^>]*>([^<]+)</g
-    while ((match = simpleRegex.exec(html)) !== null) {
-      const nombre = match[4].trim()
-      if (nombre && nombre.length > 2) {
-        grupos.push({
-          nombre,
-          slug: match[3],
-          url_interna: match[1],
-          categoria_sitio: termino,
-          publico: true,
-          termino,
-        })
-      }
-    }
+    if (!nombre || nombre.length < 3) continue
+
+    grupos.push({
+      nombre: nombre || slugToNombre(match[2]),
+      slug: match[2],
+      url_interna,
+      categoria_sitio: termino,
+      publico: !ventana.includes('🔒') && !ventana.includes('Privado'),
+      termino,
+    })
   }
 
   return grupos
