@@ -47,12 +47,13 @@ Si Sebastian pregunta qué hacer hoy, priorizá:
 }
 
 export async function POST(req: NextRequest) {
+  try {
   const { messages } = await req.json()
   if (!messages?.length) return NextResponse.json({ error: 'messages requerido' }, { status: 400 })
 
   const db = getDb()
   const [apiKey, biz] = await Promise.all([getGroqKey(db), getBusinessConfig(db)])
-  if (!apiKey) return NextResponse.json({ error: 'GROQ_API_KEY no configurada' }, { status: 400 })
+  if (!apiKey) return NextResponse.json({ error: 'GROQ_API_KEY no configurada en settings ni en env' }, { status: 400 })
 
   // Contexto real del sistema
   const hoy = new Date()
@@ -117,4 +118,8 @@ PEDIDOS (30 días):
 
   const reply = completion.choices[0]?.message?.content || 'No pude generar una respuesta.'
   return NextResponse.json({ reply })
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
 }
