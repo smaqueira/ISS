@@ -16,6 +16,13 @@ const CRONS = [
     color: '#f59e0b',
   },
   {
+    label: 'Grupos WhatsApp (gruposwsp)',
+    icon: '💬',
+    path: '/api/cron/gruposwsp-crawl',
+    desc: 'Rastrea directorio gruposwsp.com buscando grupos de Argentina por ventas, gastronomía y negocios',
+    color: '#25d366',
+  },
+  {
     label: 'Seguimiento clientes',
     icon: '🔔',
     path: '/api/cron/followup',
