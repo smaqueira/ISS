@@ -23,7 +23,7 @@ async function getGroqKey(db: ReturnType<typeof getDb>): Promise<string> {
 }
 
 // ─── Definición de herramientas ───────────────────────────────────────────────
-const TOOLS: Groq.Chat.Completions.Tool[] = [
+const TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
   {
     type: 'function',
     function: {
