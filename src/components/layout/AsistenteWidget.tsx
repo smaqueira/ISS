@@ -43,7 +43,9 @@ export default function AsistenteWidget() {
       if (!res.ok) {
         setMessages(m => [...m, { role: 'assistant', content: `❌ ${data.error || `Error ${res.status}`}` }])
       } else {
-        setMessages(m => [...m, { role: 'assistant', content: data.reply || 'Sin respuesta.' }])
+        const actions: string[] = data.actions || []
+        const actionsText = actions.length ? `\n\n${actions.join('\n')}` : ''
+        setMessages(m => [...m, { role: 'assistant', content: (data.reply || '') + actionsText }])
       }
     } catch (e) {
       setMessages(m => [...m, { role: 'assistant', content: `❌ Error al conectar: ${e}` }])
