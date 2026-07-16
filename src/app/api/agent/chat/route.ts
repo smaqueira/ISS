@@ -232,14 +232,27 @@ PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o
     const actions: string[] = []
 
     for (let i = 0; i < 5; i++) {
-      const completion = await groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        messages: groqMessages,
-        tools: TOOLS,
-        tool_choice: 'auto',
-        max_tokens: 1000,
-        temperature: 0.4,
-      })
+      let completion: Awaited<ReturnType<typeof groq.chat.completions.create>>
+      try {
+        completion = await groq.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          messages: groqMessages,
+          tools: TOOLS,
+          tool_choice: 'auto',
+          max_tokens: 1000,
+          temperature: 0.4,
+        })
+      } catch {
+        // Si Groq rechaza la tool call (error de schema), reintentamos sin tools
+        const fallback = await groq.chat.completions.create({
+          model: 'llama-3.3-70b-versatile',
+          messages: groqMessages,
+          max_tokens: 1000,
+          temperature: 0.4,
+        })
+        const fallbackMsg = fallback.choices[0]?.message?.content || 'Sin respuesta.'
+        return NextResponse.json({ reply: fallbackMsg, actions })
+      }
 
       const msg = completion.choices[0]?.message
       if (!msg) break
