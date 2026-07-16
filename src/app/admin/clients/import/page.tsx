@@ -1,5 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { useIsAdmin } from '@/hooks/useRole'
 
 interface PreviewRow {
   name: string
@@ -14,6 +16,10 @@ interface PreviewRow {
 }
 
 export default function ImportPage() {
+  const router = useRouter()
+  const isAdmin = useIsAdmin()
+  if (isAdmin === false) { router.replace('/admin/clients'); return null }
+
   const [rows, setRows] = useState<PreviewRow[]>([])
   const [importing, setImporting] = useState(false)
   const [done, setDone] = useState<{ imported: number; skipped: number } | null>(null)

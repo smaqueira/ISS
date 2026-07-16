@@ -1,21 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { SESSION_COOKIE } from '@/lib/auth'
+import { getSessionRole } from '@/lib/auth'
+
+const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE'])
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
+  const role = getSessionRole(req)
 
-  // Solo proteger rutas /admin
-  if (!pathname.startsWith('/admin')) return NextResponse.next()
+  // Proteger rutas /admin
+  if (pathname.startsWith('/admin')) {
+    if (!role) {
+      const loginUrl = new URL('/login', req.url)
+      loginUrl.searchParams.set('from', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+    return NextResponse.next()
+  }
 
-  const session = req.cookies.get(SESSION_COOKIE)?.value
-  if (session === 'ok') return NextResponse.next()
+  // Bloquear mutaciones a /api para usuarios readonly (excepto /api/auth/*)
+  if (
+    pathname.startsWith('/api/') &&
+    !pathname.startsWith('/api/auth/') &&
+    MUTATION_METHODS.has(req.method) &&
+    role === 'readonly'
+  ) {
+    return NextResponse.json({ error: 'No tenés permisos para realizar esta acción' }, { status: 403 })
+  }
 
-  // Redirigir al login
-  const loginUrl = new URL('/login', req.url)
-  loginUrl.searchParams.set('from', pathname)
-  return NextResponse.redirect(loginUrl)
+  return NextResponse.next()
 }
 
 export const config = {
-  matcher: ['/admin/:path*'],
+  matcher: ['/admin/:path*', '/api/:path*'],
 }

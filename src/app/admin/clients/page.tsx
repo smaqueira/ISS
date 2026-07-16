@@ -4,12 +4,17 @@ import ClientsAccordion from '@/components/clients/ClientsAccordion'
 import Link from 'next/link'
 import DeleteAllButton from '@/components/clients/DeleteAllButton'
 import type { Client } from '@/lib/types'
+import { cookies } from 'next/headers'
+import { SESSION_COOKIE } from '@/lib/auth'
 
 const PAGE_SIZE = 100
 
 export default async function ClientsPage({ searchParams }: {
   searchParams: Promise<{ type?: string; status?: string; origen?: string; q?: string; vista?: string; tag?: string; page?: string }>
 }) {
+  const cookieStore = await cookies()
+  const isAdmin = cookieStore.get(SESSION_COOKIE)?.value === 'admin'
+
   const filters = await searchParams
   const page = Math.max(1, parseInt(filters.page || '1', 10))
   const from = (page - 1) * PAGE_SIZE
@@ -120,8 +125,8 @@ export default async function ClientsPage({ searchParams }: {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <DeleteAllButton total={totalAll || 0} />
-          <Link href="/admin/clients/import" className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>📥 Importar CSV</Link>
-          <Link href="/admin/clients/new" className="btn btn-primary">+ Agregar</Link>
+          {isAdmin && <Link href="/admin/clients/import" className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>📥 Importar CSV</Link>}
+          {isAdmin && <Link href="/admin/clients/new" className="btn btn-primary">+ Agregar</Link>}
         </div>
       </div>
 

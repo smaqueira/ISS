@@ -2,8 +2,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ConfirmModal from '@/components/ui/ConfirmModal'
+import { useIsAdmin } from '@/hooks/useRole'
 
 export default function DeleteAllButton({ total }: { total: number }) {
+  const isAdmin = useIsAdmin()
+  if (!isAdmin) return null
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
