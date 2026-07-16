@@ -32,14 +32,15 @@ export default async function ClientsPage({ searchParams }: {
     baseQ = baseQ.or(`name.ilike.%${filters.q}%,city.ilike.%${filters.q}%,rubro.ilike.%${filters.q}%`)
   }
 
-  // origen=agente/manual se filtra JS (depende de score+status combinados)
-  const needsJsFilter = !!(filters.origen)
+  // Vistas de acordeón y origen necesitan todos los registros sin paginación
+  const needsAllRows = !!(filters.origen || filters.vista === 'zona' || filters.vista === 'rubro')
 
   let allClients: Client[] | null = null
   let dbTotal = 0
 
-  if (needsJsFilter) {
-    const { data, count } = await baseQ.order('created_at', { ascending: false })
+  if (needsAllRows) {
+    // Traer todos sin límite (Supabase permite hasta 1M con range abierto)
+    const { data, count } = await baseQ.order('created_at', { ascending: false }).range(0, 9999)
     allClients = (data || []) as unknown as Client[]
     dbTotal = count || 0
   } else {
@@ -63,8 +64,8 @@ export default async function ClientsPage({ searchParams }: {
     return true
   })
 
-  const total = needsJsFilter ? clients.length : dbTotal
-  const totalPages = needsJsFilter ? 1 : Math.ceil(dbTotal / PAGE_SIZE)
+  const total = needsAllRows ? clients.length : dbTotal
+  const totalPages = needsAllRows ? 1 : Math.ceil(dbTotal / PAGE_SIZE)
 
   const activeFilter = filters.vista === 'zona' ? 'zona' : filters.vista === 'rubro' ? 'rubro' : (filters.tag || filters.origen || filters.type || filters.status || 'todos')
 
