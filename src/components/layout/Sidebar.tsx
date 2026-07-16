@@ -1,6 +1,6 @@
 'use client'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect, useCallback } from 'react'
 
 const GROUPS = [
@@ -62,6 +62,12 @@ interface StatusData {
 
 export default function Sidebar() {
   const path = usePathname()
+  const router = useRouter()
+
+  async function handleLogout() {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push('/login')
+  }
   const activeGroupIndex = GROUPS.findIndex(g => g.items.some(i => i.href === path || (i.href !== '/admin' && path.startsWith(i.href))))
   const [open, setOpen] = useState<number>(activeGroupIndex >= 0 ? activeGroupIndex : 0)
   const [status, setStatus] = useState<StatusData | null>(null)
@@ -151,6 +157,17 @@ export default function Sidebar() {
 
         {/* Status indicator — siempre visible abajo */}
         <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
+              background: 'transparent', textAlign: 'left', marginBottom: 4,
+              color: 'var(--muted)', fontSize: '0.78rem',
+            }}
+          >
+            <span>🚪</span> Cerrar sesión
+          </button>
           <button
             onClick={() => { setStatusOpen(true); checkStatus() }}
             style={{
