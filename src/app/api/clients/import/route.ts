@@ -9,41 +9,33 @@ export async function POST(req: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
-  const { data: existing } = await db.from('clients').select('name, phone')
-  const existingNames = new Set((existing || []).map(c => c.name?.toLowerCase().trim()))
-  const existingPhones = new Set((existing || []).map(c => c.phone).filter(Boolean))
 
-  let imported = 0
-  let skipped = 0
+  const toInsert = rows.map((row: Record<string, string>) => ({
+    name: row.name,
+    phone: row.phone || null,
+    email: row.email || null,
+    city: row.city || null,
+    type: row.type || 'b2c',
+    rubro: row.rubro || null,
+    notes: row.notes || null,
+    status: 'nuevo',
+    channel: null,
+    tags: [],
+  }))
 
-  for (const row of rows) {
-    const isDupe =
-      existingNames.has(row.name?.toLowerCase().trim()) ||
-      (row.phone && existingPhones.has(row.phone))
-
-    if (isDupe) { skipped++; continue }
-
-    const { error } = await db.from('clients').insert({
-      name: row.name,
-      phone: row.phone || null,
-      email: row.email || null,
-      city: row.city || null,
-      type: row.type || 'b2c',
-      rubro: row.rubro || null,
-      notes: row.notes || null,
-      status: 'nuevo',
-      channel: null,
-      tags: [],
+  // upsert con onConflict en el índice único — si ya existe, lo ignora (ignoreDuplicates)
+  const { data, error } = await db
+    .from('clients')
+    .upsert(toInsert, {
+      onConflict: 'name,city,rubro',
+      ignoreDuplicates: true,
     })
+    .select('id')
 
-    if (!error) {
-      imported++
-      existingNames.add(row.name?.toLowerCase().trim())
-      if (row.phone) existingPhones.add(row.phone)
-    } else if (imported === 0 && skipped === 0) {
-      return NextResponse.json({ imported: 0, skipped: 0, firstError: error.message, firstRow: row.name })
-    }
-  }
+  if (error) return NextResponse.json({ imported: 0, skipped: 0, error: error.message })
+
+  const imported = data?.length || 0
+  const skipped = rows.length - imported
 
   return NextResponse.json({ imported, skipped })
 }
