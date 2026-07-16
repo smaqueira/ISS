@@ -17,23 +17,33 @@ export default async function ClientsPage({ searchParams }: {
 
   const db = await createClient()
 
-  // Query base con count exacto (sin paginación) para contadores y tabs
+  // Query base
   let baseQ = db.from('clients').select('id, name, type, status, rubro, city, phone, email, instagram, website, score, channel, notes, tags, last_contact, next_followup, created_at', { count: 'exact' })
   if (filters.type) baseQ = baseQ.eq('type', filters.type)
   if (filters.status) baseQ = baseQ.eq('status', filters.status)
 
-  // Si hay búsqueda o tag especial, traemos todo (son filtros JS) — sino usamos paginación DB
-  const needsAllData = !!(filters.q || filters.origen || filters.tag)
+  // Filtros que se pueden hacer en DB (evita el límite de 1000 filas de Supabase)
+  if (filters.tag === 'listo') baseQ = baseQ.contains('tags', ['listo'])
+  else if (filters.tag === 'sin_datos') baseQ = baseQ.contains('tags', ['sin_datos'])
+  else if (filters.tag === 'sin_clasificar') {
+    baseQ = baseQ.not('tags', 'cs', '{"listo"}').not('tags', 'cs', '{"sin_datos"}')
+  }
+  if (filters.q) {
+    baseQ = baseQ.or(`name.ilike.%${filters.q}%,city.ilike.%${filters.q}%,rubro.ilike.%${filters.q}%`)
+  }
+
+  // origen=agente/manual se filtra JS (depende de score+status combinados)
+  const needsJsFilter = !!(filters.origen)
 
   let allClients: Client[] | null = null
   let dbTotal = 0
 
-  if (needsAllData) {
+  if (needsJsFilter) {
     const { data, count } = await baseQ.order('created_at', { ascending: false })
     allClients = (data || []) as unknown as Client[]
     dbTotal = count || 0
   } else {
-    // Paginación en DB — mucho más rápido
+    // Paginación en DB
     const { data, count } = await baseQ.order('created_at', { ascending: false }).range(from, to)
     allClients = (data || []) as unknown as Client[]
     dbTotal = count || 0
@@ -48,19 +58,13 @@ export default async function ClientsPage({ searchParams }: {
   const { count: nuevosAgente } = await db.from('clients').select('*', { count: 'exact', head: true }).not('score', 'is', null).gt('score', 0).eq('status', 'nuevo')
 
   const clients = (allClients || []).filter(c => {
-    if (filters.q) {
-      const search = filters.q.toLowerCase()
-      return c.name?.toLowerCase().includes(search) || c.city?.toLowerCase().includes(search) || c.rubro?.toLowerCase().includes(search)
-    }
     if (filters.origen === 'agente') return !!c.score && c.status === 'nuevo'
     if (filters.origen === 'manual') return !c.score || c.score === 0
-    if (filters.tag === 'sin_clasificar') return !(c.tags || []).includes('listo') && !(c.tags || []).includes('sin_datos')
-    if (filters.tag) return (c.tags || []).includes(filters.tag)
     return true
   })
 
-  const total = needsAllData ? clients.length : dbTotal
-  const totalPages = needsAllData ? 1 : Math.ceil(dbTotal / PAGE_SIZE)
+  const total = needsJsFilter ? clients.length : dbTotal
+  const totalPages = needsJsFilter ? 1 : Math.ceil(dbTotal / PAGE_SIZE)
 
   const activeFilter = filters.vista === 'zona' ? 'zona' : filters.vista === 'rubro' ? 'rubro' : (filters.tag || filters.origen || filters.type || filters.status || 'todos')
 
