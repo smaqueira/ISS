@@ -34,7 +34,6 @@ const TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
         properties: {
           q: { type: 'string', description: 'Texto a buscar en nombre, rubro o ciudad' },
           status: { type: 'string', enum: ['nuevo', 'contactado', 'interesado', 'cliente', 'inactivo'], description: 'Filtrar por estado' },
-          limit: { type: 'string', description: 'Cantidad máxima de resultados (default 5)' },
         },
         required: ['q'],
       },
