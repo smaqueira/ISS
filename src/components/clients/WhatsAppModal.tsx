@@ -32,7 +32,8 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
   }
 
   function openWhatsApp() {
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
+    navigator.clipboard.writeText(message)
+    window.open(`https://wa.me/${phone}`, '_blank')
   }
 
   return (
@@ -70,7 +71,7 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
                 }}
               />
               <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-                Podés editar el mensaje antes de enviarlo. Copialo y pegalo en WhatsApp.
+                Podés editar el mensaje. Al abrir WhatsApp se copia solo — solo pegá con Ctrl+V.
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
