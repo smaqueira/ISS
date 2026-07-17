@@ -23,18 +23,21 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
   const esB2B = client.type === 'b2b'
 
   const cuerpo = esB2B
-    ? `Trabajamos con restaurantes, hoteles y rotiserias de la zona — entrega puntual, cadena de frio garantizada y seleccion diaria del puerto.`
-    : `Contamos con entrega a domicilio, productos frescos seleccionados diariamente y cadena de frio garantizada.`
+    ? `🐟 Seleccionamos nuestros productos diariamente para garantizar la mejor calidad.\n🚚 Hacemos entregas a domicilio.\n❄️ Mantenemos la cadena de frío en todo el proceso.`
+    : `🐟 Seleccionamos nuestros productos diariamente para garantizar la mejor calidad.\n🚚 Hacemos entregas a domicilio.\n❄️ Mantenemos la cadena de frío en todo el proceso.`
 
-  const whatsapp = `Hola! Como estas? Te escribo de *${nombre}*.
+  const whatsapp = `¡Hola! 😊 ¿Cómo estás?
 
-${descripcion}.
+Te escribimos de *${nombre}*, especialistas en ${descripcion}.
 
 ${cuerpo}
 
-Mira nuestros productos y precios aca: ${catalogoUrl}
+Podés ver todos nuestros productos y precios en:
+${catalogoUrl}
 
-Calidad garantizada en cada entrega — si no quedas conforme, lo resolvemos. Hablamos?${telefono ? ` Tel: ${telefono}` : ''}`
+✨ Nuestro compromiso es que disfrutes productos frescos y de la mejor calidad en cada entrega.
+
+¿Te gustaría recibir nuestro catálogo o hacer un pedido? Estamos para ayudarte.`
 
   const phone = client.phone.replace(/\D/g, '')
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(whatsapp)}`
