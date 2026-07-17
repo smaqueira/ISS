@@ -140,6 +140,7 @@ async function runTool(name: string, args: ToolArgs, db: ReturnType<typeof getDb
 
     if (name === 'crear_tarea') {
       const { error } = await db.from('daily_tasks').insert({
+        id: crypto.randomUUID(),
         title: args.titulo,
         description: args.descripcion,
         priority: args.prioridad,
