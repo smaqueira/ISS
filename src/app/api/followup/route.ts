@@ -52,11 +52,11 @@ Respondé SOLO con el mensaje, sin explicaciones.`
     return NextResponse.json({ mensaje, cliente: client, diasSinContacto })
   }
 
-  // Detectar todos los prospectos que necesitan seguimiento
+  // Solo clientes con tag "listo" (listos para contactar)
   const { data: clients } = await db
     .from('clients')
     .select('*')
-    .in('status', ['nuevo', 'contactado', 'interesado'])
+    .contains('tags', ['listo'])
     .not('phone', 'is', null)
     .order('updated_at', { ascending: true })
 
