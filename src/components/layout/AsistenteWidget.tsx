@@ -44,8 +44,11 @@ export default function AsistenteWidget() {
         setMessages(m => [...m, { role: 'assistant', content: `❌ ${data.error || `Error ${res.status}`}` }])
       } else {
         const actions: string[] = data.actions || []
+        // Limpiar cualquier XML de tool calls que el modelo haya incluido en el texto
+        const reply = (data.reply || '').replace(/<function>[\s\S]*?<\/function>/g, '').trim()
         const actionsText = actions.length ? `\n\n${actions.join('\n')}` : ''
-        setMessages(m => [...m, { role: 'assistant', content: (data.reply || '') + actionsText }])
+        const content = reply + actionsText || 'Acción completada.'
+        setMessages(m => [...m, { role: 'assistant', content }])
       }
     } catch (e) {
       setMessages(m => [...m, { role: 'assistant', content: `❌ Error al conectar: ${e}` }])
