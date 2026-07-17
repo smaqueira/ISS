@@ -123,7 +123,7 @@ export default async function ClientsPage({ searchParams }: {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <DeleteAllButton total={totalAll || 0} />
+          {isAdmin && <DeleteAllButton total={totalAll || 0} />}
           {isAdmin && <Link href="/admin/clients/import" className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>📥 Importar CSV</Link>}
           {isAdmin && <Link href="/admin/clients/new" className="btn btn-primary">+ Agregar</Link>}
         </div>
