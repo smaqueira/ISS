@@ -234,7 +234,7 @@ PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o
           return res as Groq.Chat.Completions.ChatCompletion
         } catch (e: unknown) {
           const status = (e as { status?: number })?.status
-          if (status === 429) { lastErr = e; continue }
+          if (status === 429 || status === 401) { lastErr = e; continue }
           throw e
         }
       }
