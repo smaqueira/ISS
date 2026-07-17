@@ -1,0 +1,102 @@
+'use client'
+import { useEffect, useState } from 'react'
+
+interface Props {
+  clientId: string
+  onClose: () => void
+}
+
+export default function WhatsAppModal({ clientId, onClose }: Props) {
+  const [message, setMessage] = useState('')
+  const [phone, setPhone] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    fetch(`/api/clients/${clientId}/whatsapp`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.url) {
+          const url = new URL(data.url)
+          setPhone(url.pathname.replace('/', ''))
+          setMessage(data.message || '')
+        }
+        setLoading(false)
+      })
+  }, [clientId])
+
+  function copy() {
+    navigator.clipboard.writeText(message)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  function openWhatsApp() {
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank')
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+        zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'var(--surface)', borderRadius: 16, padding: 24,
+          width: '100%', maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 14,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>💬 Mensaje de primer contacto</div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.2rem' }}>✕</button>
+        </div>
+
+        {loading
+          ? <div style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>✍️ Generando mensaje...</div>
+          : <>
+              <textarea
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+                rows={10}
+                style={{
+                  width: '100%', padding: '10px 14px', borderRadius: 8,
+                  border: '1px solid var(--border)', background: 'var(--bg)',
+                  color: 'var(--text)', fontSize: '0.85rem', resize: 'vertical',
+                  fontFamily: 'inherit', lineHeight: 1.6, boxSizing: 'border-box',
+                }}
+              />
+              <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                Podés editar el mensaje antes de enviarlo. Copialo y pegalo en WhatsApp.
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={copy}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: 8, border: '1px solid var(--border)',
+                    cursor: 'pointer', background: 'var(--bg)',
+                    color: copied ? '#22c55e' : 'var(--text)', fontWeight: 600, fontSize: '0.85rem',
+                  }}
+                >
+                  {copied ? '✓ Copiado' : '📋 Copiar mensaje'}
+                </button>
+                <button
+                  onClick={openWhatsApp}
+                  style={{
+                    flex: 2, padding: '10px', borderRadius: 8, border: 'none',
+                    cursor: 'pointer', background: '#25D366',
+                    color: 'white', fontWeight: 700, fontSize: '0.85rem',
+                  }}
+                >
+                  💬 Abrir WhatsApp
+                </button>
+              </div>
+            </>
+        }
+      </div>
+    </div>
+  )
+}

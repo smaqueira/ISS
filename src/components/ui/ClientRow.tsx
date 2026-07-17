@@ -3,13 +3,14 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import type { Client } from '@/lib/types'
-import { waLink } from '@/lib/utils'
+import WhatsAppModal from '@/components/clients/WhatsAppModal'
 
 interface Props { client: Client }
 
 export default function ClientRow({ client }: Props) {
   const router = useRouter()
   const [tags, setTags] = useState<string[]>(client.tags || [])
+  const [waOpen, setWaOpen] = useState(false)
 
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault()
@@ -66,9 +67,12 @@ export default function ClientRow({ client }: Props) {
           ⚠️
         </button>
         {client.phone && (
-          <a href={waLink(client.phone)} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ padding: '6px 10px' }}>
-            📱
-          </a>
+          <>
+            <button onClick={() => setWaOpen(true)} className="btn btn-ghost" style={{ padding: '6px 10px' }} title="Enviar WhatsApp">
+              📱
+            </button>
+            {waOpen && <WhatsAppModal clientId={client.id} onClose={() => setWaOpen(false)} />}
+          </>
         )}
         <button onClick={handleDelete} className="btn btn-ghost" style={{ padding: '6px 10px', color: '#ef4444', opacity: 0.6 }} title="Eliminar">
           🗑️
