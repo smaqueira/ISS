@@ -225,18 +225,18 @@ PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o
     const systemContent = buildSystemPrompt(biz.name, biz.description).replace('{CONTEXT}', context)
 
     // Función que intenta una llamada rotando keys en caso de 429
-    async function groqCreate(params: Parameters<Groq['chat']['completions']['create']>[0]) {
+    async function groqCreate(params: Groq.Chat.Completions.ChatCompletionCreateParamsNonStreaming): Promise<Groq.Chat.Completions.ChatCompletion> {
       let lastErr: unknown
       for (const key of apiKeys) {
         try {
           return await new Groq({ apiKey: key }).chat.completions.create(params)
         } catch (e: unknown) {
           const status = (e as { status?: number })?.status
-          if (status === 429) { lastErr = e; continue } // rotar a la siguiente key
-          throw e // otro error → propagar
+          if (status === 429) { lastErr = e; continue }
+          throw e
         }
       }
-      throw lastErr // todas las keys agotadas
+      throw lastErr
     }
 
     // Agentic loop: el modelo puede llamar herramientas varias veces
