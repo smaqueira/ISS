@@ -40,14 +40,23 @@ export default function ClientRow({ client }: Props) {
     })
   }
 
+  const [status, setStatus] = useState(client.status)
   const isListo    = tags.includes('listo')
   const isSinDatos = tags.includes('sin_datos')
   const overdue    = isOverdue(client.next_followup)
   const todayFU    = isToday(client.next_followup)
   const alertColor = overdue ? '#ef4444' : todayFU ? '#f59e0b' : null
 
-  const statusLabel = STATUS_LABELS[client.status] || client.status
-  const statusColor = STATUS_COLORS[client.status] || '#6366f1'
+  async function changeStatus(newStatus: string) {
+    setStatus(newStatus as typeof client.status)
+    await fetch(`/api/clients/${client.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    })
+  }
+
+  const statusLabel = STATUS_LABELS[status] || status
+  const statusColor = STATUS_COLORS[status] || '#6366f1'
   const prioColor   = PRIORIDAD_OPTIONS.find(o => o.value === client.prioridad)?.color
   const tempColor   = TEMPERATURA_OPTIONS.find(o => o.value === client.temperatura)?.color
 
@@ -84,9 +93,13 @@ export default function ClientRow({ client }: Props) {
       </div>
 
       <span className={`badge badge-${client.type}`}>{client.type.toUpperCase()}</span>
-      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 600, background: statusColor + '22', color: statusColor, border: `1px solid ${statusColor}44`, whiteSpace: 'nowrap' }}>
-        {statusLabel}
-      </span>
+      <select
+        value={status}
+        onChange={e => changeStatus(e.target.value)}
+        style={{ padding: '2px 6px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 600, background: statusColor + '22', color: statusColor, border: `1px solid ${statusColor}44`, cursor: 'pointer', outline: 'none' }}
+      >
+        {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
 
       <div style={{ textAlign: 'right', minWidth: 50 }}>
         <div style={{ fontWeight: 700, color: client.score >= 75 ? '#22c55e' : client.score >= 50 ? '#eab308' : '#ef4444' }}>
