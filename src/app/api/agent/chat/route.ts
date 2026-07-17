@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Groq from 'groq-sdk'
+import type { ChatCompletionCreateParamsNonStreaming, ChatCompletion } from 'groq-sdk/resources/chat/completions'
 import { getBusinessConfig } from '@/lib/business-context'
 
 export const runtime = 'nodejs'
@@ -225,7 +226,7 @@ PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o
     const systemContent = buildSystemPrompt(biz.name, biz.description).replace('{CONTEXT}', context)
 
     // Función que intenta una llamada rotando keys en caso de 429
-    async function groqCreate(params: Groq.Chat.Completions.CompletionCreateParams): Promise<Groq.Chat.Completions.ChatCompletion> {
+    async function groqCreate(params: ChatCompletionCreateParamsNonStreaming): Promise<ChatCompletion> {
       let lastErr: unknown
       for (const key of apiKeys) {
         try {
