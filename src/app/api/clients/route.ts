@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     city: body.city || null,
     instagram: body.instagram || null,
     website: body.website || null,
-    status: 'nuevo',
+    status: 'prospecto',
     score: body.score ?? ai.score,
     channel: body.channel || ai.channel,
     notes: body.notes || null,

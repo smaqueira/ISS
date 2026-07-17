@@ -35,7 +35,10 @@ export default async function ClientsPage({ searchParams }: {
   )
 
   if (filters.type)       baseQ = baseQ.eq('type', filters.type)
-  if (filters.status)     baseQ = baseQ.eq('status', filters.status)
+  if (filters.status) {
+    const statuses = filters.status.split(',').map(s => s.trim()).filter(Boolean)
+    baseQ = statuses.length === 1 ? baseQ.eq('status', statuses[0]) : baseQ.in('status', statuses)
+  }
   if (filters.prioridad)  baseQ = baseQ.eq('prioridad', filters.prioridad)
   if (filters.temperatura) baseQ = baseQ.eq('temperatura', filters.temperatura)
   if (filters.vencidos === '1') baseQ = baseQ.lt('next_followup', hoy)
@@ -55,12 +58,20 @@ export default async function ClientsPage({ searchParams }: {
     baseQ = baseQ.or(`name.ilike.%${filters.q}%,city.ilike.%${filters.q}%,rubro.ilike.%${filters.q}%,phone.ilike.%${filters.q}%,email.ilike.%${filters.q}%,instagram.ilike.%${filters.q}%`)
   }
 
-  const needsAllRows = !!(filters.origen || filters.vista === 'zona' || filters.vista === 'rubro')
+  // Filtro origen en DB en lugar de JS
+  if (filters.origen === 'agente') {
+    baseQ = baseQ.gt('score', 0).in('status', ['nuevo', 'prospecto'])
+  } else if (filters.origen === 'manual') {
+    baseQ = baseQ.eq('score', 0)
+  }
+
+  const needsAllRows = !!(filters.vista === 'zona' || filters.vista === 'rubro')
   let allClients: Client[] = []
   let dbTotal = 0
 
   if (needsAllRows) {
-    const { data, count } = await baseQ.order('created_at', { ascending: false }).range(0, 9999)
+    // Vistas agrupadas: máximo 2000 para no colapsar memoria del servidor
+    const { data, count } = await baseQ.order('created_at', { ascending: false }).range(0, 1999)
     allClients = (data || []) as unknown as Client[]
     dbTotal = count || 0
   } else {
@@ -104,11 +115,7 @@ export default async function ClientsPage({ searchParams }: {
   const totalActivos = (prospectos || 0) + (contactados || 0) + (interesados || 0)
   const conversionRate = totalAll && totalAll > 0 ? Math.round((totalGanados / totalAll) * 100) : 0
 
-  const clients = (allClients || []).filter(c => {
-    if (filters.origen === 'agente') return !!c.score && (c.status === 'nuevo' || c.status === 'prospecto')
-    if (filters.origen === 'manual') return !c.score || c.score === 0
-    return true
-  })
+  const clients = allClients || []
 
   const total = needsAllRows ? clients.length : dbTotal
   const totalPages = needsAllRows ? 1 : Math.ceil(dbTotal / PAGE_SIZE)
@@ -151,6 +158,11 @@ export default async function ClientsPage({ searchParams }: {
     if (filters.prioridad)   params.set('prioridad', filters.prioridad)
     if (filters.temperatura) params.set('temperatura', filters.temperatura)
     if (filters.vencidos)    params.set('vencidos', filters.vencidos)
+    if (filters.city)        params.set('city', filters.city)
+    if (filters.desde)       params.set('desde', filters.desde)
+    if (filters.hasta)       params.set('hasta', filters.hasta)
+    if (filters.fu_desde)    params.set('fu_desde', filters.fu_desde)
+    if (filters.fu_hasta)    params.set('fu_hasta', filters.fu_hasta)
     if (p > 1) params.set('page', String(p))
     return `/admin/clients${params.toString() ? `?${params}` : ''}`
   }
@@ -186,7 +198,7 @@ export default async function ClientsPage({ searchParams }: {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 8, marginBottom: 20 }}>
         {statCard('Prospectos',    prospectos,      '#6366f1', '/admin/clients?status=prospecto')}
         {statCard('Contactados',   contactados,     '#3b82f6', '/admin/clients?status=contactado')}
-        {statCard('Interesados',   interesados,     '#f59e0b', '/admin/clients?status=interesado')}
+        {statCard('Interesados',   interesados,     '#f59e0b', '/admin/clients?status=interesado,negociacion,presupuesto_enviado,esperando_respuesta,respondio')}
         {statCard('Clientes',      clientes,        '#22c55e', '/admin/clients?status=cliente')}
         {statCard('Recurrentes',   clientesR,       '#16a34a', '/admin/clients?status=cliente_recurrente')}
         {statCard('Perdidos',      perdidos,        '#ef4444', '/admin/clients?status=perdido')}
@@ -210,11 +222,19 @@ export default async function ClientsPage({ searchParams }: {
       <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
         <Link href="/admin/clients" style={chip(activeFilter === 'todos')}>Todos ({totalAll || 0})</Link>
         <Link href="/admin/clients?origen=agente" style={chip(activeFilter === 'agente')}>🤖 Agente ({nuevosAgente || 0})</Link>
-        {STATUS_OPTIONS.map(s => (
-          <Link key={s.value} href={`/admin/clients?status=${s.value}`} style={{ ...chip(activeFilter === s.value), borderColor: activeFilter === s.value ? 'var(--accent)' : STATUS_COLORS[s.value] + '55', color: activeFilter === s.value ? 'white' : STATUS_COLORS[s.value] }}>
-            {s.label}
-          </Link>
-        ))}
+        {STATUS_OPTIONS.map(s => {
+          const href = s.value === 'interesado'
+            ? `/admin/clients?status=interesado,negociacion,presupuesto_enviado,esperando_respuesta,respondio`
+            : `/admin/clients?status=${s.value}`
+          const isActive = s.value === 'interesado'
+            ? ['interesado','negociacion','presupuesto_enviado','esperando_respuesta','respondio'].some(v => filters.status?.includes(v))
+            : activeFilter === s.value
+          return (
+            <Link key={s.value} href={href} style={{ ...chip(isActive), borderColor: isActive ? 'var(--accent)' : STATUS_COLORS[s.value] + '55', color: isActive ? 'white' : STATUS_COLORS[s.value] }}>
+              {s.label}
+            </Link>
+          )
+        })}
       </div>
 
       {/* Filtros secundarios */}

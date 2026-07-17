@@ -21,6 +21,9 @@ export interface Client {
   status: ClientStatus
   score: number
   channel?: Channel
+  empresa?: string
+  contacto_nombre?: string
+  contacto_cargo?: string
   notes?: string
   tags?: string[]
   last_contact?: string

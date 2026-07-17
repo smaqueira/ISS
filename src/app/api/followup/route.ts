@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
     const s = Object.fromEntries((settings || []).map((r: { key: string; value: string }) => [r.key, r.value]))
 
     const rule = FOLLOWUP_RULES.find(r => r.status === client.status)
-    const diasSinContacto = Math.floor((now.getTime() - new Date(client.updated_at || client.created_at).getTime()) / 86400000)
+    const diasSinContacto = Math.floor((now.getTime() - new Date(client.last_contact || client.created_at).getTime()) / 86400000)
 
     const mensaje = await ask(
       `Sos el vendedor de "${s.COMPANY_NAME || 'Vitto Mare'}" — ${s.COMPANY_DESCRIPTION || 'pescados y mariscos frescos en Buenos Aires'}.
@@ -72,7 +72,7 @@ Respondé SOLO con el mensaje, sin explicaciones.`
     .map(c => {
       const rule = FOLLOWUP_RULES.find(r => r.status === c.status)
       if (!rule) return null
-      const lastContact = new Date(c.updated_at || c.created_at)
+      const lastContact = new Date(c.last_contact || c.created_at)
       const diasSinContacto = Math.floor((now.getTime() - lastContact.getTime()) / 86400000)
       if (diasSinContacto < rule.dias) return null
       return {

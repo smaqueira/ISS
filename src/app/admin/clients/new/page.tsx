@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 
 export default function NewClientPage() {
   const router = useRouter()
-  const [form, setForm] = useState({ name: '', rubro: '', phone: '', email: '', city: '', notes: '' })
+  const [form, setForm] = useState({ name: '', empresa: '', contacto_nombre: '', rubro: '', phone: '', email: '', city: '', instagram: '', notes: '' })
   const [loading, setLoading] = useState(false)
 
   function set(key: string, value: string) {
@@ -40,10 +40,13 @@ export default function NewClientPage() {
           🤖 La IA va a clasificar automáticamente si es B2B o B2C y calcular el score.
         </p>
         <form onSubmit={submit}>
-          {field('Nombre *', 'name', 'text', 'Ej: Restaurante El Puerto')}
+          {field('Nombre / Nombre de fantasía *', 'name', 'text', 'Ej: Restaurante El Puerto')}
+          {field('Razón social / Empresa', 'empresa', 'text', 'Ej: El Puerto S.A.')}
+          {field('Persona de contacto', 'contacto_nombre', 'text', 'Ej: Juan García')}
           {field('Rubro', 'rubro', 'text', 'Ej: restaurante, hotel, retail, mayorista...')}
           {field('Teléfono / WhatsApp', 'phone', 'text', '5491100000000')}
           {field('Email', 'email', 'email', 'contacto@negocio.com')}
+          {field('Instagram', 'instagram', 'text', '@usuario')}
           {field('Ciudad', 'city', 'text', 'Buenos Aires')}
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 6 }}>Notas</label>

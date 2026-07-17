@@ -1,5 +1,18 @@
 // CRM constants — status, prioridad, temperatura, acciones
 
+export const CHANNEL_LABELS: Record<string, string> = {
+  whatsapp:  'WhatsApp',
+  email:     'Email',
+  telefono:  'Teléfono',
+  instagram: 'Instagram',
+  web:       'Web',
+}
+
+export const TYPE_OPTIONS = [
+  { value: 'b2b', label: 'B2B — Empresa / Negocio' },
+  { value: 'b2c', label: 'B2C — Consumidor final' },
+]
+
 export const STATUS_OPTIONS = [
   { value: 'prospecto',            label: 'Prospecto' },
   { value: 'contactado',           label: 'Contactado' },

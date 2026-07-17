@@ -17,6 +17,8 @@ function isToday(date?: string) {
   return new Date(date).toDateString() === new Date().toDateString()
 }
 
+const RESERVED_TAGS = ['listo', 'sin_datos']
+
 export default function ClientRow({ client }: Props) {
   const router = useRouter()
   const [tags, setTags] = useState<string[]>(client.tags || [])
@@ -40,7 +42,9 @@ export default function ClientRow({ client }: Props) {
     })
   }
 
-  const [status, setStatus] = useState(client.status)
+  // Normalizar status legacy para que el <select> siempre tenga una opción válida
+  const initialStatus = (client.status === 'nuevo' ? 'prospecto' : client.status === 'inactivo' ? 'perdido' : client.status) as typeof client.status
+  const [status, setStatus] = useState(initialStatus)
   const isListo    = tags.includes('listo')
   const isSinDatos = tags.includes('sin_datos')
   const overdue    = isOverdue(client.next_followup)
@@ -84,6 +88,11 @@ export default function ClientRow({ client }: Props) {
               {client.temperatura}
             </span>
           )}
+          {tags.filter(t => !RESERVED_TAGS.includes(t)).map(t => (
+            <span key={t} style={{ fontSize: '0.63rem', background: 'var(--accent)18', color: 'var(--accent)', borderRadius: 4, padding: '1px 5px', border: '1px solid var(--accent)33' }}>
+              {t}
+            </span>
+          ))}
         </div>
         <div style={{ fontSize: '0.77rem', color: 'var(--muted)' }}>
           {client.rubro || '—'} · {client.city || '—'}

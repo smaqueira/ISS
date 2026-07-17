@@ -5,8 +5,10 @@ import { formatARS, formatDate, waLink } from '@/lib/utils'
 import DeleteClientButton from '@/components/clients/DeleteClientButton'
 import WhatsAppButton from '@/components/clients/WhatsAppButton'
 import BackButton from '@/components/ui/BackButton'
-import { STATUS_LABELS, STATUS_COLORS, PRIORIDAD_OPTIONS, TEMPERATURA_OPTIONS, ACCION_OPTIONS, MOTIVO_PERDIDA_OPTIONS } from '@/lib/crm'
+import { STATUS_LABELS, STATUS_COLORS, PRIORIDAD_OPTIONS, TEMPERATURA_OPTIONS, ACCION_OPTIONS, MOTIVO_PERDIDA_OPTIONS, CHANNEL_LABELS } from '@/lib/crm'
 import type { ClientHistory } from '@/lib/types'
+import ClientTasks from '@/components/clients/ClientTasks'
+import ClientFiles from '@/components/clients/ClientFiles'
 
 type Params = Promise<{ id: string }>
 
@@ -79,6 +81,8 @@ export default async function ClientDetailPage({ params }: { params: Params }) {
         <div className="card">
           <div style={sectionTitle}>Contacto</div>
           {([
+            ['Empresa', client.empresa],
+            ['Contacto', client.contacto_nombre ? `${client.contacto_nombre}${client.contacto_cargo ? ` · ${client.contacto_cargo}` : ''}` : undefined],
             ['Rubro', client.rubro],
             ['Ciudad', client.city],
             ['Email', client.email],
@@ -119,7 +123,7 @@ export default async function ClientDetailPage({ params }: { params: Params }) {
             ['Último contacto', client.last_contact?.split('T')[0]],
             ['Próximo seguimiento', client.next_followup?.split('T')[0]],
             ['Próxima acción', labelOf(ACCION_OPTIONS, client.proxima_accion)],
-            ['Canal de entrada', client.channel],
+            ['Canal de entrada', client.channel ? CHANNEL_LABELS[client.channel] || client.channel : undefined],
           ] as [string, string | null | undefined][]).filter(([, v]) => v).map(([label, value]) => (
             <div key={label} style={{ fontSize: '0.82rem' }}>
               <div style={{ color: 'var(--muted)', fontSize: '0.7rem', marginBottom: 2 }}>{label}</div>
@@ -155,6 +159,17 @@ export default async function ClientDetailPage({ params }: { params: Params }) {
         </div>
       )}
 
+      {/* Tags personalizadas */}
+      {(client.tags || []).filter((t: string) => !['listo', 'sin_datos'].includes(t)).length > 0 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
+          {(client.tags as string[]).filter(t => !['listo', 'sin_datos'].includes(t)).map(tag => (
+            <span key={tag} style={{ display: 'inline-block', padding: '3px 12px', borderRadius: 20, fontSize: '0.75rem', fontWeight: 600, background: 'var(--accent)22', color: 'var(--accent)', border: '1px solid var(--accent)55' }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
       {/* Acciones rápidas */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {client.phone && <WhatsAppButton clientId={id} />}
@@ -177,6 +192,16 @@ export default async function ClientDetailPage({ params }: { params: Params }) {
           ))}
         </div>
       )}
+
+      {/* Tareas */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <ClientTasks clientId={id} />
+      </div>
+
+      {/* Archivos adjuntos */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <ClientFiles clientId={id} />
+      </div>
 
       {/* Historial cronológico */}
       <div>

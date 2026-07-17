@@ -5,11 +5,17 @@ import { sendMessage } from '@/lib/telegram/send'
 export const runtime = 'nodejs'
 export const maxDuration = 30
 
-const FOLLOWUP_RULES = [
-  { status: 'nuevo',      dias: 2,  prioridad: 'media',   accion: 'primer contacto' },
-  { status: 'contactado', dias: 4,  prioridad: 'alta',    accion: 'seguimiento' },
-  { status: 'interesado', dias: 3,  prioridad: 'urgente', accion: 'cerrar' },
-]
+const FOLLOWUP_RULES: Record<string, { dias: number; emoji: string; label: string }> = {
+  prospecto:           { dias: 2,  emoji: '⚪', label: 'Primer contacto pendiente' },
+  nuevo:               { dias: 2,  emoji: '⚪', label: 'Primer contacto pendiente' }, // legacy
+  contactado:          { dias: 4,  emoji: '🟡', label: 'Seguimiento pendiente' },
+  sin_respuesta:       { dias: 3,  emoji: '🟡', label: 'Sin respuesta' },
+  respondio:           { dias: 2,  emoji: '🟡', label: 'Avanzar con interesado' },
+  interesado:          { dias: 3,  emoji: '🔴', label: 'URGENTE — Interesado sin cerrar' },
+  negociacion:         { dias: 2,  emoji: '🔴', label: 'URGENTE — En negociación' },
+  presupuesto_enviado: { dias: 3,  emoji: '🔴', label: 'URGENTE — Presupuesto sin respuesta' },
+  esperando_respuesta: { dias: 4,  emoji: '🟡', label: 'Esperando respuesta' },
+}
 
 export async function GET(req: NextRequest) {
   if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -21,53 +27,50 @@ export async function GET(req: NextRequest) {
 
   const { data: clients } = await db
     .from('clients')
-    .select('*')
-    .in('status', ['nuevo', 'contactado', 'interesado'])
+    .select('id, name, rubro, city, phone, status, score, last_contact, next_followup, created_at')
+    .in('status', Object.keys(FOLLOWUP_RULES))
     .not('phone', 'is', null)
 
   if (!clients?.length) return NextResponse.json({ ok: true, alertas: 0 })
 
-  const pendientes = clients.filter(c => {
-    const rule = FOLLOWUP_RULES.find(r => r.status === c.status)
-    if (!rule) return false
-    const dias = Math.floor((now.getTime() - new Date(c.updated_at || c.created_at).getTime()) / 86400000)
-    return dias >= rule.dias
-  })
+  // Agrupar por emoji/prioridad los que superaron su umbral de días
+  const grupos: Record<string, typeof clients> = { '🔴': [], '🟡': [], '⚪': [] }
 
-  if (!pendientes.length) return NextResponse.json({ ok: true, alertas: 0 })
+  for (const c of clients) {
+    const rule = FOLLOWUP_RULES[c.status]
+    if (!rule) continue
+    // Usar next_followup si existe y está vencido; sino calcular por last_contact
+    let vencido = false
+    if (c.next_followup) {
+      vencido = new Date(c.next_followup) <= now
+    } else {
+      const dias = Math.floor((now.getTime() - new Date(c.last_contact || c.created_at).getTime()) / 86400000)
+      vencido = dias >= rule.dias
+    }
+    if (vencido) grupos[rule.emoji].push(c)
+  }
 
-  const urgentes = pendientes.filter(c => c.status === 'interesado')
-  const altos    = pendientes.filter(c => c.status === 'contactado')
-  const medios   = pendientes.filter(c => c.status === 'nuevo')
+  const total = Object.values(grupos).reduce((s, g) => s + g.length, 0)
+  if (!total) return NextResponse.json({ ok: true, alertas: 0 })
 
-  let msg = `🔔 *Seguimiento de prospectos* — ${now.toLocaleDateString('es-AR')}\n\n`
+  let msg = `🔔 *Seguimiento CRM* — ${now.toLocaleDateString('es-AR')}\n\n`
 
-  if (urgentes.length) {
-    msg += `🔴 *URGENTE — Interesados sin cerrar (${urgentes.length})*\n`
-    urgentes.slice(0, 3).forEach(c => {
-      const dias = Math.floor((now.getTime() - new Date(c.updated_at || c.created_at).getTime()) / 86400000)
-      msg += `• ${c.name}${c.rubro ? ` (${c.rubro})` : ''} — ${dias} días\n`
+  for (const [emoji, grupo] of Object.entries(grupos)) {
+    if (!grupo.length) continue
+    const label = emoji === '🔴' ? 'URGENTE' : emoji === '🟡' ? 'Seguimiento' : 'Nuevos prospectos'
+    msg += `${emoji} *${label} (${grupo.length})*\n`
+    grupo.slice(0, 5).forEach(c => {
+      const dias = Math.floor((now.getTime() - new Date(c.last_contact || c.created_at).getTime()) / 86400000)
+      msg += `• ${c.name}${c.rubro ? ` · ${c.rubro}` : ''}${c.city ? ` · ${c.city}` : ''} — ${dias}d\n`
       if (c.phone) msg += `  📱 wa.me/${c.phone.replace(/\D/g, '')}\n`
     })
+    if (grupo.length > 5) msg += `  _...y ${grupo.length - 5} más_\n`
     msg += '\n'
   }
 
-  if (altos.length) {
-    msg += `🟡 *Seguimiento pendiente (${altos.length})*\n`
-    altos.slice(0, 3).forEach(c => {
-      const dias = Math.floor((now.getTime() - new Date(c.updated_at || c.created_at).getTime()) / 86400000)
-      msg += `• ${c.name}${c.rubro ? ` (${c.rubro})` : ''} — ${dias} días\n`
-    })
-    msg += '\n'
-  }
-
-  if (medios.length) {
-    msg += `⚪ *Primer contacto pendiente: ${medios.length} prospectos nuevos*\n`
-  }
-
-  msg += `\n👉 app.vittomare.com/admin/clients?status=seguimiento`
+  msg += `👉 [Ver en CRM](https://intelligent-sales-system.vercel.app/admin/clients?vencidos=1)`
 
   await sendMessage(msg)
 
-  return NextResponse.json({ ok: true, alertas: pendientes.length })
+  return NextResponse.json({ ok: true, alertas: total })
 }
