@@ -5,7 +5,6 @@ import Link from 'next/link'
 import DeleteAllButton from '@/components/clients/DeleteAllButton'
 import type { Client } from '@/lib/types'
 import { cookies } from 'next/headers'
-import { SESSION_COOKIE } from '@/lib/auth'
 
 const PAGE_SIZE = 100
 
@@ -13,7 +12,7 @@ export default async function ClientsPage({ searchParams }: {
   searchParams: Promise<{ type?: string; status?: string; origen?: string; q?: string; vista?: string; tag?: string; page?: string }>
 }) {
   const cookieStore = await cookies()
-  const isAdmin = cookieStore.get(SESSION_COOKIE)?.value === 'admin'
+  const isAdmin = cookieStore.get('iss_session')?.value === 'admin'
 
   const filters = await searchParams
   const page = Math.max(1, parseInt(filters.page || '1', 10))
