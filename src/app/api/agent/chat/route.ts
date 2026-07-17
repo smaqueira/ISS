@@ -13,13 +13,16 @@ function getDb() {
   )
 }
 
-async function getGroqKey(db: ReturnType<typeof getDb>): Promise<string> {
-  const { data } = await db.from('settings').select('key, value').in('key', ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4'])
-  for (const k of ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4']) {
+async function getAllGroqKeys(db: ReturnType<typeof getDb>): Promise<string[]> {
+  const KEY_NAMES = ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4']
+  const { data } = await db.from('settings').select('key, value').in('key', KEY_NAMES)
+  const keys: string[] = []
+  for (const k of KEY_NAMES) {
     const row = (data || []).find((r: { key: string; value: string }) => r.key === k)
-    if (row?.value) return row.value
+    if (row?.value) keys.push(row.value)
   }
-  return process.env.GROQ_API_KEY || ''
+  if (process.env.GROQ_API_KEY && !keys.includes(process.env.GROQ_API_KEY)) keys.push(process.env.GROQ_API_KEY)
+  return keys
 }
 
 // ─── Definición de herramientas ───────────────────────────────────────────────
@@ -190,8 +193,8 @@ export async function POST(req: NextRequest) {
     if (!messages?.length) return NextResponse.json({ error: 'messages requerido' }, { status: 400 })
 
     const db = getDb()
-    const [apiKey, biz] = await Promise.all([getGroqKey(db), getBusinessConfig(db)])
-    if (!apiKey) return NextResponse.json({ error: 'GROQ_API_KEY no configurada en settings ni en env' }, { status: 400 })
+    const [apiKeys, biz] = await Promise.all([getAllGroqKeys(db), getBusinessConfig(db)])
+    if (!apiKeys.length) return NextResponse.json({ error: 'GROQ_API_KEY no configurada en settings ni en env' }, { status: 400 })
 
     const hoy = new Date()
     const treintaDias = new Date(Date.now() - 30 * 86400000).toISOString()
@@ -220,7 +223,21 @@ TOP LEADS: ${topLeadsText || 'sin datos'}
 PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o.status} $${o.total || '?'}`).join(', ') || 'ninguno'}`
 
     const systemContent = buildSystemPrompt(biz.name, biz.description).replace('{CONTEXT}', context)
-    const groq = new Groq({ apiKey })
+
+    // Función que intenta una llamada rotando keys en caso de 429
+    async function groqCreate(params: Parameters<Groq['chat']['completions']['create']>[0]) {
+      let lastErr: unknown
+      for (const key of apiKeys) {
+        try {
+          return await new Groq({ apiKey: key }).chat.completions.create(params)
+        } catch (e: unknown) {
+          const status = (e as { status?: number })?.status
+          if (status === 429) { lastErr = e; continue } // rotar a la siguiente key
+          throw e // otro error → propagar
+        }
+      }
+      throw lastErr // todas las keys agotadas
+    }
 
     // Agentic loop: el modelo puede llamar herramientas varias veces
     const groqMessages: Groq.Chat.Completions.ChatCompletionMessageParam[] = [
@@ -230,9 +247,9 @@ PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o
     const actions: string[] = []
 
     for (let i = 0; i < 5; i++) {
-      let completion: Awaited<ReturnType<typeof groq.chat.completions.create>>
+      let completion: Awaited<ReturnType<typeof groqCreate>>
       try {
-        completion = await groq.chat.completions.create({
+        completion = await groqCreate({
           model: 'llama-3.3-70b-versatile',
           messages: groqMessages,
           tools: TOOLS,
@@ -242,7 +259,7 @@ PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o
         })
       } catch {
         // Si Groq rechaza la tool call (error de schema), reintentamos sin tools
-        const fallback = await groq.chat.completions.create({
+        const fallback = await groqCreate({
           model: 'llama-3.3-70b-versatile',
           messages: groqMessages,
           max_tokens: 1000,
