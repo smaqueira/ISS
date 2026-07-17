@@ -5,11 +5,11 @@ import ConfirmModal from '@/components/ui/ConfirmModal'
 import { useIsAdmin } from '@/hooks/useRole'
 
 export default function DeleteClientButton({ id, name }: { id: string; name?: string }) {
-  const isAdmin = useIsAdmin()
-  if (!isAdmin) return null
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const isAdmin = useIsAdmin()
+  if (!isAdmin) return null
 
   async function handleDelete() {
     setLoading(true)

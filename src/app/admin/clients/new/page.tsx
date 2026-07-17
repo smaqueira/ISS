@@ -1,14 +1,15 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useIsAdmin } from '@/hooks/useRole'
 
 export default function NewClientPage() {
   const router = useRouter()
-  const isAdmin = useIsAdmin()
-  if (isAdmin === false) { router.replace('/admin/clients'); return null }
   const [form, setForm] = useState({ name: '', rubro: '', phone: '', email: '', city: '', notes: '' })
   const [loading, setLoading] = useState(false)
+  const isAdmin = useIsAdmin()
+  useEffect(() => { if (isAdmin === false) router.replace('/admin/clients') }, [isAdmin, router])
+  if (isAdmin === false) return null
 
   function set(key: string, value: string) {
     setForm(prev => ({ ...prev, [key]: value }))
