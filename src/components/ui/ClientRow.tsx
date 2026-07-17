@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import type { Client } from '@/lib/types'
 import WhatsAppModal from '@/components/clients/WhatsAppModal'
-import { STATUS_LABELS, STATUS_COLORS, PRIORIDAD_OPTIONS, TEMPERATURA_OPTIONS } from '@/lib/crm'
+import { STATUS_LABELS, STATUS_COLORS, STATUS_OPTIONS, PRIORIDAD_OPTIONS, TEMPERATURA_OPTIONS } from '@/lib/crm'
 
 interface Props { client: Client }
 
