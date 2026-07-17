@@ -5,9 +5,15 @@ import { ask } from '@/lib/ai/client'
 export const runtime = 'nodejs'
 
 const FOLLOWUP_RULES = [
-  { status: 'nuevo',      dias: 2,  prioridad: 'media',  accion: 'primer contacto' },
-  { status: 'contactado', dias: 4,  prioridad: 'alta',   accion: 'seguimiento' },
-  { status: 'interesado', dias: 3,  prioridad: 'urgente', accion: 'cerrar' },
+  { status: 'prospecto',           dias: 2,  prioridad: 'media',   accion: 'primer contacto' },
+  { status: 'nuevo',               dias: 2,  prioridad: 'media',   accion: 'primer contacto' }, // legacy
+  { status: 'contactado',          dias: 4,  prioridad: 'alta',    accion: 'seguimiento' },
+  { status: 'sin_respuesta',       dias: 3,  prioridad: 'alta',    accion: 'recontactar' },
+  { status: 'respondio',           dias: 2,  prioridad: 'alta',    accion: 'avanzar' },
+  { status: 'interesado',          dias: 3,  prioridad: 'urgente', accion: 'cerrar' },
+  { status: 'negociacion',         dias: 2,  prioridad: 'urgente', accion: 'negociar' },
+  { status: 'presupuesto_enviado', dias: 3,  prioridad: 'urgente', accion: 'hacer seguimiento del presupuesto' },
+  { status: 'esperando_respuesta', dias: 4,  prioridad: 'alta',    accion: 'consultar respuesta' },
 ]
 
 export async function GET(req: NextRequest) {

@@ -4,8 +4,18 @@ import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import type { Client } from '@/lib/types'
 import WhatsAppModal from '@/components/clients/WhatsAppModal'
+import { STATUS_LABELS, STATUS_COLORS, PRIORIDAD_OPTIONS, TEMPERATURA_OPTIONS } from '@/lib/crm'
 
 interface Props { client: Client }
+
+function isOverdue(date?: string) {
+  if (!date) return false
+  return new Date(date) < new Date(new Date().toDateString())
+}
+function isToday(date?: string) {
+  if (!date) return false
+  return new Date(date).toDateString() === new Date().toDateString()
+}
 
 export default function ClientRow({ client }: Props) {
   const router = useRouter()
@@ -20,27 +30,53 @@ export default function ClientRow({ client }: Props) {
   }
 
   async function toggleTag(tag: string) {
-    const next = tags.includes(tag) ? tags.filter(t => t !== tag) : [...tags.filter(t => t !== tag && t !== (tag === 'listo' ? 'sin_datos' : 'listo')), tag]
+    const next = tags.includes(tag)
+      ? tags.filter(t => t !== tag)
+      : [...tags.filter(t => t !== tag && t !== (tag === 'listo' ? 'sin_datos' : 'listo')), tag]
     setTags(next)
     await fetch(`/api/clients/${client.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tags: next }),
     })
   }
 
-  const isListo = tags.includes('listo')
+  const isListo    = tags.includes('listo')
   const isSinDatos = tags.includes('sin_datos')
+  const overdue    = isOverdue(client.next_followup)
+  const todayFU    = isToday(client.next_followup)
+  const alertColor = overdue ? '#ef4444' : todayFU ? '#f59e0b' : null
+
+  const statusLabel = STATUS_LABELS[client.status] || client.status
+  const statusColor = STATUS_COLORS[client.status] || '#6366f1'
+  const prioColor   = PRIORIDAD_OPTIONS.find(o => o.value === client.prioridad)?.color
+  const tempColor   = TEMPERATURA_OPTIONS.find(o => o.value === client.temperatura)?.color
+
+  const borderColor = alertColor || (isListo ? '#22c55e' : isSinDatos ? '#f59e0b' : 'transparent')
 
   return (
-    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8, borderLeft: isListo ? '3px solid #22c55e' : isSinDatos ? '3px solid #f59e0b' : '3px solid transparent' }}>
+    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, borderLeft: `3px solid ${borderColor}` }}>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, marginBottom: 2 }}>
-          {isListo && <span style={{ fontSize: '0.7rem', background: '#22c55e20', color: '#22c55e', borderRadius: 4, padding: '1px 5px', marginRight: 6 }}>✓ listo</span>}
-          {isSinDatos && <span style={{ fontSize: '0.7rem', background: '#f59e0b20', color: '#f59e0b', borderRadius: 4, padding: '1px 5px', marginRight: 6 }}>⚠ datos</span>}
+        <div style={{ fontWeight: 600, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          {isListo    && <span style={{ fontSize: '0.68rem', background: '#22c55e20', color: '#22c55e', borderRadius: 4, padding: '1px 5px' }}>✓ listo</span>}
+          {isSinDatos && <span style={{ fontSize: '0.68rem', background: '#f59e0b20', color: '#f59e0b', borderRadius: 4, padding: '1px 5px' }}>⚠ datos</span>}
+          {alertColor && (
+            <span style={{ fontSize: '0.68rem', background: alertColor + '20', color: alertColor, borderRadius: 4, padding: '1px 5px' }}>
+              {overdue ? '🔴 vencido' : '🟡 hoy'}
+            </span>
+          )}
           {client.name}
+          {client.prioridad && prioColor && (
+            <span style={{ fontSize: '0.65rem', background: prioColor + '20', color: prioColor, borderRadius: 4, padding: '1px 5px' }}>
+              {client.prioridad}
+            </span>
+          )}
+          {client.temperatura && tempColor && (
+            <span style={{ fontSize: '0.65rem', background: tempColor + '20', color: tempColor, borderRadius: 4, padding: '1px 5px' }}>
+              {client.temperatura}
+            </span>
+          )}
         </div>
-        <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+        <div style={{ fontSize: '0.77rem', color: 'var(--muted)' }}>
           {client.rubro || '—'} · {client.city || '—'}
           {client.phone && <span> · 📱 {client.phone}</span>}
           {!client.phone && client.notes && <span style={{ fontStyle: 'italic' }}> · {client.notes}</span>}
@@ -48,13 +84,15 @@ export default function ClientRow({ client }: Props) {
       </div>
 
       <span className={`badge badge-${client.type}`}>{client.type.toUpperCase()}</span>
-      <span className={`badge badge-${client.status}`}>{client.status}</span>
+      <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 600, background: statusColor + '22', color: statusColor, border: `1px solid ${statusColor}44`, whiteSpace: 'nowrap' }}>
+        {statusLabel}
+      </span>
 
-      <div style={{ textAlign: 'right', minWidth: 60 }}>
+      <div style={{ textAlign: 'right', minWidth: 50 }}>
         <div style={{ fontWeight: 700, color: client.score >= 75 ? '#22c55e' : client.score >= 50 ? '#eab308' : '#ef4444' }}>
           {client.score}
         </div>
-        <div style={{ fontSize: '0.65rem', color: 'var(--muted)' }}>score</div>
+        <div style={{ fontSize: '0.62rem', color: 'var(--muted)' }}>score</div>
       </div>
 
       <div style={{ display: 'flex', gap: 4 }}>
@@ -77,9 +115,7 @@ export default function ClientRow({ client }: Props) {
         <button onClick={handleDelete} className="btn btn-ghost" style={{ padding: '6px 10px', color: '#ef4444', opacity: 0.6 }} title="Eliminar">
           🗑️
         </button>
-        <Link href={`/admin/clients/${client.id}`} className="btn btn-ghost" style={{ padding: '6px 10px' }}>
-          →
-        </Link>
+        <Link href={`/admin/clients/${client.id}`} className="btn btn-ghost" style={{ padding: '6px 10px' }}>→</Link>
       </div>
     </div>
   )

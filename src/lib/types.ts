@@ -1,5 +1,9 @@
 export type ClientType = 'b2b' | 'b2c'
-export type ClientStatus = 'nuevo' | 'contactado' | 'interesado' | 'cliente' | 'inactivo'
+export type ClientStatus =
+  | 'prospecto' | 'contactado' | 'sin_respuesta' | 'respondio'
+  | 'interesado' | 'negociacion' | 'presupuesto_enviado' | 'esperando_respuesta'
+  | 'cliente' | 'cliente_recurrente' | 'no_interesado' | 'perdido'
+  | 'nuevo' | 'inactivo' // legacy — kept for backward compatibility
 export type OrderStatus = 'pendiente' | 'confirmado' | 'preparacion' | 'enviado' | 'entregado'
 export type Channel = 'whatsapp' | 'email' | 'telefono' | 'instagram' | 'web'
 export type TaskPriority = 'urgente' | 'importante' | 'rutina'
@@ -21,6 +25,28 @@ export interface Client {
   tags?: string[]
   last_contact?: string
   next_followup?: string
+  created_at: string
+  updated_at?: string
+  // CRM fields
+  fecha_primer_contacto?: string
+  proxima_accion?: string
+  prioridad?: 'alta' | 'media' | 'baja'
+  temperatura?: 'frio' | 'tibio' | 'caliente'
+  probabilidad_cierre?: number
+  productos_interes?: string
+  proveedor_actual?: string
+  presupuesto_estimado?: number
+  motivo_perdida?: string
+  observaciones?: string
+}
+
+export interface ClientHistory {
+  id: string
+  client_id: string
+  fecha: string
+  usuario: string
+  accion: string
+  detalle?: string
   created_at: string
 }
 
