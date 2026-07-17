@@ -1,7 +1,5 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useIsAdmin } from '@/hooks/useRole'
+import { useState, useRef } from 'react'
 
 interface PreviewRow {
   name: string
@@ -16,13 +14,9 @@ interface PreviewRow {
 }
 
 export default function ImportPage() {
-  const router = useRouter()
   const [rows, setRows] = useState<PreviewRow[]>([])
   const [importing, setImporting] = useState(false)
   const [done, setDone] = useState<{ imported: number; skipped: number } | null>(null)
-  const isAdmin = useIsAdmin()
-  useEffect(() => { if (isAdmin === false) router.replace('/admin/clients') }, [isAdmin, router])
-  if (isAdmin !== true) return null
   const fileRef = useRef<HTMLInputElement>(null)
 
   function splitCSVLine(line: string): string[] {
