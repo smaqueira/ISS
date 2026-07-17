@@ -13,7 +13,7 @@ export const STATUS_OPTIONS = [
   { value: 'cliente_recurrente',   label: 'Cliente recurrente' },
   { value: 'no_interesado',        label: 'No interesado' },
   { value: 'perdido',              label: 'Perdido' },
-] as const
+]
 
 export const STATUS_LABELS: Record<string, string> = {
   prospecto:           'Prospecto',
