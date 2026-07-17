@@ -1,6 +1,16 @@
-import { getBlueMarketProducts, ISSProduct } from '@/lib/bluemarket'
+import type { ISSProduct } from '@/lib/bluemarket'
 import { ask } from '@/lib/ai/client'
 import { createClient } from '@/lib/supabase/server'
+
+async function getProductos(): Promise<ISSProduct[]> {
+  const db = await createClient()
+  const { data } = await db.from('products')
+    .select('id, name, description, price, unit, category, image_url, active, featured')
+    .eq('active', true)
+    .order('featured', { ascending: false })
+    .order('name')
+  return (data || []) as ISSProduct[]
+}
 
 function botToken() { return process.env.TELEGRAM_BOT_TOKEN || '' }
 
@@ -30,7 +40,7 @@ async function getSettings() {
 }
 
 export async function getCatalogText(products?: ISSProduct[] | null): Promise<string> {
-  const list = products ?? await getBlueMarketProducts()
+  const list = products ?? await getProductos()
   if (!list || list.length === 0) return '(catálogo no disponible)'
   return list.map(p =>
     `• <b>${p.name}</b>${p.category ? ` (${p.category})` : ''}: ${p.price ? `$${p.price.toLocaleString('es-AR')}${p.unit ? `/${p.unit}` : ''}` : 'consultar precio'}${p.description ? ` — ${p.description}` : ''}`
@@ -39,7 +49,7 @@ export async function getCatalogText(products?: ISSProduct[] | null): Promise<st
 
 export async function vittoWelcome(firstName: string): Promise<string> {
   const { nombre, whatsapp } = await getSettings()
-  const products = await getBlueMarketProducts()
+  const products = await getProductos()
   const destacados = products?.filter(p => p.featured).slice(0, 3) ?? products?.slice(0, 3) ?? []
   const lista = destacados.map(p => `🐟 <b>${p.name}</b> — $${p.price?.toLocaleString('es-AR') ?? 'consultar'}`).join('\n')
 
@@ -57,7 +67,7 @@ Preguntame por cualquier producto, te doy precios, recetas o armamos tu pedido a
 
 export async function vittoReply(userMessage: string, history: { role: string; content: string }[] = []): Promise<string> {
   const { nombre, descripcion, whatsapp } = await getSettings()
-  const products = await getBlueMarketProducts()
+  const products = await getProductos()
   const catalogo = await getCatalogText(products)
 
   const destacados = products?.filter(p => p.featured).slice(0, 2).map(p => p.name).join(' y ') ?? ''
@@ -100,7 +110,7 @@ Vitto:`
 
 export async function generateOfertaDelDia(): Promise<string> {
   const { nombre, whatsapp } = await getSettings()
-  const products = await getBlueMarketProducts()
+  const products = await getProductos()
   const catalogo = await getCatalogText(products)
   const destacados = products?.filter(p => p.featured).slice(0, 3) ?? products?.slice(0, 3) ?? []
   const hora = new Date().toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires', weekday: 'long' })
