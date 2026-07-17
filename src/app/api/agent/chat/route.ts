@@ -225,7 +225,7 @@ PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o
     const systemContent = buildSystemPrompt(biz.name, biz.description).replace('{CONTEXT}', context)
 
     // Función que intenta una llamada rotando keys en caso de 429
-    async function groqCreate(params: Groq.Chat.Completions.ChatCompletionCreateParams): Promise<Groq.Chat.Completions.ChatCompletion> {
+    async function groqCreate(params: Groq.Chat.Completions.CompletionCreateParams): Promise<Groq.Chat.Completions.ChatCompletion> {
       let lastErr: unknown
       for (const key of apiKeys) {
         try {
