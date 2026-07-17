@@ -9,7 +9,7 @@ export default function NewClientPage() {
   const [loading, setLoading] = useState(false)
   const isAdmin = useIsAdmin()
   useEffect(() => { if (isAdmin === false) router.replace('/admin/clients') }, [isAdmin, router])
-  if (isAdmin === false) return null
+  if (isAdmin !== true) return null
 
   function set(key: string, value: string) {
     setForm(prev => ({ ...prev, [key]: value }))

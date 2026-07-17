@@ -19,6 +19,9 @@ export function useRole(): Role {
   return role
 }
 
-export function useIsAdmin(): boolean {
-  return useRole() === 'admin'
+// null = todavía cargando, true = admin, false = no admin
+export function useIsAdmin(): boolean | null {
+  const role = useRole()
+  if (role === null) return null
+  return role === 'admin'
 }

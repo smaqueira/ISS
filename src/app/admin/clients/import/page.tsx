@@ -22,7 +22,7 @@ export default function ImportPage() {
   const [done, setDone] = useState<{ imported: number; skipped: number } | null>(null)
   const isAdmin = useIsAdmin()
   useEffect(() => { if (isAdmin === false) router.replace('/admin/clients') }, [isAdmin, router])
-  if (isAdmin === false) return null
+  if (isAdmin !== true) return null
   const fileRef = useRef<HTMLInputElement>(null)
 
   function splitCSVLine(line: string): string[] {
