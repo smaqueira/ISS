@@ -34,6 +34,11 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
   function openWhatsApp() {
     navigator.clipboard.writeText(message)
     window.open(`https://wa.me/${phone}`, '_blank')
+    // Log en historial
+    fetch(`/api/clients/${clientId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _accion: 'whatsapp_enviado' }),
+    })
   }
 
   return (

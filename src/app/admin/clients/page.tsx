@@ -14,6 +14,7 @@ export default async function ClientsPage({ searchParams }: {
     type?: string; status?: string; origen?: string; q?: string
     vista?: string; tag?: string; page?: string
     prioridad?: string; temperatura?: string; vencidos?: string
+    city?: string; desde?: string; hasta?: string; fu_desde?: string; fu_hasta?: string
   }>
 }) {
   const cookieStore = await cookies()
@@ -38,6 +39,11 @@ export default async function ClientsPage({ searchParams }: {
   if (filters.prioridad)  baseQ = baseQ.eq('prioridad', filters.prioridad)
   if (filters.temperatura) baseQ = baseQ.eq('temperatura', filters.temperatura)
   if (filters.vencidos === '1') baseQ = baseQ.lt('next_followup', hoy)
+  if (filters.city)     baseQ = baseQ.ilike('city', `%${filters.city}%`)
+  if (filters.desde)    baseQ = baseQ.gte('last_contact', filters.desde)
+  if (filters.hasta)    baseQ = baseQ.lte('last_contact', filters.hasta)
+  if (filters.fu_desde) baseQ = baseQ.gte('next_followup', filters.fu_desde)
+  if (filters.fu_hasta) baseQ = baseQ.lte('next_followup', filters.fu_hasta)
 
   if (filters.tag === 'listo')         baseQ = baseQ.contains('tags', ['listo'])
   else if (filters.tag === 'sin_datos') baseQ = baseQ.contains('tags', ['sin_datos'])
@@ -239,15 +245,33 @@ export default async function ClientsPage({ searchParams }: {
         <Link href="/admin/clients?vista=rubro" style={chip(activeFilter === 'rubro')}>🏷️ Por rubro</Link>
       </div>
 
-      {/* Buscador */}
-      <form method="GET" action="/admin/clients" style={{ marginBottom: 16 }}>
+      {/* Buscador + filtros de fecha/ciudad */}
+      <form method="GET" action="/admin/clients" style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {filters.status      && <input type="hidden" name="status"      value={filters.status} />}
         {filters.type        && <input type="hidden" name="type"        value={filters.type} />}
         {filters.prioridad   && <input type="hidden" name="prioridad"   value={filters.prioridad} />}
         {filters.temperatura && <input type="hidden" name="temperatura" value={filters.temperatura} />}
         <input name="q" defaultValue={filters.q || ''}
           placeholder="Buscar por nombre, WhatsApp, email, Instagram, zona o rubro..."
-          style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', color: 'var(--text)', fontSize: '0.85rem', width: '100%' }} />
+          style={fStyle} />
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input name="city" defaultValue={filters.city || ''} placeholder="Filtrar por ciudad..."
+            style={{ ...fStyle, flex: 1, minWidth: 140 }} />
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>Último contacto:</span>
+            <input type="date" name="desde" defaultValue={filters.desde || ''} style={{ ...fStyle, width: 140 }} />
+            <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>–</span>
+            <input type="date" name="hasta" defaultValue={filters.hasta || ''} style={{ ...fStyle, width: 140 }} />
+          </div>
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--muted)', whiteSpace: 'nowrap' }}>Próx. seguimiento:</span>
+            <input type="date" name="fu_desde" defaultValue={filters.fu_desde || ''} style={{ ...fStyle, width: 140 }} />
+            <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>–</span>
+            <input type="date" name="fu_hasta" defaultValue={filters.fu_hasta || ''} style={{ ...fStyle, width: 140 }} />
+          </div>
+          <button type="submit" className="btn btn-primary" style={{ padding: '8px 16px', fontSize: '0.82rem' }}>Filtrar</button>
+          <a href="/admin/clients" className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: '0.82rem' }}>Limpiar</a>
+        </div>
       </form>
 
       {/* Resultado */}
@@ -293,4 +317,9 @@ export default async function ClientsPage({ searchParams }: {
       )}
     </div>
   )
+}
+
+const fStyle: React.CSSProperties = {
+  background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8,
+  padding: '8px 12px', color: 'var(--text)', fontSize: '0.85rem', width: '100%',
 }

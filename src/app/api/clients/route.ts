@@ -51,6 +51,11 @@ export async function POST(req: NextRequest) {
     notes: `Lead creado. IA: ${ai.reason}`, ai_generated: true,
   })
 
+  // Log en historial
+  await db.from('client_history').insert({
+    client_id: data.id, accion: 'Cliente creado', detalle: `Score IA: ${data.score}`, usuario: 'sistema',
+  })
+
   if (data.score >= 75) {
     try {
       const proposal = await generateProposal({ name: data.name, rubro: data.rubro || 'negocio', type: data.type, city: data.city })
