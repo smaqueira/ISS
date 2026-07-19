@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 
 const W = 1200
 const ACCENT = '#7EC8C8'
