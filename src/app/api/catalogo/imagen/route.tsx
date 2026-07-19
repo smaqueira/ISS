@@ -3,10 +3,20 @@ import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs'
 
-const W = 1200
-const ACCENT = '#7EC8C8'
+const W      = 1200
 const NAVY   = '#0D1326'
+const ACCENT = '#7EC8C8'
 const GOLD   = '#C9A96E'
+const COLS   = 4
+const CARD_W = 256
+const CARD_H = 240
+const GAP    = 16
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
+  return out
+}
 
 export async function GET() {
   const db = createAdminClient()
@@ -17,9 +27,11 @@ export async function GET() {
     .order('category')
     .order('name')
 
-  const items = products || []
+  const items = (products || []) as {
+    id: string; name: string; category: string
+    price_retail: number | null; unit: string | null; image_url: string | null
+  }[]
 
-  // Agrupar por categoría
   const byCategory: Record<string, typeof items> = {}
   for (const p of items) {
     const cat = p.category || 'Otros'
@@ -34,135 +46,93 @@ export async function GET() {
 
   return new ImageResponse(
     (
-      <div
-        style={{
-          width: W,
-          display: 'flex',
-          flexDirection: 'column',
-          background: NAVY,
-          fontFamily: 'sans-serif',
-          padding: '0 0 60px 0',
-        }}
-      >
+      <div style={{ width: W, display: 'flex', flexDirection: 'column', background: NAVY, padding: '0 0 60px 0' }}>
+
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          padding: '52px 60px 40px',
-          borderBottom: `1px solid ${ACCENT}33`,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 14 }}>
-            <div style={{
-              width: 72, height: 72, borderRadius: '50%',
-              border: `2px solid ${ACCENT}`,
-              background: `${ACCENT}15`,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 32,
-            }}>🐟</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '52px 60px 36px', borderBottom: `1px solid ${ACCENT}33` }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 12 }}>
+            <div style={{ width: 70, height: 70, borderRadius: 35, border: `2px solid ${ACCENT}`, background: `${ACCENT}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>
+              🐟
+            </div>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: 52, fontWeight: 900, color: '#fff', letterSpacing: -1, lineHeight: 1 }}>
-                VITTO <span style={{ color: ACCENT }}>MARE</span>
-              </span>
-              <span style={{ fontSize: 15, color: `${ACCENT}99`, letterSpacing: 6, textTransform: 'uppercase', marginTop: 4 }}>
-                Pescados · Mariscos
-              </span>
+              <div style={{ fontSize: 54, fontWeight: 900, color: '#fff', letterSpacing: -1, lineHeight: 1, display: 'flex' }}>
+                <span>VITTO </span><span style={{ color: ACCENT }}>MARE</span>
+              </div>
+              <div style={{ fontSize: 14, color: `${ACCENT}99`, letterSpacing: 6, marginTop: 4 }}>
+                PESCADOS · MARISCOS
+              </div>
             </div>
           </div>
-          <div style={{
-            fontSize: 13, color: `#ffffff55`, letterSpacing: 3,
-            textTransform: 'uppercase', marginTop: 8,
-          }}>
-            Selección del día · {today}
+          <div style={{ fontSize: 12, color: '#ffffff44', letterSpacing: 3, marginTop: 6 }}>
+            SELECCIÓN DEL DÍA · {today.toUpperCase()}
           </div>
-          <div style={{
-            marginTop: 20, padding: '8px 28px',
-            border: `1px solid ${GOLD}66`,
-            borderRadius: 30,
-            fontSize: 13, color: GOLD, letterSpacing: 2,
-            textTransform: 'uppercase',
-          }}>
-            Catálogo de precios
+          <div style={{ marginTop: 16, padding: '7px 26px', border: `1px solid ${GOLD}66`, borderRadius: 30, fontSize: 12, color: GOLD, letterSpacing: 2 }}>
+            CATÁLOGO DE PRECIOS
           </div>
         </div>
 
         {/* Categorías */}
         {categories.map(([cat, prods]) => (
           <div key={cat} style={{ display: 'flex', flexDirection: 'column', padding: '0 60px' }}>
-            {/* Category title */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 16,
-              margin: '40px 0 24px',
-            }}>
+            {/* Título categoría */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '36px 0 20px' }}>
               <div style={{ height: 1, flex: 1, background: `${ACCENT}33` }} />
-              <span style={{
-                fontSize: 11, fontWeight: 700, color: ACCENT,
-                letterSpacing: 4, textTransform: 'uppercase',
-              }}>{cat}</span>
+              <div style={{ fontSize: 11, fontWeight: 700, color: ACCENT, letterSpacing: 4 }}>
+                {cat.toUpperCase()}
+              </div>
               <div style={{ height: 1, flex: 1, background: `${ACCENT}33` }} />
             </div>
 
-            {/* Product grid — 4 per row */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-              {prods.map(p => {
-                const price = p.price_retail
-                  ? `$${Number(p.price_retail).toLocaleString('es-AR')} / ${p.unit || 'kg'}`
-                  : 'Consultar'
-
-                return (
-                  <div key={p.id} style={{
-                    width: 238,
-                    display: 'flex', flexDirection: 'column',
-                    background: '#ffffff08',
-                    border: `1px solid ${ACCENT}22`,
-                    borderRadius: 12,
-                    overflow: 'hidden',
-                  }}>
-                    {/* Foto */}
-                    <div style={{
-                      width: 238, height: 180,
-                      background: `${ACCENT}10`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      overflow: 'hidden',
+            {/* Filas de productos */}
+            {chunk(prods, COLS).map((row, ri) => (
+              <div key={ri} style={{ display: 'flex', gap: GAP, marginBottom: GAP }}>
+                {row.map(p => {
+                  const price = p.price_retail
+                    ? `$${Number(p.price_retail).toLocaleString('es-AR')} / ${p.unit || 'kg'}`
+                    : 'Consultar'
+                  return (
+                    <div key={p.id} style={{
+                      width: CARD_W, display: 'flex', flexDirection: 'column',
+                      background: '#ffffff08', border: `1px solid ${ACCENT}22`,
+                      borderRadius: 12, overflow: 'hidden',
                     }}>
-                      {p.image_url
-                        ? <img src={p.image_url} width={238} height={180} style={{ objectFit: 'cover' }} />
-                        : <span style={{ fontSize: 48 }}>🐟</span>
-                      }
+                      <div style={{
+                        width: CARD_W, height: 170, background: `${ACCENT}10`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {p.image_url
+                          ? <img src={p.image_url} width={CARD_W} height={170} style={{ objectFit: 'cover' }} />
+                          : <div style={{ fontSize: 44 }}>🐟</div>
+                        }
+                      </div>
+                      <div style={{ padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{p.name}</div>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: price === 'Consultar' ? `${ACCENT}88` : ACCENT }}>
+                          {price}
+                        </div>
+                      </div>
                     </div>
-                    {/* Info */}
-                    <div style={{ padding: '14px 14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{p.name}</span>
-                      <span style={{
-                        fontSize: 15, fontWeight: 800,
-                        color: price === 'Consultar' ? `${ACCENT}99` : ACCENT,
-                        marginTop: 2,
-                      }}>{price}</span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+                {/* Placeholders para completar la fila */}
+                {Array.from({ length: COLS - row.length }).map((_, i) => (
+                  <div key={`ph-${i}`} style={{ width: CARD_W }} />
+                ))}
+              </div>
+            ))}
           </div>
         ))}
 
         {/* Footer */}
-        <div style={{
-          display: 'flex', justifyContent: 'center', alignItems: 'center',
-          gap: 32, marginTop: 56, padding: '28px 60px 0',
-          borderTop: `1px solid ${ACCENT}22`,
-        }}>
-          <span style={{ fontSize: 13, color: `#ffffff44`, letterSpacing: 1 }}>vittomare.com</span>
-          <div style={{ width: 4, height: 4, borderRadius: '50%', background: `${ACCENT}44` }} />
-          <span style={{ fontSize: 13, color: `#ffffff44`, letterSpacing: 1 }}>Pedidos por WhatsApp</span>
-          <div style={{ width: 4, height: 4, borderRadius: '50%', background: `${ACCENT}44` }} />
-          <span style={{ fontSize: 13, color: `#ffffff44`, letterSpacing: 1 }}>Entrega a domicilio</span>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 28, marginTop: 48, padding: '24px 60px 0', borderTop: `1px solid ${ACCENT}22` }}>
+          <div style={{ fontSize: 12, color: '#ffffff33', letterSpacing: 1 }}>vittomare.com</div>
+          <div style={{ width: 3, height: 3, borderRadius: 2, background: `${ACCENT}44` }} />
+          <div style={{ fontSize: 12, color: '#ffffff33', letterSpacing: 1 }}>Pedidos por WhatsApp</div>
+          <div style={{ width: 3, height: 3, borderRadius: 2, background: `${ACCENT}44` }} />
+          <div style={{ fontSize: 12, color: '#ffffff33', letterSpacing: 1 }}>Entrega a domicilio</div>
         </div>
       </div>
     ),
-    {
-      width: W,
-      height: 2400,
-    }
+    { width: W, height: 2600 }
   )
 }
