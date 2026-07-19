@@ -49,22 +49,14 @@ async function bmFetch<T>(path: string): Promise<T | null> {
   }
 }
 
-/** Devuelve los productos activos de BlueMarket, o null si no disponible. */
-export async function getBlueMarketProducts(): Promise<ISSProduct[] | null> {
-  const BM_SLUG = process.env.BLUEMARKET_TIENDA_SLUG ?? 'vitto-mare'
-  const tiendas = await bmFetch<{ id: string }[]>(
-    `pescaderias?slug=eq.${BM_SLUG}&activa=eq.true&select=id`
-  )
-  const tiendaId = tiendas?.[0]?.id
-  if (!tiendaId) return null
-
+async function fetchProductos(tiendaId: string, soloConStock = true): Promise<ISSProduct[] | null> {
+  const filtroStock = soloConStock ? '&stock=gt.0' : ''
   const productos = await bmFetch<BMProduct[]>(
-    `productos?pescaderia_id=eq.${tiendaId}&disponible=eq.true&stock=gt.0` +
+    `productos?pescaderia_id=eq.${tiendaId}&disponible=eq.true${filtroStock}` +
     `&select=id,nombre,descripcion,precio,unidad,categoria,foto_url,destacado` +
     `&order=destacado.desc,nombre.asc`
   )
   if (!productos || productos.length === 0) return null
-
   return productos.map((p) => ({
     id: p.id,
     name: p.nombre,
@@ -76,4 +68,26 @@ export async function getBlueMarketProducts(): Promise<ISSProduct[] | null> {
     active: true,
     featured: p.destacado ?? false,
   }))
+}
+
+async function getTiendaId(): Promise<string | null> {
+  const BM_SLUG = process.env.BLUEMARKET_TIENDA_SLUG ?? 'vitto-mare'
+  const tiendas = await bmFetch<{ id: string }[]>(
+    `pescaderias?slug=eq.${BM_SLUG}&activa=eq.true&select=id`
+  )
+  return tiendas?.[0]?.id ?? null
+}
+
+/** Devuelve los productos activos de BlueMarket, o null si no disponible. */
+export async function getBlueMarketProducts(): Promise<ISSProduct[] | null> {
+  const tiendaId = await getTiendaId()
+  if (!tiendaId) return null
+  return fetchProductos(tiendaId, true)
+}
+
+/** Devuelve TODOS los productos disponibles (sin filtro de stock) — para catálogo. */
+export async function getBlueMarketCatalog(): Promise<ISSProduct[] | null> {
+  const tiendaId = await getTiendaId()
+  if (!tiendaId) return null
+  return fetchProductos(tiendaId, false)
 }

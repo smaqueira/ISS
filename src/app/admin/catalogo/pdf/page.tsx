@@ -1,10 +1,10 @@
-import { getBlueMarketProducts } from '@/lib/bluemarket'
+import { getBlueMarketCatalog } from '@/lib/bluemarket'
 import PrintButton from './PrintButton'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CatalogoPDFPage() {
-  const products = await getBlueMarketProducts()
+  const products = await getBlueMarketCatalog()
   const items = (products || []) as {
     id: string; name: string; category: string | null
     price: number | null; unit: string | null; image_url: string | null

@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og'
-import { getBlueMarketProducts } from '@/lib/bluemarket'
+import { getBlueMarketCatalog } from '@/lib/bluemarket'
 
 export const runtime = 'nodejs'
 
@@ -19,7 +19,7 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 export async function GET() {
-  const products = await getBlueMarketProducts()
+  const products = await getBlueMarketCatalog()
   const items = (products || []) as {
     id: string; name: string; category: string | null
     price: number | null; unit: string | null; image_url: string | null
