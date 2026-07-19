@@ -69,9 +69,9 @@ export default async function FlyerPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 24 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/logo-vittomare.png"
+              src="/logo-vitto-mare.png"
               alt="Vitto Mare"
-              style={{ height: 160, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+              style={{ width: 150, height: 150, objectFit: 'contain', flexShrink: 0 }}
             />
 
             <div style={{ flex: 1 }} />
