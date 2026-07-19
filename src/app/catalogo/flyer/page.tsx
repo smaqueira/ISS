@@ -120,19 +120,18 @@ export default async function FlyerPage() {
                     borderRadius: 12,
                     overflow: 'hidden',
                   }}>
-                    <div style={{ position: 'relative', aspectRatio: '4/3', overflow: 'hidden', background: 'rgba(126,200,200,0.06)' }}>
+                    <div style={{ position: 'relative', width: '100%', height: 130, overflow: 'hidden', background: 'rgba(126,200,200,0.06)' }}>
                       {p.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={p.image_url}
                           alt={p.name}
-                          crossOrigin="anonymous"
                           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                         />
                       ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 40 }}>🐟</div>
                       )}
-                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: 'linear-gradient(transparent, rgba(10,18,32,0.85))' }} />
+                      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 52, background: 'linear-gradient(transparent, rgba(10,18,32,0.85))' }} />
                     </div>
 
                     <div style={{ padding: '12px 14px 14px' }}>

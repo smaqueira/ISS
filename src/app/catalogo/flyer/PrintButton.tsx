@@ -1,6 +1,17 @@
 'use client'
 import { useState } from 'react'
 
+async function toDataURL(src: string): Promise<string> {
+  const res = await fetch(`/api/proxy-image?url=${encodeURIComponent(src)}`)
+  const blob = await res.blob()
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+}
+
 export default function FlyerControls() {
   const [loading, setLoading] = useState(false)
 
@@ -10,18 +21,13 @@ export default function FlyerControls() {
       const html2canvas = (await import('html2canvas')).default
       const el = document.getElementById('flyer-root')!
 
-      // Reemplazar todas las imgs externas por versiones proxeadas (mismo origen = sin CORS)
-      const imgs = el.querySelectorAll<HTMLImageElement>('img')
-      const origSrcs: string[] = []
-      await Promise.all(Array.from(imgs).map(async (img, i) => {
-        origSrcs[i] = img.src
+      // Convertir todas las imgs externas a base64 data URLs (mismo origen para html2canvas)
+      const imgs = Array.from(el.querySelectorAll<HTMLImageElement>('img'))
+      const origSrcs = imgs.map(img => img.src)
+      await Promise.all(imgs.map(async (img) => {
         if (img.src && img.src.startsWith('http')) {
           try {
-            const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(img.src)}`
-            const res = await fetch(proxyUrl)
-            const blob = await res.blob()
-            img.src = URL.createObjectURL(blob)
-            await new Promise(r => { img.onload = r; img.onerror = r })
+            img.src = await toDataURL(img.src)
           } catch {
             img.style.visibility = 'hidden'
           }
@@ -36,7 +42,7 @@ export default function FlyerControls() {
         logging: false,
       })
 
-      // Restaurar srcs originales
+      // Restaurar
       imgs.forEach((img, i) => { img.src = origSrcs[i] })
 
       const link = document.createElement('a')
@@ -45,13 +51,9 @@ export default function FlyerControls() {
       link.click()
     } catch (e) {
       console.error('Error generando PNG:', e)
-      alert('Error al generar la imagen. Intentá de nuevo.')
+      alert('Error al generar la imagen.')
     }
     setLoading(false)
-  }
-
-  function descargarPDF() {
-    window.print()
   }
 
   return (
@@ -59,7 +61,7 @@ export default function FlyerControls() {
       <button onClick={descargarPNG} disabled={loading} style={btnStyle('#1a2540', '#7EC8C8')}>
         {loading ? '⏳ Generando...' : '🖼️ PNG'}
       </button>
-      <button onClick={descargarPDF} style={btnStyle('#7EC8C8', '#0D1326')}>
+      <button onClick={() => window.print()} style={btnStyle('#7EC8C8', '#0D1326')}>
         📄 PDF
       </button>
     </div>
