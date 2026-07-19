@@ -10,33 +10,42 @@ export default function FlyerControls() {
       const html2canvas = (await import('html2canvas')).default
       const el = document.getElementById('flyer-root')!
 
-      // Reemplazar imgs con fallo por placeholder antes de capturar
+      // Reemplazar todas las imgs externas por versiones proxeadas (mismo origen = sin CORS)
       const imgs = el.querySelectorAll<HTMLImageElement>('img')
-      imgs.forEach(img => {
-        if (!img.complete || img.naturalWidth === 0) {
-          img.style.visibility = 'hidden'
+      const origSrcs: string[] = []
+      await Promise.all(Array.from(imgs).map(async (img, i) => {
+        origSrcs[i] = img.src
+        if (img.src && img.src.startsWith('http')) {
+          try {
+            const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(img.src)}`
+            const res = await fetch(proxyUrl)
+            const blob = await res.blob()
+            img.src = URL.createObjectURL(blob)
+            await new Promise(r => { img.onload = r; img.onerror = r })
+          } catch {
+            img.style.visibility = 'hidden'
+          }
         }
-      })
+      }))
 
       const canvas = await html2canvas(el, {
         scale: 2,
-        useCORS: true,
-        allowTaint: true,
+        useCORS: false,
+        allowTaint: false,
         backgroundColor: '#0D1326',
         logging: false,
-        imageTimeout: 3000,
-        onclone: (doc) => {
-          // En el clon, ocultar los botones flotantes
-          doc.querySelectorAll<HTMLElement>('[data-no-print]').forEach(el => { el.style.display = 'none' })
-        },
       })
+
+      // Restaurar srcs originales
+      imgs.forEach((img, i) => { img.src = origSrcs[i] })
+
       const link = document.createElement('a')
       link.download = `catalogo-vittomare-${new Date().toISOString().split('T')[0]}.png`
       link.href = canvas.toDataURL('image/png')
       link.click()
     } catch (e) {
-      console.error('html2canvas error', e)
-      alert('No se pudo generar la imagen. Usá el botón PDF e imprimí como imagen.')
+      console.error('Error generando PNG:', e)
+      alert('Error al generar la imagen. Intentá de nuevo.')
     }
     setLoading(false)
   }
@@ -46,7 +55,7 @@ export default function FlyerControls() {
   }
 
   return (
-    <div data-no-print style={{ position: 'fixed', top: 20, right: 20, zIndex: 100, display: 'flex', gap: 10 }}>
+    <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 100, display: 'flex', gap: 10 }}>
       <button onClick={descargarPNG} disabled={loading} style={btnStyle('#1a2540', '#7EC8C8')}>
         {loading ? '⏳ Generando...' : '🖼️ PNG'}
       </button>
