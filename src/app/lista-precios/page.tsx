@@ -1,4 +1,4 @@
-import { getBlueMarketProducts } from '@/lib/bluemarket'
+import { getBlueMarketCatalog as getBlueMarketProducts } from '@/lib/bluemarket'
 import { createClient } from '@/lib/supabase/server'
 
 export const revalidate = 300 // refresca cada 5 minutos

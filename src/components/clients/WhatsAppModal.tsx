@@ -11,13 +11,13 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
   const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
-  const [copiedCat, setCopiedCat] = useState<'png'|'pdf'|null>(null)
+  const [copiedCat, setCopiedCat] = useState<'flyer'|'lista'|null>(null)
 
   const CATALOGO_PNG = 'https://app.vittomare.com/catalogo/flyer'
-  const CATALOGO_PDF = 'https://app.vittomare.com/catalogo/pdf'
+  const LISTA_PRECIOS = 'https://app.vittomare.com/lista-precios'
 
-  function copyCatalogo(tipo: 'png'|'pdf') {
-    const url = tipo === 'png' ? CATALOGO_PNG : CATALOGO_PDF
+  function copyCatalogo(tipo: 'flyer'|'lista') {
+    const url = tipo === 'flyer' ? CATALOGO_PNG : LISTA_PRECIOS
     navigator.clipboard.writeText(url)
     setCopiedCat(tipo)
     setTimeout(() => setCopiedCat(null), 2000)
@@ -92,23 +92,23 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
                   📲 Enviar catálogo
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={() => copyCatalogo('png')} style={{
+                  <button onClick={() => copyCatalogo('flyer')} style={{
                     flex: 1, padding: '8px 10px', borderRadius: 8,
-                    border: `1px solid ${copiedCat === 'png' ? '#22c55e' : 'var(--border)'}`,
-                    background: copiedCat === 'png' ? '#22c55e18' : 'transparent',
-                    color: copiedCat === 'png' ? '#22c55e' : 'var(--text)',
+                    border: `1px solid ${copiedCat === 'flyer' ? '#22c55e' : 'var(--border)'}`,
+                    background: copiedCat === 'flyer' ? '#22c55e18' : 'transparent',
+                    color: copiedCat === 'flyer' ? '#22c55e' : 'var(--text)',
                     cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
                   }}>
-                    {copiedCat === 'png' ? '✓ Copiado' : '🖼️ Copiar link PNG'}
+                    {copiedCat === 'flyer' ? '✓ Copiado' : '🖼️ Flyer catálogo'}
                   </button>
-                  <button onClick={() => copyCatalogo('pdf')} style={{
+                  <button onClick={() => copyCatalogo('lista')} style={{
                     flex: 1, padding: '8px 10px', borderRadius: 8,
-                    border: `1px solid ${copiedCat === 'pdf' ? '#22c55e' : 'var(--border)'}`,
-                    background: copiedCat === 'pdf' ? '#22c55e18' : 'transparent',
-                    color: copiedCat === 'pdf' ? '#22c55e' : 'var(--text)',
+                    border: `1px solid ${copiedCat === 'lista' ? '#22c55e' : 'var(--border)'}`,
+                    background: copiedCat === 'lista' ? '#22c55e18' : 'transparent',
+                    color: copiedCat === 'lista' ? '#22c55e' : 'var(--text)',
                     cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
                   }}>
-                    {copiedCat === 'pdf' ? '✓ Copiado' : '📄 Copiar link PDF'}
+                    {copiedCat === 'lista' ? '✓ Copiado' : '📋 Lista de precios'}
                   </button>
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--muted)', marginTop: 6 }}>
