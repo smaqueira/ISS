@@ -35,7 +35,7 @@ export default function FlyerControls() {
       }))
 
       const canvas = await html2canvas(el, {
-        scale: 2,
+        scale: 1.5,
         useCORS: false,
         allowTaint: false,
         backgroundColor: '#0D1326',
@@ -46,12 +46,12 @@ export default function FlyerControls() {
       imgs.forEach((img, i) => { img.src = origSrcs[i] })
 
       const link = document.createElement('a')
-      link.download = `catalogo-vittomare-${new Date().toISOString().split('T')[0]}.png`
-      link.href = canvas.toDataURL('image/png')
+      link.download = `catalogo-vittomare-${new Date().toISOString().split('T')[0]}.jpg`
+      link.href = canvas.toDataURL('image/jpeg', 0.92)
       link.click()
     } catch (e) {
-      console.error('Error generando PNG:', e)
-      alert('Error al generar la imagen.')
+      console.error('Error generando imagen:', e)
+      alert('Error: ' + (e instanceof Error ? e.message : String(e)))
     }
     setLoading(false)
   }
