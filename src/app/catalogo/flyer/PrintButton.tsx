@@ -30,10 +30,7 @@ export default function FlyerControls() {
   }
 
   return (
-    <div style={{
-      position: 'fixed', top: 20, right: 20, zIndex: 100,
-      display: 'flex', gap: 10,
-    }}>
+    <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 100, display: 'flex', gap: 10 }}>
       <button onClick={descargarPNG} disabled={loading} style={btnStyle('#1a2540', '#7EC8C8')}>
         {loading ? '⏳' : '🖼️ PNG'}
       </button>
