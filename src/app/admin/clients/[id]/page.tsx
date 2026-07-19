@@ -173,6 +173,13 @@ export default async function ClientDetailPage({ params }: { params: Params }) {
       {/* Acciones rápidas */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {client.phone && <WhatsAppButton clientId={id} />}
+        {client.phone && (
+          <a
+            href={`https://wa.me/${client.phone}?text=${encodeURIComponent('¡Hola! Te comparto nuestro catálogo de productos de hoy 👇\nhttps://app.vittomare.com/api/catalogo/imagen')}`}
+            target="_blank" rel="noopener noreferrer"
+            className="btn btn-ghost"
+          >📲 Catálogo</a>
+        )}
         {client.email && <a href={`mailto:${client.email}`} className="btn btn-ghost">📧 Email</a>}
         <Link href={`/admin/orders/new?client=${id}`} className="btn btn-ghost">📦 Nuevo pedido</Link>
         <Link href={`/admin/clients/${id}/edit`} className="btn btn-ghost">✏️ Editar</Link>
