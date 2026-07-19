@@ -131,6 +131,11 @@ export default function ClientRow({ client }: Props) {
             <button onClick={() => setWaOpen(true)} className="btn btn-ghost" style={{ padding: '6px 10px' }} title="Enviar WhatsApp">
               📱
             </button>
+            <a
+              href={`https://wa.me/${client.phone}?text=${encodeURIComponent('¡Hola! Te comparto nuestro catálogo de productos de hoy 👇\nhttps://app.vittomare.com/api/catalogo/imagen')}`}
+              target="_blank" rel="noopener noreferrer"
+              className="btn btn-ghost" style={{ padding: '6px 10px' }} title="Enviar catálogo"
+            >📲</a>
             {waOpen && <WhatsAppModal clientId={client.id} onClose={() => setWaOpen(false)} />}
           </>
         )}
