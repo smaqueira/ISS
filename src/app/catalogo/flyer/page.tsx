@@ -120,7 +120,7 @@ export default async function FlyerPage() {
                     borderRadius: 12,
                     overflow: 'hidden',
                   }}>
-                    <div style={{ position: 'relative', width: '100%', height: 130, overflow: 'hidden', background: 'rgba(126,200,200,0.06)' }}>
+                    <div style={{ position: 'relative', width: '100%', height: 170, overflow: 'hidden', background: 'rgba(126,200,200,0.06)' }}>
                       {p.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
