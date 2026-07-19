@@ -28,13 +28,14 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
     Promise.all([
       fetch(`/api/clients/${clientId}/whatsapp`).then(r => r.json()),
       fetch('/api/settings').then(r => r.json()),
-    ]).then(([data, settings]) => {
+    ]).then(([data, settingsArr]) => {
       if (data.url) {
         const url = new URL(data.url)
         setPhone(url.pathname.replace('/', ''))
         setMessage(data.message || '')
       }
-      setCompraMinima(settings.COMPRA_MINIMA || '')
+      const sm = Object.fromEntries((settingsArr || []).map((r: { key: string; value: string }) => [r.key, r.value]))
+      setCompraMinima(sm.COMPRA_MINIMA || '')
       setLoading(false)
     })
   }, [clientId])

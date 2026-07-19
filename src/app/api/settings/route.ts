@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   const updates: { key: string; value: string }[] = await req.json()
 
   for (const { key, value } of updates) {
-    await db.from('settings').update({ value, updated_at: new Date().toISOString() }).eq('key', key)
+    await db.from('settings').upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
   }
 
   return NextResponse.json({ ok: true })
