@@ -53,28 +53,13 @@ export default async function FlyerPage() {
           <div style={{ width: 48, height: 2, background: 'linear-gradient(90deg, #C9A96E, transparent)', marginBottom: 32 }} />
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 24 }}>
-            <div style={{
-              width: 80, height: 80, borderRadius: '50%',
-              border: '1.5px solid rgba(126,200,200,0.4)',
-              background: 'rgba(126,200,200,0.06)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <span style={{ fontSize: 36 }}>🐟</span>
-            </div>
-
-            <div>
-              <div style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: 58, fontWeight: 900, lineHeight: 1,
-                color: '#fff', letterSpacing: -1,
-              }}>
-                VITTO <span style={{ color: '#7EC8C8' }}>MARE</span>
-              </div>
-              <div style={{ fontSize: 11, color: 'rgba(126,200,200,0.6)', letterSpacing: 7, marginTop: 6, fontWeight: 600 }}>
-                PESCADOS · MARISCOS
-              </div>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://vittomare.com/logo-vitto-mare.png"
+              alt="Vitto Mare"
+              crossOrigin="anonymous"
+              style={{ width: 100, height: 100, objectFit: 'contain', flexShrink: 0 }}
+            />
 
             <div style={{ flex: 1 }} />
 
