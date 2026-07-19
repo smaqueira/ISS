@@ -71,7 +71,7 @@ export default async function FlyerPage() {
             <img
               src="/logo-vittomare.png"
               alt="Vitto Mare"
-              style={{ width: 140, height: 140, objectFit: 'contain', flexShrink: 0 }}
+              style={{ height: 160, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
             />
 
             <div style={{ flex: 1 }} />
