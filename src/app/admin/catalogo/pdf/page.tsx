@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import PrintButton from './PrintButton'
 
 export default async function CatalogoPDFPage() {
   const db = createAdminClient()
@@ -67,9 +68,7 @@ export default async function CatalogoPDFPage() {
         .footer { margin-top: 48px; padding-top: 22px; border-top: 1px solid #7EC8C822; text-align: center; font-size: 11px; color: #ffffff33; letter-spacing: 1px; display: flex; justify-content: center; gap: 24px; }
       `}</style>
 
-      <button className="print-btn" onClick={() => window.print()} suppressHydrationWarning>
-        🖨️ Guardar como PDF
-      </button>
+      <PrintButton />
 
       <div className="catalog">
         <div className="header">
