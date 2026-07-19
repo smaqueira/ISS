@@ -9,6 +9,7 @@ interface Props {
 export default function WhatsAppModal({ clientId, onClose }: Props) {
   const [message, setMessage] = useState('')
   const [phone, setPhone] = useState('')
+  const [compraMinima, setCompraMinima] = useState('')
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [copiedCat, setCopiedCat] = useState<'flyer'|'lista'|null>(null)
@@ -24,16 +25,18 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
   }
 
   useEffect(() => {
-    fetch(`/api/clients/${clientId}/whatsapp`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.url) {
-          const url = new URL(data.url)
-          setPhone(url.pathname.replace('/', ''))
-          setMessage(data.message || '')
-        }
-        setLoading(false)
-      })
+    Promise.all([
+      fetch(`/api/clients/${clientId}/whatsapp`).then(r => r.json()),
+      fetch('/api/settings').then(r => r.json()),
+    ]).then(([data, settings]) => {
+      if (data.url) {
+        const url = new URL(data.url)
+        setPhone(url.pathname.replace('/', ''))
+        setMessage(data.message || '')
+      }
+      setCompraMinima(settings.COMPRA_MINIMA || '')
+      setLoading(false)
+    })
   }, [clientId])
 
   function copy() {
@@ -75,6 +78,11 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
         {loading
           ? <div style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>✍️ Generando mensaje...</div>
           : <>
+              {compraMinima && (
+                <div style={{ background: '#22c55e12', border: '1px solid #22c55e44', borderRadius: 8, padding: '7px 12px', fontSize: '0.78rem', color: '#22c55e', fontWeight: 600 }}>
+                  🛒 Compra mínima: {compraMinima}
+                </div>
+              )}
               <textarea
                 value={message}
                 onChange={e => setMessage(e.target.value)}

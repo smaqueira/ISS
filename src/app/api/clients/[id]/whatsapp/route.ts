@@ -10,9 +10,10 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
   const { data: client } = await db.from('clients').select('*').eq('id', id).single()
   if (!client || !client.phone) return NextResponse.json({ error: 'Sin teléfono' }, { status: 400 })
 
-  const [companyName, companyDesc] = await Promise.all([
+  const [companyName, companyDesc, compraMinima] = await Promise.all([
     getSetting('COMPANY_NAME'),
     getSetting('COMPANY_DESCRIPTION'),
+    getSetting('COMPRA_MINIMA'),
   ])
 
   const nombre = companyName || 'nuestro equipo'
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
 
   const esPrimerContacto = !client.fecha_primer_contacto && !client.last_contact
 
-  const cuerpo = `${fish} Seleccionamos nuestros productos diariamente para garantizar la mejor calidad.\n${truck} Hacemos entregas a domicilio.\n${snow} Mantenemos la cadena de frío en todo el proceso.`
+  const cuerpo = `${fish} Seleccionamos nuestros productos diariamente para garantizar la mejor calidad.\n${truck} Hacemos entregas a domicilio.\n${snow} Mantenemos la cadena de frío en todo el proceso.${compraMinima ? `\n🛒 Compra mínima: ${compraMinima}` : ''}`
 
   const whatsapp = esPrimerContacto
     ? `¡Hola! ${wave} ¿Cómo estás?\n\nTe escribimos de *${nombre}*, especialistas en ${descripcion}.\n\n${cuerpo}\n\n${cam} *Te compartimos nuestro catálogo de hoy:*\n${catalogoImgUrl}\n\nTambién podés ver todos nuestros productos en:\n${catalogoUrl}\n\n${spark} Nuestro compromiso es que disfrutes productos frescos y de la mejor calidad en cada entrega.\n\n¿Te gustaría hacer un pedido? Estamos para ayudarte.`
