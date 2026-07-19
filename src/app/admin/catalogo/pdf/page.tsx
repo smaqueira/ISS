@@ -1,25 +1,18 @@
-import { createClient } from '@/lib/supabase/server'
+import { getBlueMarketProducts } from '@/lib/bluemarket'
 import PrintButton from './PrintButton'
 
 export const dynamic = 'force-dynamic'
 
 export default async function CatalogoPDFPage() {
-  const db = await createClient()
-  const { data: products } = await db
-    .from('products')
-    .select('*')
-    .eq('active', true)
-    .order('category')
-    .order('name')
-
+  const products = await getBlueMarketProducts()
   const items = (products || []) as {
-    id: string; name: string; category: string
-    price_retail: number | null; unit: string | null; image_url: string | null
+    id: string; name: string; category: string | null
+    price: number | null; unit: string | null; image_url: string | null
   }[]
 
   const byCategory: Record<string, typeof items> = {}
   for (const p of items) {
-    const cat = p.category || 'Otros'
+    const cat = (p.category as string) || 'Otros'
     if (!byCategory[cat]) byCategory[cat] = []
     byCategory[cat].push(p)
   }
@@ -94,9 +87,9 @@ export default async function CatalogoPDFPage() {
             </div>
             <div className="product-grid">
               {prods.map(p => {
-                const price = p.price_retail
-                  ? `$${Number(p.price_retail).toLocaleString('es-AR')} / ${p.unit || 'kg'}`
-                  : 'Consultar'
+                const price = p.price
+                  ? `$${Number(p.price).toLocaleString('es-AR')} / ${p.unit || 'kg'}`
+                  : 'Consultar precio'
                 return (
                   <div key={p.id} className="product-card">
                     {p.image_url

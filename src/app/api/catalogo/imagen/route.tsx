@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { getBlueMarketProducts } from '@/lib/bluemarket'
 
 export const runtime = 'nodejs'
 
@@ -19,22 +19,15 @@ function chunk<T>(arr: T[], size: number): T[][] {
 }
 
 export async function GET() {
-  const db = createAdminClient()
-  const { data: products } = await db
-    .from('products')
-    .select('*')
-    .eq('active', true)
-    .order('category')
-    .order('name')
-
+  const products = await getBlueMarketProducts()
   const items = (products || []) as {
-    id: string; name: string; category: string
-    price_retail: number | null; unit: string | null; image_url: string | null
+    id: string; name: string; category: string | null
+    price: number | null; unit: string | null; image_url: string | null
   }[]
 
   const byCategory: Record<string, typeof items> = {}
   for (const p of items) {
-    const cat = p.category || 'Otros'
+    const cat = (p.category as string) || 'Otros'
     if (!byCategory[cat]) byCategory[cat] = []
     byCategory[cat].push(p)
   }
@@ -87,9 +80,9 @@ export async function GET() {
             {chunk(prods, COLS).map((row, ri) => (
               <div key={ri} style={{ display: 'flex', gap: GAP, marginBottom: GAP }}>
                 {row.map(p => {
-                  const price = p.price_retail
-                    ? `$${Number(p.price_retail).toLocaleString('es-AR')} / ${p.unit || 'kg'}`
-                    : 'Consultar'
+                  const price = p.price
+                    ? `$${Number(p.price).toLocaleString('es-AR')} / ${p.unit || 'kg'}`
+                    : 'Consultar precio'
                   return (
                     <div key={p.id} style={{
                       width: CARD_W, display: 'flex', flexDirection: 'column',
