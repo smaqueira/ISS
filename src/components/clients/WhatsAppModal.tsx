@@ -13,7 +13,7 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
   const [copied, setCopied] = useState(false)
   const [copiedCat, setCopiedCat] = useState<'png'|'pdf'|null>(null)
 
-  const CATALOGO_PNG = 'https://app.vittomare.com/api/catalogo/imagen'
+  const CATALOGO_PNG = 'https://app.vittomare.com/catalogo/flyer'
   const CATALOGO_PDF = 'https://app.vittomare.com/catalogo/pdf'
 
   function copyCatalogo(tipo: 'png'|'pdf') {
