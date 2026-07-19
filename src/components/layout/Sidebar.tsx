@@ -35,6 +35,7 @@ const GROUPS = [
     items: [
       { href: '/admin/productos',   label: 'Catálogo',    icon: '🛍️' },
       { href: '/admin/productos/lista-precios', label: 'Lista de Precios', icon: '💰' },
+      { href: '/admin/catalogo',    label: 'Catálogo WA', icon: '📲' },
       { href: '/admin/prospecting', label: 'Prospección', icon: '🔍' },
       { href: '/admin/grupos',      label: 'Grupos B2C',  icon: '👥' },
       { href: '/admin/comunidades', label: 'Comunidades', icon: '🌐' },
