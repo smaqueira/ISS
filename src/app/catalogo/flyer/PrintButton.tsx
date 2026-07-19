@@ -6,36 +6,52 @@ export default function FlyerControls() {
 
   async function descargarPNG() {
     setLoading(true)
-    const html2canvas = (await import('html2canvas')).default
-    const el = document.getElementById('flyer-root')!
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#0D1326' })
-    const link = document.createElement('a')
-    link.download = `catalogo-vittomare-${new Date().toISOString().split('T')[0]}.png`
-    link.href = canvas.toDataURL('image/png')
-    link.click()
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const el = document.getElementById('flyer-root')!
+
+      // Reemplazar imgs con fallo por placeholder antes de capturar
+      const imgs = el.querySelectorAll<HTMLImageElement>('img')
+      imgs.forEach(img => {
+        if (!img.complete || img.naturalWidth === 0) {
+          img.style.visibility = 'hidden'
+        }
+      })
+
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#0D1326',
+        logging: false,
+        imageTimeout: 3000,
+        onclone: (doc) => {
+          // En el clon, ocultar los botones flotantes
+          doc.querySelectorAll<HTMLElement>('[data-no-print]').forEach(el => { el.style.display = 'none' })
+        },
+      })
+      const link = document.createElement('a')
+      link.download = `catalogo-vittomare-${new Date().toISOString().split('T')[0]}.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    } catch (e) {
+      console.error('html2canvas error', e)
+      alert('No se pudo generar la imagen. Usá el botón PDF e imprimí como imagen.')
+    }
     setLoading(false)
   }
 
-  async function descargarPDF() {
-    setLoading(true)
-    const html2canvas = (await import('html2canvas')).default
-    const { jsPDF } = await import('jspdf')
-    const el = document.getElementById('flyer-root')!
-    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#0D1326' })
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [canvas.width / 2, canvas.height / 2] })
-    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2)
-    pdf.save(`catalogo-vittomare-${new Date().toISOString().split('T')[0]}.pdf`)
-    setLoading(false)
+  function descargarPDF() {
+    window.print()
   }
 
   return (
-    <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 100, display: 'flex', gap: 10 }}>
+    <div data-no-print style={{ position: 'fixed', top: 20, right: 20, zIndex: 100, display: 'flex', gap: 10 }}>
       <button onClick={descargarPNG} disabled={loading} style={btnStyle('#1a2540', '#7EC8C8')}>
-        {loading ? '⏳' : '🖼️ PNG'}
+        {loading ? '⏳ Generando...' : '🖼️ PNG'}
       </button>
-      <button onClick={descargarPDF} disabled={loading} style={btnStyle('#7EC8C8', '#0D1326')}>
-        {loading ? '⏳ Generando...' : '📄 PDF'}
+      <button onClick={descargarPDF} style={btnStyle('#7EC8C8', '#0D1326')}>
+        📄 PDF
       </button>
     </div>
   )
