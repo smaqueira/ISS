@@ -31,8 +31,11 @@ export default function CatalogoPage() {
           <button onClick={regenerar} className="btn btn-ghost" style={{ fontSize: '0.82rem' }}>
             🔄 Actualizar preview
           </button>
+          <a href="/catalogo/flyer" target="_blank" className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '10px 22px', background: '#C9A96E', borderColor: '#C9A96E' }}>
+            ✨ Flyer premium
+          </a>
           <a href="/catalogo/pdf" target="_blank" className="btn btn-ghost" style={{ fontSize: '0.85rem', padding: '10px 22px' }}>
-            🖨️ PDF
+            🖨️ PDF simple
           </a>
           <button onClick={descargar} disabled={loading} className="btn btn-primary" style={{ fontSize: '0.85rem', padding: '10px 22px' }}>
             {loading ? '⏳ Descargando...' : '⬇️ Descargar imagen'}
