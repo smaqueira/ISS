@@ -1,7 +1,21 @@
+import type { Metadata } from 'next'
 import { getBlueMarketCatalog } from '@/lib/bluemarket'
 import FlyerControls from './PrintButton'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Vitto Mare — Catálogo del día',
+  description: 'Pescados y mariscos frescos. Ver productos y precios.',
+  openGraph: {
+    title: 'Vitto Mare — Catálogo del día',
+    description: 'Pescados y mariscos frescos. Ver productos y precios.',
+    url: 'https://app.vittomare.com/catalogo/flyer',
+    siteName: 'Vitto Mare',
+    images: [{ url: 'https://app.vittomare.com/logo-og-vittomare.png', width: 1200, height: 1200 }],
+    type: 'website',
+  },
+}
 
 export default async function FlyerPage() {
   const products = await getBlueMarketCatalog()
