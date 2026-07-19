@@ -1,7 +1,7 @@
 import { getBlueMarketCatalog as getBlueMarketProducts } from '@/lib/bluemarket'
 import { createClient } from '@/lib/supabase/server'
 
-export const revalidate = 300 // refresca cada 5 minutos
+export const dynamic = 'force-dynamic'
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(price)
