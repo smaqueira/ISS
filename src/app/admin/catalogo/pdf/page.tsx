@@ -1,8 +1,8 @@
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 import PrintButton from './PrintButton'
 
 export default async function CatalogoPDFPage() {
-  const db = createAdminClient()
+  const db = await createClient()
   const { data: products } = await db
     .from('products')
     .select('*')
