@@ -11,6 +11,17 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
   const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [copiedCat, setCopiedCat] = useState<'png'|'pdf'|null>(null)
+
+  const CATALOGO_PNG = 'https://app.vittomare.com/api/catalogo/imagen'
+  const CATALOGO_PDF = 'https://app.vittomare.com/catalogo/pdf'
+
+  function copyCatalogo(tipo: 'png'|'pdf') {
+    const url = tipo === 'png' ? CATALOGO_PNG : CATALOGO_PDF
+    navigator.clipboard.writeText(url)
+    setCopiedCat(tipo)
+    setTimeout(() => setCopiedCat(null), 2000)
+  }
 
   useEffect(() => {
     fetch(`/api/clients/${clientId}/whatsapp`)
@@ -75,6 +86,36 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
                   fontFamily: 'inherit', lineHeight: 1.6, boxSizing: 'border-box',
                 }}
               />
+              {/* Catálogo rápido */}
+              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px' }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 }}>
+                  📲 Enviar catálogo
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => copyCatalogo('png')} style={{
+                    flex: 1, padding: '8px 10px', borderRadius: 8,
+                    border: `1px solid ${copiedCat === 'png' ? '#22c55e' : 'var(--border)'}`,
+                    background: copiedCat === 'png' ? '#22c55e18' : 'transparent',
+                    color: copiedCat === 'png' ? '#22c55e' : 'var(--text)',
+                    cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+                  }}>
+                    {copiedCat === 'png' ? '✓ Copiado' : '🖼️ Copiar link PNG'}
+                  </button>
+                  <button onClick={() => copyCatalogo('pdf')} style={{
+                    flex: 1, padding: '8px 10px', borderRadius: 8,
+                    border: `1px solid ${copiedCat === 'pdf' ? '#22c55e' : 'var(--border)'}`,
+                    background: copiedCat === 'pdf' ? '#22c55e18' : 'transparent',
+                    color: copiedCat === 'pdf' ? '#22c55e' : 'var(--text)',
+                    cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+                  }}>
+                    {copiedCat === 'pdf' ? '✓ Copiado' : '📄 Copiar link PDF'}
+                  </button>
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--muted)', marginTop: 6 }}>
+                  Copiá el link y pegalo en WhatsApp con Ctrl+V
+                </div>
+              </div>
+
               <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
                 Podés editar el mensaje. Al abrir WhatsApp se copia solo — solo pegá con Ctrl+V.
               </div>
