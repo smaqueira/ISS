@@ -18,7 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
   const nombre = companyName || 'nuestro equipo'
   const descripcion = companyDesc || 'pescados y mariscos frescos'
   const catalogoUrl  = 'https://vittomare.com/productos'
-  const catalogoImgUrl = 'https://app.vittomare.com/api/catalogo/imagen'
+  const catalogoImgUrl = 'https://app.vittomare.com/catalogo/flyer'
 
   const fish  = String.fromCodePoint(0x1F41F)
   const truck = String.fromCodePoint(0x1F69A)
