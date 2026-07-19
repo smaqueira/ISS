@@ -10,12 +10,13 @@ function formatPrice(price: number) {
 export default async function ListaPreciosPage() {
   const products = await getBlueMarketProducts()
   const db = await createClient()
-  const { data: settings } = await db.from('settings').select('key, value').in('key', ['COMPANY_NAME', 'COMPANY_WHATSAPP', 'COMPANY_LOGO_URL'])
+  const { data: settings } = await db.from('settings').select('key, value').in('key', ['COMPANY_NAME', 'COMPANY_WHATSAPP', 'COMPANY_LOGO_URL', 'COMPRA_MINIMA'])
   const s = Object.fromEntries((settings || []).map((r: { key: string; value: string }) => [r.key, r.value]))
 
   const nombre = s.COMPANY_NAME || 'Lista de Precios'
   const whatsapp = s.COMPANY_WHATSAPP || ''
   const logo = s.COMPANY_LOGO_URL || ''
+  const compraMinima = s.COMPRA_MINIMA || ''
   const fecha = new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
 
   const categorias = [...new Set((products || []).map(p => p.category || 'General'))].sort()
@@ -65,9 +66,16 @@ export default async function ListaPreciosPage() {
         <div style={{ textAlign: 'center', padding: 60, color: '#94a3b8' }}>Catálogo no disponible</div>
       )}
 
+      {/* Compra mínima */}
+      {compraMinima && (
+        <div style={{ margin: '24px 0 0', padding: '12px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, fontSize: '0.82rem', color: '#166534', fontWeight: 600 }}>
+          🛒 Compra mínima: {compraMinima}
+        </div>
+      )}
+
       {/* Footer */}
-      <div style={{ marginTop: 32, paddingTop: 16, borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.72rem', color: '#94a3b8' }}>
-        Lista generada automáticamente · Productos con stock disponible
+      <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.72rem', color: '#94a3b8' }}>
+        Lista generada automáticamente · Precios sujetos a cambio sin previo aviso
         {whatsapp && <span> · Pedidos por WhatsApp +{whatsapp}</span>}
       </div>
     </div>

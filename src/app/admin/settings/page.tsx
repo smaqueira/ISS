@@ -72,6 +72,7 @@ const GROUPS = [
       { key: 'COMPANY_NAME', label: 'Nombre del negocio', placeholder: 'MariscoVittomare' },
       { key: 'COMPANY_WHATSAPP', label: 'WhatsApp del negocio', placeholder: '5491100000000' },
       { key: 'COMPANY_DESCRIPTION', label: 'Qué vendés (para mensajes IA)', placeholder: 'Proveemos mariscos y pescados frescos a restaurantes y hoteles de Buenos Aires' },
+      { key: 'COMPRA_MINIMA', label: 'Compra mínima', placeholder: 'Ej: $5.000 · Zona Norte GBA · Lunes a sábados', hint: 'Aparece en el catálogo y la lista de precios' },
     ],
   },
 ]

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { getBlueMarketCatalog } from '@/lib/bluemarket'
+import { getSetting } from '@/lib/settings'
 import FlyerControls from './PrintButton'
 
 export const dynamic = 'force-dynamic'
@@ -18,7 +19,10 @@ export const metadata: Metadata = {
 }
 
 export default async function FlyerPage() {
-  const products = await getBlueMarketCatalog()
+  const [products, compraMinima] = await Promise.all([
+    getBlueMarketCatalog(),
+    getSetting('COMPRA_MINIMA'),
+  ])
   const items = (products || []) as {
     id: string; name: string; category: string | null
     price: number | null; unit: string | null; image_url: string | null
@@ -155,6 +159,20 @@ export default async function FlyerPage() {
             </div>
           ))}
         </div>
+
+        {/* COMPRA MÍNIMA */}
+        {compraMinima && (
+          <div style={{
+            margin: '0 64px 32px',
+            padding: '12px 20px',
+            background: 'rgba(126,200,200,0.08)',
+            border: '1px solid rgba(126,200,200,0.2)',
+            borderRadius: 10,
+            fontSize: 12, color: '#7EC8C8', fontWeight: 600, textAlign: 'center', letterSpacing: 0.5,
+          }}>
+            🛒 Compra mínima: {compraMinima}
+          </div>
+        )}
 
         {/* FOOTER */}
         <div style={{
