@@ -1,4 +1,4 @@
-import { ImageResponse } from '@vercel/og'
+import { ImageResponse } from 'next/og'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const runtime = 'edge'
