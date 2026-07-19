@@ -58,10 +58,6 @@ export default async function FlyerPage() {
         overflow: 'hidden',
       }}>
 
-        {/* Decoración de fondo */}
-        <div style={{ position: 'absolute', top: -120, right: -120, width: 400, height: 400, borderRadius: '50%', background: 'radial-gradient(circle, #7EC8C808 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', top: 60, left: -60, width: 200, height: 200, borderRadius: '50%', background: 'radial-gradient(circle, #C9A96E06 0%, transparent 70%)', pointerEvents: 'none' }} />
-
         {/* HERO HEADER */}
         <div style={{ padding: '60px 64px 48px', borderBottom: '1px solid rgba(126,200,200,0.12)', position: 'relative' }}>
           <div style={{ width: 48, height: 2, background: 'linear-gradient(90deg, #C9A96E, transparent)', marginBottom: 32 }} />
