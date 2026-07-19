@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import PrintButton from './PrintButton'
 
+export const dynamic = 'force-dynamic'
+
 export default async function CatalogoPDFPage() {
   const db = await createClient()
   const { data: products } = await db
