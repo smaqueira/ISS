@@ -70,9 +70,8 @@ export async function POST(req: NextRequest) {
       email: row.email?.trim() || null,
       city: row.city?.trim() || null,
       notes: row.notes?.trim() || null,
-      status: 'prospecto',
+      status: 'nuevo',
       score: 50,
-      origen: 'importacion',
       tags: [],
     }))
     const { data: inserted, error } = await db.from('clients').insert(batch).select('id')
