@@ -24,9 +24,11 @@ export async function POST(req: NextRequest) {
 
   const nuevos = rows.filter(row => {
     if (!row.name?.trim()) return false
+    // Dedup por teléfono o email (identificadores únicos confiables)
     if (row.phone && existingPhones.has(row.phone.trim())) return false
     if (row.email && existingEmails.has(row.email.trim().toLowerCase())) return false
-    if (existingNames.has(row.name.toLowerCase().trim())) return false
+    // Dedup por nombre solo si el contacto no tiene teléfono ni email (evita falsos positivos con zonas distintas)
+    if (!row.phone && !row.email && existingNames.has(row.name.toLowerCase().trim())) return false
     return true
   })
 
