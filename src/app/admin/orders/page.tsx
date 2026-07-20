@@ -33,7 +33,12 @@ export default async function OrdersPage() {
       {active.map(order => (
         <div key={order.id} className="card" style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 16 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 600 }}>{order.clients?.name || '—'}</div>
+            <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+              {order.clients?.name || '—'}
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, background: 'var(--accent)18', color: 'var(--accent)', borderRadius: 4, padding: '1px 6px' }}>
+                #{order.numero || order.id.slice(0, 6).toUpperCase()}
+              </span>
+            </div>
             <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
               {order.clients?.type?.toUpperCase()} · {formatDate(order.created_at)}
               {order.delivery_date && ` · Entrega: ${formatDate(order.delivery_date)}`}

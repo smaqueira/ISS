@@ -5,6 +5,7 @@ import Link from 'next/link'
 
 interface Order {
   id: string
+  numero?: number
   status: string
   total: number
   delivery_date?: string
@@ -67,7 +68,8 @@ export default function OrderDetailPage() {
   function whatsappMsg() {
     if (!order?.clients?.phone) return
     const items = order.order_items?.map(i => `• ${i.products?.name} x${i.qty} ${i.products?.unit || 'kg'} — ${formatARS(i.subtotal)}`).join('\n') || ''
-    const msg = `Hola ${order.clients.name}! 👋\n\nTu pedido está *${STATUS_LABELS[order.status]}*:\n\n${items}\n\n*Total: ${formatARS(order.total)}*${order.delivery_date ? `\n📅 Entrega: ${formatDate(order.delivery_date)}` : ''}\n\n¿Alguna consulta? Estamos para ayudarte 🐟`
+    const nro = order.numero ?? order.id.slice(0, 6).toUpperCase()
+    const msg = `Hola ${order.clients.name}! 👋\n\nTu pedido *#${nro}* está *${STATUS_LABELS[order.status]}*:\n\n${items}\n\n*Total: ${formatARS(order.total)}*${order.delivery_date ? `\n📅 Entrega: ${formatDate(order.delivery_date)}` : ''}\n\n¿Alguna consulta? Estamos para ayudarte 🐟`
     window.open(`https://wa.me/${order.clients.phone.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank')
   }
 
@@ -83,7 +85,7 @@ export default function OrderDetailPage() {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
         <Link href="/admin/orders" style={{ color: 'var(--muted)', textDecoration: 'none', fontSize: '0.85rem' }}>← Pedidos</Link>
         <h1 style={{ fontSize: '1.3rem', fontWeight: 700, margin: 0, flex: 1 }}>
-          Pedido #{order.id.slice(0, 8).toUpperCase()}
+          Pedido #{order.numero ?? order.id.slice(0, 6).toUpperCase()}
         </h1>
         <span style={{ background: color + '22', color, border: `1px solid ${color}44`, borderRadius: 20, padding: '4px 12px', fontSize: '0.8rem', fontWeight: 700 }}>
           {STATUS_LABELS[order.status]}

@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
     await db.from('orders').update({ total }).eq('id', data.id)
   }
 
-  await db.from('interactions').insert({ client_id: order.client_id, channel: 'sistema', type: 'pedido', notes: `Pedido creado #${data.id.slice(0, 8)}`, ai_generated: false })
+  const numero = data.numero || data.id.slice(0, 8).toUpperCase()
+  await db.from('interactions').insert({ client_id: order.client_id, channel: 'sistema', type: 'pedido', notes: `Pedido #${numero} creado`, ai_generated: false })
 
   return NextResponse.json(data, { status: 201 })
 }
