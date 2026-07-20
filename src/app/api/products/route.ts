@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getBlueMarketProducts } from '@/lib/bluemarket'
+import { getBlueMarketCatalog } from '@/lib/bluemarket'
 
 export async function GET() {
-  const bm = await getBlueMarketProducts()
+  const bm = await getBlueMarketCatalog()
   if (bm) return NextResponse.json(bm)
 
   const db = await createClient()
