@@ -60,7 +60,14 @@ export async function POST(req: NextRequest) {
     return { name: row.name, phone: row.phone, city: row.city, reasons }
   })
 
-  if (!nuevos.length) return NextResponse.json({ imported: 0, skipped: skippedCount, debug: debugSkipped.slice(0, 10) })
+  if (!nuevos.length) return NextResponse.json({
+    imported: 0,
+    skipped: skippedCount,
+    debug: debugSkipped.slice(0, 5),
+    existingCount: existing?.length ?? 0,
+    sampleExisting: existing?.slice(0, 2),
+    sampleRows: rows.slice(0, 2).map(r => ({ name: r.name, phone: r.phone, email: r.email, city: r.city })),
+  })
 
   // Insertar en lotes de 100
   let imported = 0

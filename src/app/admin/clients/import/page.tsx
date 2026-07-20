@@ -17,7 +17,7 @@ interface PreviewRow {
 export default function ImportPage() {
   const [rows, setRows] = useState<PreviewRow[]>([])
   const [importing, setImporting] = useState(false)
-  const [done, setDone] = useState<{ imported: number; skipped: number; nuevos?: number; error?: string; sample?: unknown[]; debug?: {name:string;phone?:string;city?:string;reasons:string[]}[] } | null>(null)
+  const [done, setDone] = useState<{ imported: number; skipped: number; nuevos?: number; error?: string; sample?: unknown[]; existingCount?: number; sampleExisting?: unknown[]; sampleRows?: unknown[]; debug?: {name:string;phone?:string;city?:string;reasons:string[]}[] } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function splitCSVLine(line: string): string[] {
@@ -229,10 +229,11 @@ export default function ImportPage() {
             </div>
           )}
           {done.error && <div style={{ color: '#ef4444', fontSize: '0.82rem', background: '#ef444415', border: '1px solid #ef444430', borderRadius: 8, padding: '8px 14px', marginBottom: 16 }}>Error: {done.error}</div>}
-          {done.debug && done.debug.length > 0 && (
-            <div style={{ textAlign: 'left', fontSize: '0.75rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, maxHeight: 200, overflowY: 'auto' }}>
-              <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--muted)' }}>Debug — primeros omitidos:</div>
-              {done.debug.map((d, i) => (
+          {(done.debug || done.sampleRows || done.sampleExisting) && (
+            <div style={{ textAlign: 'left', fontSize: '0.72rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, maxHeight: 300, overflowY: 'auto' }}>
+              <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--muted)' }}>Debug ({done.existingCount} contactos en DB):</div>
+              {done.sampleRows && <div style={{ marginBottom: 8 }}><strong>Rows recibidas:</strong> <pre style={{ margin: 0, fontSize: '0.65rem', whiteSpace: 'pre-wrap' }}>{JSON.stringify(done.sampleRows, null, 2)}</pre></div>}
+              {done.debug && done.debug.map((d, i) => (
                 <div key={i} style={{ marginBottom: 4, color: 'var(--text)' }}>
                   <strong>{d.name}</strong>{d.city ? ` · ${d.city}` : ''}{d.phone ? ` · ${d.phone}` : ''} — <span style={{ color: '#f59e0b' }}>{d.reasons.join(', ') || 'sin razón detectada'}</span>
                 </div>
