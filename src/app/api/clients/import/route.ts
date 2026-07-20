@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/admin'
+import { createClient } from '@/lib/supabase/server'
 
 interface ImportRow {
   name: string
@@ -12,7 +12,7 @@ interface ImportRow {
 }
 
 export async function POST(req: NextRequest) {
-  const db = createAdminClient()
+  const db = await createClient()
   const { rows }: { rows: ImportRow[] } = await req.json()
   if (!rows?.length) return NextResponse.json({ imported: 0, skipped: 0 })
 
