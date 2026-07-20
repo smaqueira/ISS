@@ -20,27 +20,24 @@ export async function POST(req: NextRequest) {
   const { data: existing } = await db.from('clients').select('name, phone, email, city')
   const existingPhones   = new Set((existing || []).map(c => c.phone?.trim()).filter(Boolean))
   const existingEmails   = new Set((existing || []).map(c => c.email?.trim().toLowerCase()).filter(Boolean))
-  // clave nombre+ciudad para dedup de negocios (ej: restaurantes con mismo nombre en distintas zonas)
+  // dedup nombre+ciudad: solo cuando AMBOS están presentes en DB y en el CSV
   const existingNameCity = new Set(
     (existing || [])
       .filter(c => c.name && c.city)
-      .map(c => `${c.name.toLowerCase().trim()}|${c.city.toLowerCase().trim()}`)
-  )
-  const existingNamesOnly = new Set(
-    (existing || []).filter(c => !c.city).map(c => c.name?.toLowerCase().trim()).filter(Boolean)
+      .map(c => `${c.name.toLowerCase().trim()}||${c.city.toLowerCase().trim()}`)
   )
 
   const nuevos = rows.filter(row => {
     if (!row.name?.trim()) return false
+    // 1. teléfono duplicado
     if (row.phone && existingPhones.has(row.phone.trim())) return false
+    // 2. email duplicado
     if (row.email && existingEmails.has(row.email.trim().toLowerCase())) return false
-    // mismo nombre + misma ciudad = mismo negocio
-    const nameCity = row.city?.trim()
-      ? `${row.name.toLowerCase().trim()}|${row.city.toLowerCase().trim()}`
-      : null
-    if (nameCity && existingNameCity.has(nameCity)) return false
-    // si no tiene ciudad, dedup por nombre solo cuando tampoco tiene tel/email
-    if (!row.city && !row.phone && !row.email && existingNamesOnly.has(row.name.toLowerCase().trim())) return false
+    // 3. mismo nombre + misma ciudad (solo si ambos están definidos)
+    if (row.name && row.city) {
+      const key = `${row.name.toLowerCase().trim()}||${row.city.toLowerCase().trim()}`
+      if (existingNameCity.has(key)) return false
+    }
     return true
   })
 
