@@ -66,9 +66,14 @@ export default function ImportPage() {
     return lines.slice(1).map(line => {
       const cols = splitCSVLine(line)
       const name = colMap.name !== undefined ? cols[colMap.name] : cols[0]
-      const phone = (colMap.phone !== undefined ? cols[colMap.phone] : undefined)
-                 || (colMap.whatsapp !== undefined ? cols[colMap.whatsapp] : undefined)
-      const email = colMap.email !== undefined ? cols[colMap.email] : undefined
+      const PLACEHOLDERS = ['no disponible', 'sin datos', 'n/a', 'nd', '-', '—', 'none', 'null']
+      const clean = (v?: string) => {
+        const t = v?.trim()
+        return (!t || PLACEHOLDERS.includes(t.toLowerCase())) ? undefined : t
+      }
+      const phone = clean(colMap.phone !== undefined ? cols[colMap.phone] : undefined)
+               || clean(colMap.whatsapp !== undefined ? cols[colMap.whatsapp] : undefined)
+      const email = clean(colMap.email !== undefined ? cols[colMap.email] : undefined)
       const city = colMap.city !== undefined ? cols[colMap.city] : undefined
       const typeRaw = colMap.type !== undefined ? cols[colMap.type]?.toLowerCase() : ''
       const type = typeRaw?.includes('b2b') || typeRaw?.includes('negocio') || typeRaw?.includes('empresa') ? 'b2b' : 'b2c'
@@ -80,7 +85,7 @@ export default function ImportPage() {
       const valid = !!name?.trim()
       const error = !valid ? 'Falta nombre' : (!phone && !email) ? 'Sin teléfono ni email' : undefined
 
-      return { name: name?.trim() || '', phone: phone?.trim() || undefined, email: email?.trim() || undefined, city: city?.trim(), type, rubro: rubro?.trim(), notes: notes?.trim(), valid: !!name?.trim(), error }
+      return { name: name?.trim() || '', phone: phone || undefined, email: email || undefined, city: city?.trim(), type, rubro: rubro?.trim(), notes: notes?.trim(), valid: !!name?.trim(), error }
     }).filter(r => r.name)
   }
 
