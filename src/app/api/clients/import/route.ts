@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       notes: row.notes?.trim() || null,
       status: 'prospecto',
       score: 50,
-      channel: 'web',
+      origen: 'importacion',
       tags: [],
     }))
     const { data: inserted, error } = await db.from('clients').insert(batch).select('id')

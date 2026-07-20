@@ -16,7 +16,7 @@ interface PreviewRow {
 export default function ImportPage() {
   const [rows, setRows] = useState<PreviewRow[]>([])
   const [importing, setImporting] = useState(false)
-  const [done, setDone] = useState<{ imported: number; skipped: number } | null>(null)
+  const [done, setDone] = useState<{ imported: number; skipped: number; error?: string } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function splitCSVLine(line: string): string[] {
@@ -91,7 +91,13 @@ export default function ImportPage() {
       setRows(parseCSV(text))
       setDone(null)
     }
+    // Intentar UTF-8, si hay caracteres raros reintentar con latin1
     reader.readAsText(file, 'UTF-8')
+    reader.onerror = () => {
+      const r2 = new FileReader()
+      r2.onload = e => { setRows(parseCSV(e.target?.result as string)); setDone(null) }
+      r2.readAsText(file, 'ISO-8859-1')
+    }
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -206,9 +212,10 @@ export default function ImportPage() {
 
       {done && (
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>✅</div>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>{done.error ? '⚠️' : '✅'}</div>
           <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 6 }}>{done.imported} contactos importados</div>
-          {done.skipped > 0 && <div style={{ color: 'var(--muted)', fontSize: '0.82rem', marginBottom: 16 }}>{done.skipped} ya existían y fueron omitidos</div>}
+          {done.skipped > 0 && <div style={{ color: 'var(--muted)', fontSize: '0.82rem', marginBottom: 8 }}>{done.skipped} ya existían y fueron omitidos</div>}
+          {done.error && <div style={{ color: '#ef4444', fontSize: '0.82rem', background: '#ef444415', border: '1px solid #ef444430', borderRadius: 8, padding: '8px 14px', marginBottom: 16 }}>Error: {done.error}</div>}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href="/admin/clients"><button className="btn btn-primary">Ver contactos →</button></a>
             <button onClick={() => { setRows([]); setDone(null) }} className="btn btn-ghost">Importar otro archivo</button>
