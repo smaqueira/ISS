@@ -11,6 +11,7 @@ interface PreviewRow {
   notes?: string
   valid: boolean
   error?: string
+  warn?: string
 }
 
 export default function ImportPage() {
@@ -83,9 +84,10 @@ export default function ImportPage() {
       const notes = [notesBase, webVal && webVal !== 'No disponible' ? `Web: ${webVal}` : ''].filter(Boolean).join(' | ') || undefined
 
       const valid = !!name?.trim()
-      const error = !valid ? 'Falta nombre' : (!phone && !email) ? 'Sin teléfono ni email' : undefined
+      const error = !valid ? 'Falta nombre' : undefined
+      const warn = valid && !phone && !email ? 'Sin teléfono ni email' : undefined
 
-      return { name: name?.trim() || '', phone: phone || undefined, email: email || undefined, city: city?.trim(), type, rubro: rubro?.trim(), notes: notes?.trim(), valid: !!name?.trim(), error }
+      return { name: name?.trim() || '', phone: phone || undefined, email: email || undefined, city: city?.trim(), type, rubro: rubro?.trim(), notes: notes?.trim(), valid: !!name?.trim(), error, warn }
     }).filter(r => r.name)
   }
 
@@ -125,8 +127,8 @@ export default function ImportPage() {
     setImporting(false)
   }
 
-  const validCount = rows.filter(r => r.valid && !r.error).length
-  const warnCount = rows.filter(r => r.valid && r.error).length
+  const validCount = rows.filter(r => r.valid).length
+  const warnCount = rows.filter(r => r.valid && r.warn).length
 
   return (
     <div style={{ maxWidth: 800 }}>
@@ -201,7 +203,8 @@ export default function ImportPage() {
                     <td style={{ padding: '6px 8px' }}><span className={`badge badge-${r.type}`}>{r.type}</span></td>
                     <td style={{ padding: '6px 8px', color: 'var(--muted)' }}>{r.rubro || '—'}</td>
                     <td style={{ padding: '6px 8px' }}>
-                      {r.error && <span style={{ color: '#f59e0b', fontSize: '0.68rem' }}>⚠️ {r.error}</span>}
+                      {r.error && <span style={{ color: '#ef4444', fontSize: '0.68rem' }}>❌ {r.error}</span>}
+                      {!r.error && r.warn && <span style={{ color: '#f59e0b', fontSize: '0.68rem' }}>⚠️ {r.warn}</span>}
                     </td>
                   </tr>
                 ))}
