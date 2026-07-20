@@ -16,7 +16,7 @@ interface PreviewRow {
 export default function ImportPage() {
   const [rows, setRows] = useState<PreviewRow[]>([])
   const [importing, setImporting] = useState(false)
-  const [done, setDone] = useState<{ imported: number; skipped: number; error?: string; debug?: {name:string;phone?:string;city?:string;reasons:string[]}[] } | null>(null)
+  const [done, setDone] = useState<{ imported: number; skipped: number; nuevos?: number; error?: string; sample?: unknown[]; debug?: {name:string;phone?:string;city?:string;reasons:string[]}[] } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function splitCSVLine(line: string): string[] {
@@ -220,6 +220,11 @@ export default function ImportPage() {
           <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>{done.error ? '⚠️' : '✅'}</div>
           <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 6 }}>{done.imported} contactos importados</div>
           {done.skipped > 0 && <div style={{ color: 'var(--muted)', fontSize: '0.82rem', marginBottom: 8 }}>{done.skipped} ya existían y fueron omitidos</div>}
+          {done.nuevos !== undefined && done.imported === 0 && !done.error && (
+            <div style={{ color: '#f59e0b', fontSize: '0.82rem', background: '#f59e0b15', border: '1px solid #f59e0b30', borderRadius: 8, padding: '8px 14px', marginBottom: 8 }}>
+              {done.nuevos} pasaron el filtro pero no se insertaron (sin error de DB)
+            </div>
+          )}
           {done.error && <div style={{ color: '#ef4444', fontSize: '0.82rem', background: '#ef444415', border: '1px solid #ef444430', borderRadius: 8, padding: '8px 14px', marginBottom: 16 }}>Error: {done.error}</div>}
           {done.debug && done.debug.length > 0 && (
             <div style={{ textAlign: 'left', fontSize: '0.75rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, maxHeight: 200, overflowY: 'auto' }}>
