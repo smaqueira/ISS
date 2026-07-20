@@ -17,18 +17,30 @@ export async function POST(req: NextRequest) {
   if (!rows?.length) return NextResponse.json({ imported: 0, skipped: 0 })
 
   // Dedup: cargar name+phone+email existentes
-  const { data: existing } = await db.from('clients').select('name, phone, email')
-  const existingPhones = new Set((existing || []).map(c => c.phone?.trim()).filter(Boolean))
-  const existingEmails = new Set((existing || []).map(c => c.email?.trim().toLowerCase()).filter(Boolean))
-  const existingNames  = new Set((existing || []).map(c => c.name?.toLowerCase().trim()).filter(Boolean))
+  const { data: existing } = await db.from('clients').select('name, phone, email, city')
+  const existingPhones   = new Set((existing || []).map(c => c.phone?.trim()).filter(Boolean))
+  const existingEmails   = new Set((existing || []).map(c => c.email?.trim().toLowerCase()).filter(Boolean))
+  // clave nombre+ciudad para dedup de negocios (ej: restaurantes con mismo nombre en distintas zonas)
+  const existingNameCity = new Set(
+    (existing || [])
+      .filter(c => c.name && c.city)
+      .map(c => `${c.name.toLowerCase().trim()}|${c.city.toLowerCase().trim()}`)
+  )
+  const existingNamesOnly = new Set(
+    (existing || []).filter(c => !c.city).map(c => c.name?.toLowerCase().trim()).filter(Boolean)
+  )
 
   const nuevos = rows.filter(row => {
     if (!row.name?.trim()) return false
-    // Dedup por teléfono o email (identificadores únicos confiables)
     if (row.phone && existingPhones.has(row.phone.trim())) return false
     if (row.email && existingEmails.has(row.email.trim().toLowerCase())) return false
-    // Dedup por nombre solo si el contacto no tiene teléfono ni email (evita falsos positivos con zonas distintas)
-    if (!row.phone && !row.email && existingNames.has(row.name.toLowerCase().trim())) return false
+    // mismo nombre + misma ciudad = mismo negocio
+    const nameCity = row.city?.trim()
+      ? `${row.name.toLowerCase().trim()}|${row.city.toLowerCase().trim()}`
+      : null
+    if (nameCity && existingNameCity.has(nameCity)) return false
+    // si no tiene ciudad, dedup por nombre solo cuando tampoco tiene tel/email
+    if (!row.city && !row.phone && !row.email && existingNamesOnly.has(row.name.toLowerCase().trim())) return false
     return true
   })
 
