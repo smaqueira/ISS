@@ -42,7 +42,21 @@ export async function POST(req: NextRequest) {
   })
 
   const skippedCount = rows.length - nuevos.length
-  if (!nuevos.length) return NextResponse.json({ imported: 0, skipped: skippedCount })
+
+  // debug: qué se está filtrando y por qué
+  const debugSkipped = rows.filter(row => !nuevos.includes(row)).map(row => {
+    const reasons = []
+    if (!row.name?.trim()) reasons.push('sin nombre')
+    if (row.phone && existingPhones.has(row.phone.trim())) reasons.push('tel duplicado')
+    if (row.email && existingEmails.has(row.email.trim().toLowerCase())) reasons.push('email duplicado')
+    if (row.name && row.city) {
+      const key = `${row.name.toLowerCase().trim()}||${row.city.toLowerCase().trim()}`
+      if (existingNameCity.has(key)) reasons.push('nombre+ciudad duplicado')
+    }
+    return { name: row.name, phone: row.phone, city: row.city, reasons }
+  })
+
+  if (!nuevos.length) return NextResponse.json({ imported: 0, skipped: skippedCount, debug: debugSkipped.slice(0, 10) })
 
   // Insertar en lotes de 100
   let imported = 0

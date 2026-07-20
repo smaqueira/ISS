@@ -16,7 +16,7 @@ interface PreviewRow {
 export default function ImportPage() {
   const [rows, setRows] = useState<PreviewRow[]>([])
   const [importing, setImporting] = useState(false)
-  const [done, setDone] = useState<{ imported: number; skipped: number; error?: string } | null>(null)
+  const [done, setDone] = useState<{ imported: number; skipped: number; error?: string; debug?: {name:string;phone?:string;city?:string;reasons:string[]}[] } | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function splitCSVLine(line: string): string[] {
@@ -216,6 +216,16 @@ export default function ImportPage() {
           <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 6 }}>{done.imported} contactos importados</div>
           {done.skipped > 0 && <div style={{ color: 'var(--muted)', fontSize: '0.82rem', marginBottom: 8 }}>{done.skipped} ya existían y fueron omitidos</div>}
           {done.error && <div style={{ color: '#ef4444', fontSize: '0.82rem', background: '#ef444415', border: '1px solid #ef444430', borderRadius: 8, padding: '8px 14px', marginBottom: 16 }}>Error: {done.error}</div>}
+          {done.debug && done.debug.length > 0 && (
+            <div style={{ textAlign: 'left', fontSize: '0.75rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: 12, marginBottom: 16, maxHeight: 200, overflowY: 'auto' }}>
+              <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--muted)' }}>Debug — primeros omitidos:</div>
+              {done.debug.map((d, i) => (
+                <div key={i} style={{ marginBottom: 4, color: 'var(--text)' }}>
+                  <strong>{d.name}</strong>{d.city ? ` · ${d.city}` : ''}{d.phone ? ` · ${d.phone}` : ''} — <span style={{ color: '#f59e0b' }}>{d.reasons.join(', ') || 'sin razón detectada'}</span>
+                </div>
+              ))}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
             <a href="/admin/clients"><button className="btn btn-primary">Ver contactos →</button></a>
             <button onClick={() => { setRows([]); setDone(null) }} className="btn btn-ghost">Importar otro archivo</button>
