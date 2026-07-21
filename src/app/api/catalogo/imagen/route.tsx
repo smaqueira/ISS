@@ -92,8 +92,20 @@ export async function GET() {
                       <div style={{
                         width: CARD_W, height: 170, background: `${ACCENT}10`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        overflow: 'hidden',
                       }}>
-                        <div style={{ fontSize: 44 }}>🐟</div>
+                        {p.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={p.image_url}
+                            alt={p.name}
+                            width={CARD_W}
+                            height={170}
+                            style={{ width: CARD_W, height: 170, objectFit: 'cover', objectPosition: 'top' }}
+                          />
+                        ) : (
+                          <div style={{ fontSize: 44 }}>🐟</div>
+                        )}
                       </div>
                       <div style={{ padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 5 }}>
                         <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{p.name}</div>
