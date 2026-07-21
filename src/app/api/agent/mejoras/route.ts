@@ -91,7 +91,8 @@ export async function GET() {
   const hasGmail = configuredKeys.includes('GMAIL_USER')
   const hasWhatsApp = configuredKeys.includes('COMPANY_WHATSAPP')
   const hasCustomerBot = configuredKeys.includes('TELEGRAM_CUSTOMER_BOT_TOKEN')
-  const hasGroq = configuredKeys.includes('GROQ_API_KEY')
+  // Groq está OK si hay CUALQUIER key configurada (rotación usa GROQ_API_KEY + _1..4)
+  const hasGroq = apiKeys.length > 0
   const hasResend = configuredKeys.includes('RESEND_API_KEY')
 
   const ordersByStatus: Record<string, number> = {}
