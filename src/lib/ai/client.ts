@@ -3,38 +3,69 @@ import { getSetting } from '@/lib/settings'
 
 const MODEL = 'llama-3.3-70b-versatile'
 
+const KEY_NAMES = ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4']
+
 async function getKeys(): Promise<string[]> {
-  const [k1, k2, k3, k4] = await Promise.all([
-    getSetting('GROQ_API_KEY_1'),
-    getSetting('GROQ_API_KEY_2'),
-    getSetting('GROQ_API_KEY_3'),
-    getSetting('GROQ_API_KEY_4'),
-  ])
-  return [k1, k2, k3, k4].filter(Boolean)
+  const values = await Promise.all(KEY_NAMES.map((k) => getSetting(k)))
+  // Dedup manteniendo el orden (GROQ_API_KEY primero, luego _1.._4)
+  return [...new Set(values.filter(Boolean))]
+}
+
+/**
+ * Decide si conviene reintentar con la SIGUIENTE key ante un error de Groq.
+ *
+ * Rota ante cualquier error salvo un 400 (bad request), que fallaría igual con
+ * todas las keys. Esto cubre de forma robusta el caso "sin créditos / rate limit"
+ * sin depender del texto del mensaje (que Groq escribe con mayúsculas variables:
+ * "Rate limit reached...", "You have exceeded...", etc.).
+ *
+ * Cubre: 401 (key inválida/revocada), 402 (sin créditos), 403, 429 (rate/quota),
+ * 5xx (caída temporal) y errores de red (sin `status`).
+ */
+export function shouldRotateGroqError(e: unknown): boolean {
+  const status = (e as { status?: number } | null)?.status
+  if (status === 400) return false
+  return true
+}
+
+/**
+ * Ejecuta una llamada a Groq probando cada key en orden. Salta a la siguiente
+ * cuando una está agotada/inválida y solo falla si TODAS fallan.
+ */
+export async function groqWithRotation<T>(
+  keys: string[],
+  call: (groq: Groq) => Promise<T>,
+): Promise<T> {
+  const usable = [...new Set(keys.filter(Boolean))]
+  if (usable.length === 0) throw new Error('No hay Groq API keys configuradas')
+
+  let lastErr: unknown
+  for (const key of usable) {
+    try {
+      return await call(new Groq({ apiKey: key }))
+    } catch (e: unknown) {
+      lastErr = e
+      if (!shouldRotateGroqError(e)) throw e
+      // key agotada/inválida → probar con la siguiente
+    }
+  }
+
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error('Todas las Groq API keys están agotadas')
 }
 
 export async function ask(prompt: string, maxTokens = 300): Promise<string> {
   const keys = await getKeys()
-  if (keys.length === 0) throw new Error('No hay Groq API keys configuradas')
-
-  for (const key of keys) {
-    try {
-      const groq = new Groq({ apiKey: key })
-      const res = await groq.chat.completions.create({
-        model: MODEL,
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.4,
-        max_tokens: maxTokens,
-      })
-      return res.choices[0].message.content || ''
-    } catch (e: unknown) {
-      const isRateLimit = e instanceof Error && (e.message.includes('429') || e.message.includes('rate') || e.message.includes('quota'))
-      if (!isRateLimit) throw e
-      // Si es rate limit → prueba con la siguiente key
-    }
-  }
-
-  throw new Error('Todas las Groq API keys están agotadas')
+  const res = await groqWithRotation(keys, (groq) =>
+    groq.chat.completions.create({
+      model: MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.4,
+      max_tokens: maxTokens,
+    }),
+  )
+  return res.choices[0].message.content || ''
 }
 
 export function parseJSON<T>(text: string): T {

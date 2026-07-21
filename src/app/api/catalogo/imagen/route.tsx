@@ -57,7 +57,7 @@ export async function GET() {
             </div>
           </div>
           <div style={{ fontSize: 12, color: '#ffffff44', letterSpacing: 3, marginTop: 6 }}>
-            SELECCIÓN DEL DÍA · {today.toUpperCase()}
+            {`SELECCIÓN DEL DÍA · ${today.toUpperCase()}`}
           </div>
           <div style={{ marginTop: 16, padding: '7px 26px', border: `1px solid ${GOLD}66`, borderRadius: 30, fontSize: 12, color: GOLD, letterSpacing: 2 }}>
             CATÁLOGO DE PRECIOS

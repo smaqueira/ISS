@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Groq from 'groq-sdk'
+import { groqWithRotation } from '@/lib/ai/client'
 import { getBusinessConfig } from '@/lib/business-context'
 
 export const runtime = 'nodejs'
@@ -13,19 +13,22 @@ function getDb() {
   )
 }
 
-async function getGroqKey(db: ReturnType<typeof getDb>): Promise<string> {
-  const { data } = await db.from('settings').select('key, value').in('key', ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4'])
-  for (const k of ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4']) {
+const KEY_NAMES = ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4']
+
+async function getGroqKeys(db: ReturnType<typeof getDb>): Promise<string[]> {
+  const { data } = await db.from('settings').select('key, value').in('key', KEY_NAMES)
+  const keys: string[] = []
+  for (const k of KEY_NAMES) {
     const row = (data || []).find(r => r.key === k)
-    if (row?.value) return row.value
+    if (row?.value) keys.push(row.value)
   }
-  return process.env.GROQ_API_KEY || ''
+  if (process.env.GROQ_API_KEY && !keys.includes(process.env.GROQ_API_KEY)) keys.push(process.env.GROQ_API_KEY)
+  return keys
 }
 
 export async function GET() {
   const db = getDb()
-  const [apiKey, biz] = await Promise.all([getGroqKey(db), getBusinessConfig(db)])
-  const groq = new Groq({ apiKey })
+  const [apiKeys, biz] = await Promise.all([getGroqKeys(db), getBusinessConfig(db)])
 
   // Recolectar datos del sistema en paralelo
   const today = new Date().toISOString().split('T')[0]
@@ -145,7 +148,7 @@ ANÁLISIS ANTERIOR:
 ${previousAnalysis?.value ? `Último análisis: ${previousAnalysis.value.slice(0, 300)}...` : 'Primer análisis — sin historial previo'}
 `
 
-  const completion = await groq.chat.completions.create({
+  const completion = await groqWithRotation(apiKeys, (groq) => groq.chat.completions.create({
     model: 'llama-3.3-70b-versatile',
     messages: [
       {
@@ -179,7 +182,7 @@ Máximo 4 ítems por sección. Sé específico, no genérico.`,
     ],
     max_tokens: 1800,
     temperature: 0.4,
-  })
+  }))
 
   const analysis = completion.choices[0]?.message?.content || 'No se pudo generar el análisis.'
 

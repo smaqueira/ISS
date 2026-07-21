@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 
-const BM_URL  = process.env.BLUEMARKET_SUPABASE_URL
-const BM_KEY  = process.env.BLUEMARKET_SUPABASE_ANON_KEY
-const BM_SLUG = process.env.BLUEMARKET_TIENDA_SLUG ?? 'vitto-mare'
+// Leer en runtime (no en build) para que el diagnóstico refleje el estado real
+// del deploy — mismo fix que 8de7e41 aplicó a bluemarket.ts.
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 async function bmFetch(path: string) {
+  const BM_URL = process.env.BLUEMARKET_SUPABASE_URL
+  const BM_KEY = process.env.BLUEMARKET_SUPABASE_ANON_KEY
   if (!BM_URL || !BM_KEY) return { error: 'env vars faltantes', BM_URL: !!BM_URL, BM_KEY: !!BM_KEY }
   const res = await fetch(`${BM_URL}/rest/v1/${path}`, {
     headers: { apikey: BM_KEY, Authorization: `Bearer ${BM_KEY}` },
@@ -15,6 +18,7 @@ async function bmFetch(path: string) {
 }
 
 export async function GET() {
+  const BM_SLUG = process.env.BLUEMARKET_TIENDA_SLUG ?? 'vitto-mare'
   const tiendas = await bmFetch(`pescaderias?slug=eq.${BM_SLUG}&activa=eq.true&select=id,slug,nombre`)
   const tiendaId = (() => { try { return JSON.parse((tiendas as {body:string}).body)?.[0]?.id } catch { return null } })()
 

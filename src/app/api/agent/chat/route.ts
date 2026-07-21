@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import Groq from 'groq-sdk'
 import type { ChatCompletionCreateParamsNonStreaming, ChatCompletion } from 'groq-sdk/resources/chat/completions'
 import { getBusinessConfig } from '@/lib/business-context'
+import { groqWithRotation } from '@/lib/ai/client'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -227,18 +228,8 @@ PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o
 
     // Función que intenta una llamada rotando keys en caso de 429
     async function groqCreate(params: ChatCompletionCreateParamsNonStreaming): Promise<ChatCompletion> {
-      let lastErr: unknown
-      for (const key of apiKeys) {
-        try {
-          const res = await new Groq({ apiKey: key }).chat.completions.create(params)
-          return res as Groq.Chat.Completions.ChatCompletion
-        } catch (e: unknown) {
-          const status = (e as { status?: number })?.status
-          if (status === 429 || status === 401) { lastErr = e; continue }
-          throw e
-        }
-      }
-      throw lastErr
+      const res = await groqWithRotation(apiKeys, (groq) => groq.chat.completions.create(params))
+      return res as Groq.Chat.Completions.ChatCompletion
     }
 
     // Agentic loop: el modelo puede llamar herramientas varias veces
