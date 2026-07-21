@@ -20,43 +20,34 @@ export async function POST(req: NextRequest) {
   const { rows }: { rows: ImportRow[] } = await req.json()
   if (!rows?.length) return NextResponse.json({ imported: 0, skipped: 0 })
 
-  // Dedup: cargar name+phone+email existentes
-  const { data: existing } = await db.from('clients').select('name, phone, email, city')
-  const existingPhones   = new Set((existing || []).map(c => c.phone?.trim()).filter(Boolean))
-  const existingEmails   = new Set((existing || []).map(c => c.email?.trim().toLowerCase()).filter(Boolean))
-  // dedup nombre+ciudad: solo cuando AMBOS están presentes en DB y en el CSV
-  const existingNameCity = new Set(
+  // Dedup: cargar name+phone+email+city+rubro existentes
+  const { data: existing } = await db.from('clients').select('name, phone, email, city, rubro')
+  const existingPhones = new Set((existing || []).map(c => c.phone?.trim()).filter(Boolean))
+  const existingEmails = new Set((existing || []).map(c => c.email?.trim().toLowerCase()).filter(Boolean))
+  const existingNameCityRubro = new Set(
     (existing || [])
-      .filter(c => c.name && c.city)
-      .map(c => `${c.name.toLowerCase().trim()}||${c.city.toLowerCase().trim()}`)
+      .filter(c => c.name)
+      .map(c => `${c.name.toLowerCase().trim()}||${(c.city || '').toLowerCase().trim()}||${(c.rubro || '').toLowerCase().trim()}`)
   )
 
   const nuevos = rows.filter(row => {
     if (!row.name?.trim()) return false
-    // 1. teléfono duplicado
     if (row.phone && existingPhones.has(row.phone.trim())) return false
-    // 2. email duplicado
     if (row.email && existingEmails.has(row.email.trim().toLowerCase())) return false
-    // 3. mismo nombre + misma ciudad (solo si ambos están definidos)
-    if (row.name && row.city) {
-      const key = `${row.name.toLowerCase().trim()}||${row.city.toLowerCase().trim()}`
-      if (existingNameCity.has(key)) return false
-    }
+    const key = `${row.name.toLowerCase().trim()}||${(row.city || '').toLowerCase().trim()}||${(row.rubro || '').toLowerCase().trim()}`
+    if (existingNameCityRubro.has(key)) return false
     return true
   })
 
   const skippedCount = rows.length - nuevos.length
 
-  // debug: qué se está filtrando y por qué
   const debugSkipped = rows.filter(row => !nuevos.includes(row)).map(row => {
     const reasons = []
     if (!row.name?.trim()) reasons.push('sin nombre')
     if (row.phone && existingPhones.has(row.phone.trim())) reasons.push('tel duplicado')
     if (row.email && existingEmails.has(row.email.trim().toLowerCase())) reasons.push('email duplicado')
-    if (row.name && row.city) {
-      const key = `${row.name.toLowerCase().trim()}||${row.city.toLowerCase().trim()}`
-      if (existingNameCity.has(key)) reasons.push('nombre+ciudad duplicado')
-    }
+    const key = `${row.name.toLowerCase().trim()}||${(row.city || '').toLowerCase().trim()}||${(row.rubro || '').toLowerCase().trim()}`
+    if (existingNameCityRubro.has(key)) reasons.push('nombre+ciudad+rubro duplicado')
     return { name: row.name, phone: row.phone, city: row.city, reasons }
   })
 
@@ -86,8 +77,21 @@ export async function POST(req: NextRequest) {
       tags: [],
     }))
     const { data: inserted, error } = await db.from('clients').insert(batch).select('id')
-    if (error) { firstError = error.message; break }
-    if (inserted?.length) {
+    if (error) {
+      if (error.code === '23505') {
+        // Hay un duplicado en el lote: insertar uno por uno, salteando los que ya existen
+        for (const row of batch) {
+          const { data: r } = await db.from('clients').insert([row]).select('id')
+          if (r?.[0]) {
+            await db.from('client_history').insert([{ client_id: r[0].id, accion: 'Cliente importado', detalle: 'Importación CSV', usuario: 'sistema' }])
+            imported++
+          }
+        }
+      } else {
+        firstError = error.message
+        break
+      }
+    } else if (inserted?.length) {
       await db.from('client_history').insert(
         inserted.map(c => ({ client_id: c.id, accion: 'Cliente importado', detalle: 'Importación CSV', usuario: 'sistema' }))
       )

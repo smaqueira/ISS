@@ -10,6 +10,7 @@ function LoginForm() {
 
   const [user, setUser] = useState('')
   const [pass, setPass] = useState('')
+  const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -71,15 +72,23 @@ function LoginForm() {
             <label style={{ fontSize: '0.78rem', color: 'var(--muted)', display: 'block', marginBottom: 6 }}>
               Contraseña
             </label>
-            <input
-              type="password" value={pass} onChange={e => setPass(e.target.value)}
-              autoComplete="current-password" required
-              style={{
-                width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
-                borderRadius: 8, padding: '10px 12px', color: 'var(--text)', fontSize: '0.9rem',
-                boxSizing: 'border-box',
-              }}
-            />
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPass ? 'text' : 'password'} value={pass} onChange={e => setPass(e.target.value)}
+                autoComplete="current-password" required
+                style={{
+                  width: '100%', background: 'var(--bg)', border: '1px solid var(--border)',
+                  borderRadius: 8, padding: '10px 40px 10px 12px', color: 'var(--text)', fontSize: '0.9rem',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <button
+                type="button" onClick={() => setShowPass(v => !v)}
+                style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1rem', padding: 2 }}
+              >
+                {showPass ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
 
           {error && (
