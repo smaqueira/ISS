@@ -37,6 +37,15 @@ export async function GET() {
     day: 'numeric', month: 'long', year: 'numeric',
   })
 
+  // Altura dinámica: la hoja termina justo después del último producto,
+  // en vez de una altura fija que dejaba una franja negra abajo.
+  const HEADER_H = 236  // header + padding
+  const CAT_TITLE_H = 67  // título de categoría (margin 36+20 + texto)
+  const ROW_H = 266  // tarjeta (imagen 170 + texto 80) + gap 16
+  const FOOTER_H = 150  // footer (marginTop 48 + contenido) + padding inferior 60
+  const totalRows = categories.reduce((acc, [, prods]) => acc + Math.ceil(prods.length / COLS), 0)
+  const HEIGHT = HEADER_H + categories.length * CAT_TITLE_H + totalRows * ROW_H + FOOTER_H
+
   return new ImageResponse(
     (
       <div style={{ width: W, display: 'flex', flexDirection: 'column', background: NAVY, padding: '0 0 60px 0' }}>
@@ -108,7 +117,7 @@ export async function GET() {
                         )}
                       </div>
                       <div style={{ padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>{p.name}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1.2, height: 32, overflow: 'hidden' }}>{p.name}</div>
                         <div style={{ fontSize: 14, fontWeight: 800, color: price === 'Consultar' ? `${ACCENT}88` : ACCENT }}>
                           {price}
                         </div>
@@ -135,6 +144,6 @@ export async function GET() {
         </div>
       </div>
     ),
-    { width: W, height: 2600 }
+    { width: W, height: HEIGHT }
   )
 }
