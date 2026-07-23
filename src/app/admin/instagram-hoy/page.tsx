@@ -4,6 +4,7 @@ import { elegirPrimerContacto, igHandle } from '@/lib/primer-contacto'
 import TermometroEnvio from '@/components/clients/TermometroEnvio'
 import InstagramList from '@/components/clients/InstagramList'
 import SeguimientosHoy from '@/components/clients/SeguimientosHoy'
+import MiCuentaInstagram from '@/components/clients/MiCuentaInstagram'
 
 export const dynamic = 'force-dynamic'
 
@@ -67,6 +68,10 @@ export default async function InstagramHoyPage({ searchParams }: { searchParams:
         <p style={{ color: 'var(--muted)', fontSize: '0.82rem' }}>
           Contactos con Instagram sin contactar. Seguí el orden: seguir → like → DM. Pocos y espaciados.
         </p>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <MiCuentaInstagram />
       </div>
 
       <div style={{ marginBottom: 16 }}>
