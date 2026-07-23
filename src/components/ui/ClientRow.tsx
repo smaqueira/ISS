@@ -17,7 +17,7 @@ function isToday(date?: string) {
   return new Date(date).toDateString() === new Date().toDateString()
 }
 
-const RESERVED_TAGS = ['listo', 'sin_datos']
+const RESERVED_TAGS = ['listo', 'sin_datos', 'me_sigue']
 
 export default function ClientRow({ client }: Props) {
   const router = useRouter()
@@ -98,6 +98,7 @@ export default function ClientRow({ client }: Props) {
           {client.rubro || '—'} · {client.city || '—'}
           {client.phone && <span> · 📱 {client.phone}</span>}
           {client.instagram && <span style={{ color: '#DD2A7B', fontWeight: 600 }} title={`Instagram: ${client.instagram}`}> · 📸 IG</span>}
+          {tags.includes('me_sigue') && <span style={{ color: '#22c55e', fontWeight: 600 }} title="Te sigue en Instagram"> · 💚 Te sigue</span>}
           {!client.phone && client.notes && <span style={{ fontStyle: 'italic' }}> · {client.notes}</span>}
         </div>
       </div>

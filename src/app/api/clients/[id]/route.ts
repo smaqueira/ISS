@@ -126,7 +126,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
   // Marcar seguir / like de Instagram (quedan registrados para siempre)
   if (_accion === 'instagram_seguido') await logHistory(db, id, 'Instagram seguido')
   if (_accion === 'instagram_like')    await logHistory(db, id, 'Instagram like')
-  if (_accion === 'instagram_te_sigue') await logHistory(db, id, 'Instagram te sigue')
+  if (_accion === 'instagram_te_sigue') {
+    await logHistory(db, id, 'Instagram te sigue')
+    // Etiquetar el contacto para verlo en la lista y poder filtrarlo
+    const { data: cli } = await db.from('clients').select('tags').eq('id', id).single()
+    const t: string[] = Array.isArray(cli?.tags) ? cli.tags : []
+    if (!t.includes('me_sigue')) await db.from('clients').update({ tags: [...t, 'me_sigue'] }).eq('id', id)
+  }
   // Saltar: lo sacamos del tablero "Instagram hoy" (no reaparece)
   if (_accion === 'instagram_salteado') await logHistory(db, id, 'Instagram salteado')
 
