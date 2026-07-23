@@ -10,6 +10,7 @@ interface Props {
 export default function WhatsAppModal({ clientId, onClose }: Props) {
   const [message, setMessage] = useState('')
   const [phone, setPhone] = useState('')
+  const [instagram, setInstagram] = useState('')
   const [compraMinima, setCompraMinima] = useState('')
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -35,6 +36,7 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
         setPhone(url.pathname.replace('/', ''))
         setMessage(data.message || '')
       }
+      setInstagram(data.instagram || '')
       const sm = Object.fromEntries((settingsArr || []).map((r: { key: string; value: string }) => [r.key, r.value]))
       setCompraMinima(sm.COMPRA_MINIMA || '')
       setLoading(false)
@@ -54,6 +56,16 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
     fetch(`/api/clients/${clientId}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _accion: 'whatsapp_enviado', _mensaje: message }),
+    })
+  }
+
+  function openInstagram() {
+    // Instagram no permite pre-cargar texto → copiamos el mensaje y abrimos el MD directo
+    navigator.clipboard.writeText(message)
+    window.open(`https://ig.me/m/${instagram}`, '_blank')
+    fetch(`/api/clients/${clientId}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _accion: 'instagram_enviado', _mensaje: message }),
     })
   }
 
@@ -152,6 +164,24 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
                   💬 Abrir WhatsApp
                 </button>
               </div>
+
+              {/* Enviar el MISMO mensaje por Instagram (canal alternativo, más seguro en frío) */}
+              {instagram ? (
+                <button
+                  onClick={openInstagram}
+                  style={{
+                    padding: '10px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    background: 'linear-gradient(45deg, #F58529, #DD2A7B, #8134AF)',
+                    color: 'white', fontWeight: 700, fontSize: '0.85rem',
+                  }}
+                >
+                  📸 Enviar el mismo mensaje por Instagram (@{instagram})
+                </button>
+              ) : (
+                <div style={{ fontSize: '0.75rem', color: 'var(--muted)', textAlign: 'center', padding: '4px 0' }}>
+                  📸 Para enviarlo por Instagram, cargá el @usuario en la ficha del cliente.
+                </div>
+              )}
             </>
         }
       </div>

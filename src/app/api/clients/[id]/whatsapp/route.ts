@@ -35,6 +35,16 @@ function elegirPrimerContacto(id: string, nombre: string): string {
   return lugar ? msg.replace(/\[restaurante\]/g, lugar) : msg
 }
 
+// Normaliza el campo instagram a un usuario limpio (soporta @user, url, etc.)
+function igHandle(raw?: string | null): string | null {
+  if (!raw) return null
+  let s = raw.trim()
+  if (!s) return null
+  s = s.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+  s = s.replace(/^@/, '').replace(/[/?].*$/, '').trim()
+  return s || null
+}
+
 export async function GET(req: NextRequest, { params }: { params: Params }) {
   const { id } = await params
   const db = await createClient()
@@ -69,5 +79,5 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
   const phone = client.phone.replace(/\D/g, '')
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(whatsapp)}`
 
-  return NextResponse.json({ url, message: whatsapp })
+  return NextResponse.json({ url, message: whatsapp, instagram: igHandle(client.instagram) })
 }

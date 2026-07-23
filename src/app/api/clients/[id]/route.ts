@@ -104,10 +104,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
     await logHistory(db, id, 'Datos actualizados')
   }
 
-  // Log WhatsApp sent — guarda el texto exacto enviado (registro/control de la Parte A)
-  if (_accion === 'whatsapp_enviado') {
+  // Log envío por WhatsApp / Instagram — guarda el texto exacto enviado
+  if (_accion === 'whatsapp_enviado' || _accion === 'instagram_enviado') {
+    const label = _accion === 'instagram_enviado' ? 'Instagram enviado' : 'WhatsApp enviado'
     const detalle = typeof _mensaje === 'string' && _mensaje.trim() ? _mensaje.trim().slice(0, 800) : undefined
-    await logHistory(db, id, 'WhatsApp enviado', detalle)
+    await logHistory(db, id, label, detalle)
     const patch: Record<string, string> = { last_contact: new Date().toISOString() }
     if (!prev?.fecha_primer_contacto) patch.fecha_primer_contacto = new Date().toISOString()
     await db.from('clients').update(patch).eq('id', id)
