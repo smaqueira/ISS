@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { elegirPrimerContacto, igHandle } from '@/lib/primer-contacto'
 import TermometroEnvio from '@/components/clients/TermometroEnvio'
@@ -7,7 +8,9 @@ export const dynamic = 'force-dynamic'
 
 const LIMITE = 60
 
-export default async function InstagramHoyPage() {
+export default async function InstagramHoyPage({ searchParams }: { searchParams: Promise<{ sin?: string }> }) {
+  const filters = await searchParams
+  const sinRubros = (filters.sin || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
   const db = await createClient()
 
   // Contactos ya salteados → se excluyen del tablero
@@ -29,15 +32,23 @@ export default async function InstagramHoyPage() {
     .map(c => ({ ...c, handle: igHandle(c.instagram as string) }))
     .filter(c => c.handle) as { id: string; name: string; rubro: string | null; city: string | null; handle: string }[]
 
+  // Rubros presentes (para los chips) + lista filtrada por los rubros ocultos
+  const rubroCount: Record<string, number> = {}
+  for (const c of items) {
+    const r = (c.rubro || 'sin rubro').toLowerCase()
+    rubroCount[r] = (rubroCount[r] || 0) + 1
+  }
+  const visibles = items.filter(c => !sinRubros.includes((c.rubro || 'sin rubro').toLowerCase()))
+
   // Traer qué contactos ya fueron seguidos / likeados (persistido en el historial)
-  const ids = items.map(c => c.id)
+  const ids = visibles.map(c => c.id)
   const { data: hist } = ids.length
     ? await db.from('client_history').select('client_id, accion').in('client_id', ids).in('accion', ['Instagram seguido', 'Instagram like'])
     : { data: [] as { client_id: string; accion: string }[] }
   const seguidos = new Set((hist || []).filter(h => h.accion === 'Instagram seguido').map(h => h.client_id))
   const likes = new Set((hist || []).filter(h => h.accion === 'Instagram like').map(h => h.client_id))
 
-  const igItems = items.map(c => ({
+  const igItems = visibles.map(c => ({
     id: c.id,
     name: c.name,
     rubro: c.rubro,
@@ -68,10 +79,38 @@ export default async function InstagramHoyPage() {
         El catálogo se los pasás cuando te respondan.
       </div>
 
+      {/* Chips: ocultar rubros (ej: hoteles) de un clic */}
+      {Object.keys(rubroCount).length > 1 && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>Ocultar rubro:</span>
+          {Object.entries(rubroCount).sort((a, b) => b[1] - a[1]).map(([r, n]) => {
+            const oculto = sinRubros.includes(r)
+            const set = new Set(sinRubros)
+            if (oculto) set.delete(r); else set.add(r)
+            const val = [...set].join(',')
+            const href = val ? `/admin/instagram-hoy?sin=${encodeURIComponent(val)}` : '/admin/instagram-hoy'
+            return (
+              <Link key={r} href={href} style={{
+                fontSize: '0.72rem', padding: '3px 10px', borderRadius: 20, textDecoration: 'none',
+                border: `1px solid ${oculto ? '#ef4444' : 'var(--border)'}`,
+                background: oculto ? '#ef444418' : 'transparent',
+                color: oculto ? '#ef4444' : 'var(--muted)',
+              }}>
+                {oculto ? '🚫 ' : ''}{r} ({n})
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
       {items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)', fontSize: '0.85rem' }}>
           No hay contactos con Instagram pendientes. 🎉<br />
           Cargá el @usuario en las fichas o revisá el filtro <strong>&quot;Con Instagram&quot;</strong> en Contactos.
+        </div>
+      ) : igItems.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)', fontSize: '0.85rem' }}>
+          Todos los contactos pendientes son de rubros que ocultaste. Volvé a mostrarlos con los chips de arriba. 👆
         </div>
       ) : (
         <InstagramList items={igItems} />
