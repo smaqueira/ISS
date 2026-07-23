@@ -126,6 +126,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
   // Marcar seguir / like de Instagram (quedan registrados para siempre)
   if (_accion === 'instagram_seguido') await logHistory(db, id, 'Instagram seguido')
   if (_accion === 'instagram_like')    await logHistory(db, id, 'Instagram like')
+  // Saltar: lo sacamos del tablero "Instagram hoy" (no reaparece)
+  if (_accion === 'instagram_salteado') await logHistory(db, id, 'Instagram salteado')
 
   return NextResponse.json(data)
 }

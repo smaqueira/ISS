@@ -10,14 +10,14 @@ interface Props {
   message: string
   seguidoInicial?: boolean
   likeInicial?: boolean
+  onDone?: (id: string) => void
 }
 
 const IG_GRADIENT = 'linear-gradient(45deg, #F58529, #DD2A7B, #8134AF)'
 
-export default function InstagramCard({ id, name, rubro, city, handle, message, seguidoInicial = false, likeInicial = false }: Props) {
+export default function InstagramCard({ id, name, rubro, city, handle, message, seguidoInicial = false, likeInicial = false, onDone }: Props) {
   const [seguido, setSeguido] = useState(seguidoInicial)
   const [like, setLike] = useState(likeInicial)
-  const [enviado, setEnviado] = useState(false)
   const [copied, setCopied] = useState(false)
 
   function logAccion(accion: string) {
@@ -25,6 +25,11 @@ export default function InstagramCard({ id, name, rubro, city, handle, message, 
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _accion: accion }),
     })
+  }
+
+  function saltar() {
+    logAccion('instagram_salteado')
+    onDone?.(id)
   }
 
   function marcarSeguido(v: boolean) {
@@ -54,17 +59,7 @@ export default function InstagramCard({ id, name, rubro, city, handle, message, 
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _accion: 'instagram_enviado', _mensaje: message }),
     })
-    setEnviado(true)
-  }
-
-  if (enviado) {
-    return (
-      <div style={{ border: '1px solid #22c55e55', background: '#22c55e12', borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: '1.1rem' }}>✅</span>
-        <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{name}</div>
-        <span style={{ fontSize: '0.75rem', color: 'var(--muted)', marginLeft: 'auto' }}>DM enviado · @{handle}</span>
-      </div>
-    )
+    onDone?.(id)
   }
 
   return (
@@ -77,6 +72,12 @@ export default function InstagramCard({ id, name, rubro, city, handle, message, 
             {rubro || '—'} · {city || '—'} · <span style={{ color: '#DD2A7B', fontWeight: 600 }}>@{handle}</span>
           </div>
         </div>
+        <button onClick={saltar} title="Saltar por ahora (no vuelve a aparecer)" style={{
+          background: 'none', border: '1px solid var(--border)', borderRadius: 8,
+          padding: '4px 10px', cursor: 'pointer', color: 'var(--muted)', fontSize: '0.75rem', whiteSpace: 'nowrap',
+        }}>
+          ⏭️ Saltar
+        </button>
       </div>
 
       {/* Paso 1: perfil + seguir + like */}

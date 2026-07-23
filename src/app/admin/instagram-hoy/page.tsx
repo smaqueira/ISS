@@ -1,14 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
 import { elegirPrimerContacto, igHandle } from '@/lib/primer-contacto'
 import TermometroEnvio from '@/components/clients/TermometroEnvio'
-import InstagramCard from '@/components/clients/InstagramCard'
+import InstagramList from '@/components/clients/InstagramList'
 
 export const dynamic = 'force-dynamic'
 
-const LIMITE = 40
+const LIMITE = 60
 
 export default async function InstagramHoyPage() {
   const db = await createClient()
+
+  // Contactos ya salteados → se excluyen del tablero
+  const { data: skipHist } = await db.from('client_history').select('client_id').eq('accion', 'Instagram salteado')
+  const skipSet = new Set((skipHist || []).map(h => h.client_id))
 
   // Contactos con Instagram y todavía sin primer contacto, mejores primero.
   const { data } = await db
@@ -21,6 +25,7 @@ export default async function InstagramHoyPage() {
     .limit(LIMITE)
 
   const items = (data || [])
+    .filter(c => !skipSet.has(c.id))
     .map(c => ({ ...c, handle: igHandle(c.instagram as string) }))
     .filter(c => c.handle) as { id: string; name: string; rubro: string | null; city: string | null; handle: string }[]
 
@@ -31,6 +36,17 @@ export default async function InstagramHoyPage() {
     : { data: [] as { client_id: string; accion: string }[] }
   const seguidos = new Set((hist || []).filter(h => h.accion === 'Instagram seguido').map(h => h.client_id))
   const likes = new Set((hist || []).filter(h => h.accion === 'Instagram like').map(h => h.client_id))
+
+  const igItems = items.map(c => ({
+    id: c.id,
+    name: c.name,
+    rubro: c.rubro,
+    city: c.city,
+    handle: c.handle,
+    message: elegirPrimerContacto(c.id, (c.name || '').trim()),
+    seguidoInicial: seguidos.has(c.id),
+    likeInicial: likes.has(c.id),
+  }))
 
   return (
     <div style={{ maxWidth: 720 }}>
@@ -58,21 +74,7 @@ export default async function InstagramHoyPage() {
           Cargá el @usuario en las fichas o revisá el filtro <strong>&quot;Con Instagram&quot;</strong> en Contactos.
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {items.map(c => (
-            <InstagramCard
-              key={c.id}
-              id={c.id}
-              name={c.name}
-              rubro={c.rubro}
-              city={c.city}
-              handle={c.handle}
-              message={elegirPrimerContacto(c.id, (c.name || '').trim())}
-              seguidoInicial={seguidos.has(c.id)}
-              likeInicial={likes.has(c.id)}
-            />
-          ))}
-        </div>
+        <InstagramList items={igItems} />
       )}
     </div>
   )
