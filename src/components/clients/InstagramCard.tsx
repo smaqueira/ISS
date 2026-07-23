@@ -34,7 +34,10 @@ export default function InstagramCard({ id, name, rubro, city, handle, message, 
 
   function marcarSeguido(v: boolean) {
     setSeguido(v)
-    if (v && !seguidoInicial) logAccion('instagram_seguido')
+    if (v && !seguidoInicial) {
+      logAccion('instagram_seguido')
+      if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('ig-seguido'))
+    }
   }
 
   function marcarLike(v: boolean) {

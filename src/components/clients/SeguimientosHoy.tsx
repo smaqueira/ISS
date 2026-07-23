@@ -22,7 +22,10 @@ export default function SeguimientosHoy() {
       .catch(() => {})
     cargar()
     const t = setInterval(cargar, 60000) // refresca cada minuto
-    return () => clearInterval(t)
+    // Al marcar "Seguido" en una tarjeta, subir el contador al instante
+    const onSeguido = () => setHoy(h => (h ?? 0) + 1)
+    window.addEventListener('ig-seguido', onSeguido)
+    return () => { clearInterval(t); window.removeEventListener('ig-seguido', onSeguido) }
   }, [])
 
   if (hoy === null) return null
