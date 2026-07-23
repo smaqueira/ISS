@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import TermometroEnvio from './TermometroEnvio'
 
 interface Props {
   clientId: string
@@ -79,6 +80,7 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
         {loading
           ? <div style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>✍️ Generando mensaje...</div>
           : <>
+              <TermometroEnvio />
               {compraMinima && (
                 <div style={{ background: '#22c55e12', border: '1px solid #22c55e44', borderRadius: 8, padding: '7px 12px', fontSize: '0.78rem', color: '#22c55e', fontWeight: 600 }}>
                   🛒 Compra mínima: {compraMinima}

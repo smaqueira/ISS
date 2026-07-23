@@ -3,6 +3,7 @@ import ClientRow from '@/components/ui/ClientRow'
 import ClientsAccordion from '@/components/clients/ClientsAccordion'
 import Link from 'next/link'
 import DeleteAllButton from '@/components/clients/DeleteAllButton'
+import TermometroEnvio from '@/components/clients/TermometroEnvio'
 import type { Client } from '@/lib/types'
 import { cookies } from 'next/headers'
 import { STATUS_LABELS, STATUS_COLORS, STATUS_OPTIONS, PRIORIDAD_OPTIONS, TEMPERATURA_OPTIONS, STATUS_GROUPS } from '@/lib/crm'
@@ -187,7 +188,8 @@ export default async function ClientsPage({ searchParams }: {
             {totalPages > 1 && ` · página ${page} de ${totalPages}`}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <TermometroEnvio compact />
           {isAdmin && <DeleteAllButton total={totalAll || 0} />}
           {isAdmin && <Link href="/admin/clients/import" className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>📥 CSV</Link>}
           {isAdmin && <Link href="/admin/clients/new" className="btn btn-primary">+ Agregar</Link>}
