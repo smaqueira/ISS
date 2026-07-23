@@ -48,10 +48,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
   const body = await req.json()
 
   // Get current client to detect changes
-  const { data: prev } = await db.from('clients').select('status, prioridad, temperatura, next_followup, name, rubro, notes, score').eq('id', id).single()
+  const { data: prev } = await db.from('clients').select('status, prioridad, temperatura, next_followup, name, rubro, notes, score, fecha_primer_contacto').eq('id', id).single()
 
   // Remove virtual fields before sending to DB
-  const { _accion, ...rawBody } = body
+  const { _accion, _mensaje, ...rawBody } = body
 
   // Allowlist de columnas válidas en la tabla clients
   const ALLOWED = new Set([
@@ -104,10 +104,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
     await logHistory(db, id, 'Datos actualizados')
   }
 
-  // Log WhatsApp sent
+  // Log WhatsApp sent — guarda el texto exacto enviado (registro/control de la Parte A)
   if (_accion === 'whatsapp_enviado') {
-    await logHistory(db, id, 'WhatsApp enviado')
-    await db.from('clients').update({ last_contact: new Date().toISOString() }).eq('id', id)
+    const detalle = typeof _mensaje === 'string' && _mensaje.trim() ? _mensaje.trim().slice(0, 800) : undefined
+    await logHistory(db, id, 'WhatsApp enviado', detalle)
+    const patch: Record<string, string> = { last_contact: new Date().toISOString() }
+    if (!prev?.fecha_primer_contacto) patch.fecha_primer_contacto = new Date().toISOString()
+    await db.from('clients').update(patch).eq('id', id)
   }
 
   return NextResponse.json(data)
