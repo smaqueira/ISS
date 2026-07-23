@@ -16,6 +16,7 @@ export default async function ClientsPage({ searchParams }: {
     vista?: string; tag?: string; page?: string
     prioridad?: string; temperatura?: string; vencidos?: string
     city?: string; desde?: string; hasta?: string; fu_desde?: string; fu_hasta?: string
+    ig?: string
   }>
 }) {
   const cookieStore = await cookies()
@@ -43,6 +44,8 @@ export default async function ClientsPage({ searchParams }: {
   if (filters.prioridad)  baseQ = baseQ.eq('prioridad', filters.prioridad)
   if (filters.temperatura) baseQ = baseQ.eq('temperatura', filters.temperatura)
   if (filters.vencidos === '1') baseQ = baseQ.lt('next_followup', hoy)
+  if (filters.ig === 'con')      baseQ = baseQ.not('instagram', 'is', null).neq('instagram', '')
+  else if (filters.ig === 'sin') baseQ = baseQ.or('instagram.is.null,instagram.eq.')
   if (filters.city)     baseQ = baseQ.ilike('city', `%${filters.city}%`)
   if (filters.desde)    baseQ = baseQ.gte('last_contact', filters.desde)
   if (filters.hasta)    baseQ = baseQ.lte('last_contact', filters.hasta)
@@ -96,6 +99,8 @@ export default async function ClientsPage({ searchParams }: {
     { count: perdidos },
     { count: seguimientoHoy },
     { count: seguimientoVencido },
+    { count: conIgCount },
+    { count: sinIgCount },
   ] = await Promise.all([
     db.from('clients').select('*', { count: 'exact', head: true }),
     db.from('clients').select('*', { count: 'exact', head: true }).contains('tags', ['listo']),
@@ -110,6 +115,8 @@ export default async function ClientsPage({ searchParams }: {
     db.from('clients').select('*', { count: 'exact', head: true }).in('status', ['perdido', 'no_interesado', 'inactivo']),
     db.from('clients').select('*', { count: 'exact', head: true }).eq('next_followup', hoy),
     db.from('clients').select('*', { count: 'exact', head: true }).lt('next_followup', hoy).not('next_followup', 'is', null),
+    db.from('clients').select('*', { count: 'exact', head: true }).not('instagram', 'is', null).neq('instagram', ''),
+    db.from('clients').select('*', { count: 'exact', head: true }).or('instagram.is.null,instagram.eq.'),
   ])
 
   const totalGanados = (clientes || 0) + (clientesR || 0)
@@ -123,7 +130,7 @@ export default async function ClientsPage({ searchParams }: {
 
   const activeFilter = filters.vista === 'zona' ? 'zona'
     : filters.vista === 'rubro' ? 'rubro'
-    : (filters.tag || filters.origen || filters.status || filters.type || filters.prioridad || filters.temperatura || (filters.vencidos === '1' ? 'vencidos' : 'todos'))
+    : (filters.tag || filters.origen || filters.status || filters.type || filters.prioridad || filters.temperatura || (filters.vencidos === '1' ? 'vencidos' : filters.ig ? 'ig' : 'todos'))
 
   function groupBy(key: 'city' | 'rubro', fallback: string) {
     return Object.entries(
@@ -247,6 +254,8 @@ export default async function ClientsPage({ searchParams }: {
         <Link href="/admin/clients?tag=sin_datos" style={chip(activeFilter === 'sin_datos')}>⚠️ Sin datos ({sinDatosCount || 0})</Link>
         <Link href="/admin/clients?tag=sin_clasificar" style={chip(activeFilter === 'sin_clasificar')}>❓ Sin clasificar</Link>
         <Link href="/admin/clients?vencidos=1" style={chip(activeFilter === 'vencidos')}>🔴 Vencidos ({seguimientoVencido || 0})</Link>
+        <Link href="/admin/clients?ig=con" style={{ ...chip(filters.ig === 'con'), borderColor: filters.ig === 'con' ? 'var(--accent)' : '#DD2A7B55', color: filters.ig === 'con' ? 'white' : '#DD2A7B' }}>📸 Con Instagram ({conIgCount || 0})</Link>
+        <Link href="/admin/clients?ig=sin" style={{ ...chip(filters.ig === 'sin'), borderColor: filters.ig === 'sin' ? 'var(--accent)' : 'var(--border)', color: filters.ig === 'sin' ? 'white' : 'var(--muted)' }}>🚫 Sin Instagram ({sinIgCount || 0})</Link>
       </div>
 
       {/* Prioridad + Temperatura */}

@@ -97,6 +97,7 @@ export default function ClientRow({ client }: Props) {
         <div style={{ fontSize: '0.77rem', color: 'var(--muted)' }}>
           {client.rubro || '—'} · {client.city || '—'}
           {client.phone && <span> · 📱 {client.phone}</span>}
+          {client.instagram && <span style={{ color: '#DD2A7B', fontWeight: 600 }} title={`Instagram: ${client.instagram}`}> · 📸 IG</span>}
           {!client.phone && client.notes && <span style={{ fontStyle: 'italic' }}> · {client.notes}</span>}
         </div>
       </div>
