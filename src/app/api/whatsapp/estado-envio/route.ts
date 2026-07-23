@@ -41,6 +41,6 @@ export async function GET() {
   return NextResponse.json({
     whatsapp: resumir(wa, haceUnaHora),
     instagram: resumir(ig, haceUnaHora),
-    seguidos: { hoy: seg.length, ultimo: seg[0]?.fecha ?? null },
+    seguidos: resumir(seg, haceUnaHora),
   })
 }
