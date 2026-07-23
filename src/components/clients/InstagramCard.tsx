@@ -10,14 +10,16 @@ interface Props {
   message: string
   seguidoInicial?: boolean
   likeInicial?: boolean
+  teSigueInicial?: boolean
   onDone?: (id: string) => void
 }
 
 const IG_GRADIENT = 'linear-gradient(45deg, #F58529, #DD2A7B, #8134AF)'
 
-export default function InstagramCard({ id, name, rubro, city, handle, message, seguidoInicial = false, likeInicial = false, onDone }: Props) {
+export default function InstagramCard({ id, name, rubro, city, handle, message, seguidoInicial = false, likeInicial = false, teSigueInicial = false, onDone }: Props) {
   const [seguido, setSeguido] = useState(seguidoInicial)
   const [like, setLike] = useState(likeInicial)
+  const [teSigue, setTeSigue] = useState(teSigueInicial)
   const [copied, setCopied] = useState(false)
 
   function logAccion(accion: string) {
@@ -45,6 +47,11 @@ export default function InstagramCard({ id, name, rubro, city, handle, message, 
     if (v && !likeInicial) logAccion('instagram_like')
   }
 
+  function marcarTeSigue(v: boolean) {
+    setTeSigue(v)
+    if (v && !teSigueInicial) logAccion('instagram_te_sigue')
+  }
+
   function abrirPerfil() {
     window.open(`https://instagram.com/${handle}`, '_blank')
   }
@@ -70,7 +77,10 @@ export default function InstagramCard({ id, name, rubro, city, handle, message, 
       {/* Encabezado */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
         <div>
-          <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{name}</div>
+          <div style={{ fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {name}
+            {teSigue && <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#22c55e', background: '#22c55e18', border: '1px solid #22c55e55', borderRadius: 6, padding: '1px 6px' }}>✅ Te sigue</span>}
+          </div>
           <div style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>
             {rubro || '—'} · {city || '—'} · <span style={{ color: '#DD2A7B', fontWeight: 600 }}>@{handle}</span>
           </div>
@@ -96,6 +106,9 @@ export default function InstagramCard({ id, name, rubro, city, handle, message, 
         </label>
         <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', cursor: like ? 'default' : 'pointer', color: like ? '#22c55e' : 'var(--muted)' }}>
           <input type="checkbox" checked={like} disabled={like} onChange={e => marcarLike(e.target.checked)} /> Like
+        </label>
+        <label title="Marcá si te siguió de vuelta — ahí el DM es más seguro" style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', cursor: teSigue ? 'default' : 'pointer', color: teSigue ? '#22c55e' : 'var(--muted)' }}>
+          <input type="checkbox" checked={teSigue} disabled={teSigue} onChange={e => marcarTeSigue(e.target.checked)} /> Me sigue
         </label>
       </div>
 

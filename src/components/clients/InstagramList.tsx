@@ -11,6 +11,7 @@ export interface IgItem {
   message: string
   seguidoInicial: boolean
   likeInicial: boolean
+  teSigueInicial: boolean
 }
 
 const VISIBLE = 10  // cuántos mostrar a la vez (el resto es reserva)
@@ -50,6 +51,7 @@ export default function InstagramList({ items }: { items: IgItem[] }) {
           message={c.message}
           seguidoInicial={c.seguidoInicial}
           likeInicial={c.likeInicial}
+          teSigueInicial={c.teSigueInicial}
           onDone={marcarDone}
         />
       ))}

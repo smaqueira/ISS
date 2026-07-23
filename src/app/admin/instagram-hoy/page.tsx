@@ -45,10 +45,11 @@ export default async function InstagramHoyPage({ searchParams }: { searchParams:
   // Traer qué contactos ya fueron seguidos / likeados (persistido en el historial)
   const ids = visibles.map(c => c.id)
   const { data: hist } = ids.length
-    ? await db.from('client_history').select('client_id, accion').in('client_id', ids).in('accion', ['Instagram seguido', 'Instagram like'])
+    ? await db.from('client_history').select('client_id, accion').in('client_id', ids).in('accion', ['Instagram seguido', 'Instagram like', 'Instagram te sigue'])
     : { data: [] as { client_id: string; accion: string }[] }
   const seguidos = new Set((hist || []).filter(h => h.accion === 'Instagram seguido').map(h => h.client_id))
   const likes = new Set((hist || []).filter(h => h.accion === 'Instagram like').map(h => h.client_id))
+  const teSigue = new Set((hist || []).filter(h => h.accion === 'Instagram te sigue').map(h => h.client_id))
 
   const igItems = visibles.map(c => ({
     id: c.id,
@@ -59,6 +60,7 @@ export default async function InstagramHoyPage({ searchParams }: { searchParams:
     message: elegirPrimerContacto(c.id, (c.name || '').trim()),
     seguidoInicial: seguidos.has(c.id),
     likeInicial: likes.has(c.id),
+    teSigueInicial: teSigue.has(c.id),
   }))
 
   return (
