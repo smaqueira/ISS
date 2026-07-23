@@ -25,20 +25,22 @@ export async function GET() {
   const desdeDia = inicioDiaAR()
   const haceUnaHora = new Date(Date.now() - 3600 * 1000).toISOString()
 
-  // Envíos de WhatsApp e Instagram desde el inicio del día (AR)
+  // Acciones de WhatsApp/Instagram desde el inicio del día (AR)
   const { data } = await db
     .from('client_history')
     .select('accion, fecha')
-    .in('accion', ['WhatsApp enviado', 'Instagram enviado'])
+    .in('accion', ['WhatsApp enviado', 'Instagram enviado', 'Instagram seguido'])
     .gte('fecha', desdeDia)
     .order('fecha', { ascending: false })
 
   const rows = (data || []) as { accion: string; fecha: string }[]
   const wa = rows.filter(r => r.accion === 'WhatsApp enviado')
   const ig = rows.filter(r => r.accion === 'Instagram enviado')
+  const seg = rows.filter(r => r.accion === 'Instagram seguido')
 
   return NextResponse.json({
     whatsapp: resumir(wa, haceUnaHora),
     instagram: resumir(ig, haceUnaHora),
+    seguidos: { hoy: seg.length, ultimo: seg[0]?.fecha ?? null },
   })
 }
