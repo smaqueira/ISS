@@ -70,8 +70,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
     if (f in dbBody && !dbBody[f]) delete dbBody[f]
   }
 
-  const { data, error } = await db.from('clients').update(dbBody).eq('id', id).select().single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // Solo actualizar si hay columnas reales; los requests de solo-acción
+  // (envíos, seguir/like) no tocan la tabla clients acá.
+  let data
+  if (Object.keys(dbBody).length > 0) {
+    const res = await db.from('clients').update(dbBody).eq('id', id).select().single()
+    if (res.error) return NextResponse.json({ error: res.error.message }, { status: 500 })
+    data = res.data
+  } else {
+    const res = await db.from('clients').select().eq('id', id).single()
+    data = res.data
+  }
 
   // Log status change + recalcular score dinámicamente
   if (dbBody.status && prev && dbBody.status !== prev.status) {
@@ -113,6 +122,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
     if (!prev?.fecha_primer_contacto) patch.fecha_primer_contacto = new Date().toISOString()
     await db.from('clients').update(patch).eq('id', id)
   }
+
+  // Marcar seguir / like de Instagram (quedan registrados para siempre)
+  if (_accion === 'instagram_seguido') await logHistory(db, id, 'Instagram seguido')
+  if (_accion === 'instagram_like')    await logHistory(db, id, 'Instagram like')
 
   return NextResponse.json(data)
 }

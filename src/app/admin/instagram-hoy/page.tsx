@@ -24,6 +24,14 @@ export default async function InstagramHoyPage() {
     .map(c => ({ ...c, handle: igHandle(c.instagram as string) }))
     .filter(c => c.handle) as { id: string; name: string; rubro: string | null; city: string | null; handle: string }[]
 
+  // Traer qué contactos ya fueron seguidos / likeados (persistido en el historial)
+  const ids = items.map(c => c.id)
+  const { data: hist } = ids.length
+    ? await db.from('client_history').select('client_id, accion').in('client_id', ids).in('accion', ['Instagram seguido', 'Instagram like'])
+    : { data: [] as { client_id: string; accion: string }[] }
+  const seguidos = new Set((hist || []).filter(h => h.accion === 'Instagram seguido').map(h => h.client_id))
+  const likes = new Set((hist || []).filter(h => h.accion === 'Instagram like').map(h => h.client_id))
+
   return (
     <div style={{ maxWidth: 720 }}>
       <div style={{ marginBottom: 16 }}>
@@ -60,6 +68,8 @@ export default async function InstagramHoyPage() {
               city={c.city}
               handle={c.handle}
               message={elegirPrimerContacto(c.id, (c.name || '').trim())}
+              seguidoInicial={seguidos.has(c.id)}
+              likeInicial={likes.has(c.id)}
             />
           ))}
         </div>

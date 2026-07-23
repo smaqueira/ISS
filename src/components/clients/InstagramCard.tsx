@@ -8,15 +8,34 @@ interface Props {
   city: string | null
   handle: string
   message: string
+  seguidoInicial?: boolean
+  likeInicial?: boolean
 }
 
 const IG_GRADIENT = 'linear-gradient(45deg, #F58529, #DD2A7B, #8134AF)'
 
-export default function InstagramCard({ id, name, rubro, city, handle, message }: Props) {
-  const [seguido, setSeguido] = useState(false)
-  const [like, setLike] = useState(false)
+export default function InstagramCard({ id, name, rubro, city, handle, message, seguidoInicial = false, likeInicial = false }: Props) {
+  const [seguido, setSeguido] = useState(seguidoInicial)
+  const [like, setLike] = useState(likeInicial)
   const [enviado, setEnviado] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  function logAccion(accion: string) {
+    fetch(`/api/clients/${id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _accion: accion }),
+    })
+  }
+
+  function marcarSeguido(v: boolean) {
+    setSeguido(v)
+    if (v && !seguidoInicial) logAccion('instagram_seguido')
+  }
+
+  function marcarLike(v: boolean) {
+    setLike(v)
+    if (v && !likeInicial) logAccion('instagram_like')
+  }
 
   function abrirPerfil() {
     window.open(`https://instagram.com/${handle}`, '_blank')
@@ -68,11 +87,11 @@ export default function InstagramCard({ id, name, rubro, city, handle, message }
         }}>
           1️⃣ Abrir perfil (seguir + like)
         </button>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', cursor: 'pointer', color: seguido ? '#22c55e' : 'var(--muted)' }}>
-          <input type="checkbox" checked={seguido} onChange={e => setSeguido(e.target.checked)} /> Seguido
+        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', cursor: seguido ? 'default' : 'pointer', color: seguido ? '#22c55e' : 'var(--muted)' }}>
+          <input type="checkbox" checked={seguido} disabled={seguido} onChange={e => marcarSeguido(e.target.checked)} /> Seguido
         </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', cursor: 'pointer', color: like ? '#22c55e' : 'var(--muted)' }}>
-          <input type="checkbox" checked={like} onChange={e => setLike(e.target.checked)} /> Like
+        <label style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.8rem', cursor: like ? 'default' : 'pointer', color: like ? '#22c55e' : 'var(--muted)' }}>
+          <input type="checkbox" checked={like} disabled={like} onChange={e => marcarLike(e.target.checked)} /> Like
         </label>
       </div>
 
