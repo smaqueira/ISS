@@ -3,10 +3,33 @@ import { useEffect, useState } from 'react'
 
 interface Snap { fecha: string; posts: number; followers: number; following: number }
 
+const METRICAS: Record<'followers' | 'following' | 'posts', { label: string; color: string }> = {
+  followers: { label: 'Seguidores', color: '#22c55e' },
+  following: { label: 'Seguidos', color: '#DD2A7B' },
+  posts: { label: 'Publicaciones', color: '#7EC8C8' },
+}
+
 function delta(actual: number, prev: number | undefined) {
   if (prev === undefined) return null
   const d = actual - prev
   return d
+}
+
+function Sparkline({ values, color }: { values: number[]; color: string }) {
+  if (values.length < 2) return null
+  const W = 300, H = 48, pad = 4
+  const min = Math.min(...values), max = Math.max(...values)
+  const range = max - min || 1
+  const pts = values.map((v, i) => {
+    const x = pad + (i / (values.length - 1)) * (W - 2 * pad)
+    const y = H - pad - ((v - min) / range) * (H - 2 * pad)
+    return `${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ')
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} preserveAspectRatio="none" style={{ display: 'block' }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  )
 }
 
 function Metrica({ label, valor, d }: { label: string; valor: number; d: number | null }) {
@@ -31,6 +54,7 @@ export default function MiCuentaInstagram() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [abierto, setAbierto] = useState(false)
+  const [metrica, setMetrica] = useState<'followers' | 'following' | 'posts'>('followers')
 
   useEffect(() => {
     fetch('/api/instagram/cuenta').then(r => r.json()).then(d => {
@@ -93,6 +117,26 @@ export default function MiCuentaInstagram() {
       {ratioRiesgo && (
         <div style={{ fontSize: '0.74rem', color: '#f59e0b', background: '#f59e0b12', border: '1px solid #f59e0b44', borderRadius: 8, padding: '7px 10px' }}>
           ⚠️ Seguís a bastantes más de los que te siguen. Bajá el ritmo de follows y considerá dejar de seguir a los que no te siguieron de vuelta — ese desbalance es una señal de riesgo para Instagram.
+        </div>
+      )}
+
+      {snaps.length >= 2 && (
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {(['followers', 'following', 'posts'] as const).map(m => (
+              <button key={m} onClick={() => setMetrica(m)} style={{
+                fontSize: '0.7rem', padding: '3px 10px', borderRadius: 12, cursor: 'pointer',
+                border: `1px solid ${metrica === m ? METRICAS[m].color : 'var(--border)'}`,
+                background: metrica === m ? METRICAS[m].color + '22' : 'transparent',
+                color: metrica === m ? METRICAS[m].color : 'var(--muted)', fontWeight: metrica === m ? 700 : 400,
+              }}>{METRICAS[m].label}</button>
+            ))}
+          </div>
+          <Sparkline values={snaps.map(s => s[metrica])} color={METRICAS[metrica].color} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--muted)' }}>
+            <span>{new Date(snaps[0].fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}: {snaps[0][metrica].toLocaleString('es-AR')}</span>
+            <span>ahora: {snaps[snaps.length - 1][metrica].toLocaleString('es-AR')}</span>
+          </div>
         </div>
       )}
 
