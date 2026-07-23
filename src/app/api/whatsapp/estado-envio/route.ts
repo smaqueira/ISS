@@ -12,23 +12,33 @@ function inicioDiaAR(): string {
   return new Date(Date.UTC(y, m, d, 3, 0, 0)).toISOString()
 }
 
+function resumir(rows: { fecha: string }[], haceUnaHora: string) {
+  return {
+    hoy: rows.length,
+    ultimaHora: rows.filter(r => r.fecha >= haceUnaHora).length,
+    ultimoEnvio: rows[0]?.fecha ?? null,
+  }
+}
+
 export async function GET() {
   const db = await createClient()
   const desdeDia = inicioDiaAR()
   const haceUnaHora = new Date(Date.now() - 3600 * 1000).toISOString()
 
-  // Todos los "WhatsApp enviado" desde el inicio del día (AR)
+  // Envíos de WhatsApp e Instagram desde el inicio del día (AR)
   const { data } = await db
     .from('client_history')
-    .select('fecha')
-    .eq('accion', 'WhatsApp enviado')
+    .select('accion, fecha')
+    .in('accion', ['WhatsApp enviado', 'Instagram enviado'])
     .gte('fecha', desdeDia)
     .order('fecha', { ascending: false })
 
-  const rows = (data || []) as { fecha: string }[]
-  const hoy = rows.length
-  const ultimaHora = rows.filter(r => r.fecha >= haceUnaHora).length
-  const ultimoEnvio = rows[0]?.fecha ?? null
+  const rows = (data || []) as { accion: string; fecha: string }[]
+  const wa = rows.filter(r => r.accion === 'WhatsApp enviado')
+  const ig = rows.filter(r => r.accion === 'Instagram enviado')
 
-  return NextResponse.json({ hoy, ultimaHora, ultimoEnvio })
+  return NextResponse.json({
+    whatsapp: resumir(wa, haceUnaHora),
+    instagram: resumir(ig, haceUnaHora),
+  })
 }
