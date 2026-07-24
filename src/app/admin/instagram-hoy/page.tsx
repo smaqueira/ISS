@@ -9,7 +9,17 @@ import MiCuentaInstagram from '@/components/clients/MiCuentaInstagram'
 export const dynamic = 'force-dynamic'
 
 const LIMITE = 60
-type Row = { id: string; name: string; rubro: string | null; city: string | null; handle: string }
+const SELECT = 'id, name, rubro, city, instagram, score, tags'
+type Row = { id: string; name: string; rubro: string | null; city: string | null; handle: string; tags: string[] }
+
+function toRows(data: unknown[] | null): Row[] {
+  return (data || [])
+    .map(c => {
+      const r = c as { id: string; name: string; rubro: string | null; city: string | null; instagram: string | null; tags: string[] | null }
+      return { ...r, handle: igHandle(r.instagram), tags: Array.isArray(r.tags) ? r.tags : [] }
+    })
+    .filter(r => r.handle) as Row[]
+}
 
 export default async function InstagramHoyPage({ searchParams }: { searchParams: Promise<{ sin?: string; vista?: string }> }) {
   const filters = await searchParams
@@ -17,38 +27,30 @@ export default async function InstagramHoyPage({ searchParams }: { searchParams:
   const sinRubros = (filters.sin || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
   const db = await createClient()
 
-  // te_sigue (todos) + salteados
-  const [{ data: tsHist }, { data: skipHist }] = await Promise.all([
-    db.from('client_history').select('client_id').eq('accion', 'Instagram te sigue'),
-    db.from('client_history').select('client_id').eq('accion', 'Instagram salteado'),
-  ])
-  const teSigueIds = [...new Set((tsHist || []).map(h => h.client_id))]
+  // Salteados → se excluyen del tablero
+  const { data: skipHist } = await db.from('client_history').select('client_id').eq('accion', 'Instagram salteado')
   const skipSet = new Set((skipHist || []).map(h => h.client_id))
 
-  // "Me siguen" pendientes (para el contador y la vista) — sin filtros de skip/rubro
-  const { data: segData } = teSigueIds.length
-    ? await db.from('clients').select('id, name, rubro, city, instagram, score').in('id', teSigueIds).is('fecha_primer_contacto', null).order('score', { ascending: false, nullsFirst: false })
-    : { data: [] as { id: string; name: string; rubro: string | null; city: string | null; instagram: string | null; score: number | null }[] }
-  const seguidores = (segData || [])
-    .map(c => ({ ...c, handle: igHandle(c.instagram as string) }))
-    .filter(c => c.handle) as Row[]
+  // "Me siguen" pendientes (contador + vista) — por etiqueta, sin filtros de skip/rubro
+  const { data: segData } = await db
+    .from('clients').select(SELECT)
+    .contains('tags', ['me_sigue'])
+    .is('fecha_primer_contacto', null)
+    .order('score', { ascending: false, nullsFirst: false })
+  const seguidores = toRows(segData)
   const meSiguenCount = seguidores.length
 
-  // Lista principal (vista "todos"): mejores pendientes sin contactar
+  // Lista principal: mejores pendientes sin contactar
   const { data } = await db
-    .from('clients')
-    .select('id, name, rubro, city, instagram, score')
+    .from('clients').select(SELECT)
     .not('instagram', 'is', null)
     .neq('instagram', '')
     .is('fecha_primer_contacto', null)
     .order('score', { ascending: false, nullsFirst: false })
     .limit(LIMITE)
-  const itemsTodos = (data || [])
-    .filter(c => !skipSet.has(c.id))
-    .map(c => ({ ...c, handle: igHandle(c.instagram as string) }))
-    .filter(c => c.handle) as Row[]
+  const itemsTodos = toRows(data).filter(c => !skipSet.has(c.id))
 
-  // Rubros presentes (chips) — solo aplican a la vista "todos"
+  // Rubros presentes (chips) — solo en la vista "todos"
   const rubroCount: Record<string, number> = {}
   for (const c of itemsTodos) {
     const r = (c.rubro || 'sin rubro').toLowerCase()
@@ -58,15 +60,6 @@ export default async function InstagramHoyPage({ searchParams }: { searchParams:
 
   const lista: Row[] = vista === 'me-siguen' ? seguidores : visiblesTodos
 
-  // Estado seguido/like/te_sigue para la lista mostrada
-  const ids = lista.map(c => c.id)
-  const { data: hist } = ids.length
-    ? await db.from('client_history').select('client_id, accion').in('client_id', ids).in('accion', ['Instagram seguido', 'Instagram like', 'Instagram te sigue'])
-    : { data: [] as { client_id: string; accion: string }[] }
-  const seguidos = new Set((hist || []).filter(h => h.accion === 'Instagram seguido').map(h => h.client_id))
-  const likes = new Set((hist || []).filter(h => h.accion === 'Instagram like').map(h => h.client_id))
-  const teSigue = new Set((hist || []).filter(h => h.accion === 'Instagram te sigue').map(h => h.client_id))
-
   const igItems = lista.map(c => ({
     id: c.id,
     name: c.name,
@@ -74,9 +67,9 @@ export default async function InstagramHoyPage({ searchParams }: { searchParams:
     city: c.city,
     handle: c.handle,
     message: elegirPrimerContacto(c.id, (c.name || '').trim()),
-    seguidoInicial: seguidos.has(c.id),
-    likeInicial: likes.has(c.id),
-    teSigueInicial: teSigue.has(c.id) || vista === 'me-siguen',
+    seguidoInicial: c.tags.includes('ig_seguido'),
+    likeInicial: c.tags.includes('ig_like'),
+    teSigueInicial: c.tags.includes('me_sigue'),
   }))
 
   const chip = (activo: boolean, color = 'var(--accent)') => ({
@@ -99,7 +92,6 @@ export default async function InstagramHoyPage({ searchParams }: { searchParams:
       <div style={{ marginBottom: 16 }}><SeguimientosHoy /></div>
       <div style={{ marginBottom: 16 }}><TermometroEnvio canal="instagram" /></div>
 
-      {/* Recordatorio de buenas prácticas */}
       <div style={{ background: '#DD2A7B10', border: '1px solid #DD2A7B44', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6 }}>
         <strong style={{ color: '#DD2A7B' }}>Para no quemar la cuenta:</strong> seguí y dale like antes del DM,
         mandá <strong>pocos por día (5–10)</strong> y espaciados, mensajes cortos y <strong>sin links</strong>.
@@ -146,7 +138,7 @@ export default async function InstagramHoyPage({ searchParams }: { searchParams:
         <InstagramList items={igItems} />
       ) : vista === 'me-siguen' ? (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)', fontSize: '0.85rem' }}>
-          Todavía nadie te sigue de vuelta sin contactar. Marcá <strong>&quot;Me sigue&quot;</strong> en las tarjetas cuando te sigan. 💚
+          Todavía nadie te sigue de vuelta sin contactar. Marcá <strong>&quot;Me sigue&quot;</strong> cuando te sigan. 💚
         </div>
       ) : itemsTodos.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)', fontSize: '0.85rem' }}>

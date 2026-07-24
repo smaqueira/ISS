@@ -124,14 +124,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
   }
 
   // Marcar seguir / like de Instagram (quedan registrados para siempre)
-  if (_accion === 'instagram_seguido') await logHistory(db, id, 'Instagram seguido')
-  if (_accion === 'instagram_like')    await logHistory(db, id, 'Instagram like')
-  if (_accion === 'instagram_te_sigue') {
-    await logHistory(db, id, 'Instagram te sigue')
-    // Etiquetar el contacto para verlo en la lista y poder filtrarlo
+  // Marcas de Instagram: quedan en el historial (para los contadores) y como
+  // etiqueta del contacto (para verlas/filtrarlas en la lista).
+  const IG_MARCAS: Record<string, { label: string; tag: string }> = {
+    instagram_seguido:  { label: 'Instagram seguido',  tag: 'ig_seguido' },
+    instagram_like:     { label: 'Instagram like',     tag: 'ig_like' },
+    instagram_te_sigue: { label: 'Instagram te sigue', tag: 'me_sigue' },
+  }
+  if (typeof _accion === 'string' && IG_MARCAS[_accion]) {
+    const { label, tag } = IG_MARCAS[_accion]
+    await logHistory(db, id, label)
     const { data: cli } = await db.from('clients').select('tags').eq('id', id).single()
     const t: string[] = Array.isArray(cli?.tags) ? cli.tags : []
-    if (!t.includes('me_sigue')) await db.from('clients').update({ tags: [...t, 'me_sigue'] }).eq('id', id)
+    if (!t.includes(tag)) await db.from('clients').update({ tags: [...t, tag] }).eq('id', id)
   }
   // Saltar: lo sacamos del tablero "Instagram hoy" (no reaparece)
   if (_accion === 'instagram_salteado') await logHistory(db, id, 'Instagram salteado')

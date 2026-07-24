@@ -17,7 +17,7 @@ function isToday(date?: string) {
   return new Date(date).toDateString() === new Date().toDateString()
 }
 
-const RESERVED_TAGS = ['listo', 'sin_datos', 'me_sigue']
+const RESERVED_TAGS = ['listo', 'sin_datos', 'me_sigue', 'ig_seguido', 'ig_like']
 
 export default function ClientRow({ client }: Props) {
   const router = useRouter()
@@ -39,6 +39,18 @@ export default function ClientRow({ client }: Props) {
     await fetch(`/api/clients/${client.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ tags: next }),
+    })
+  }
+
+  // Marcas de Instagram (sigo / like / me sigue). Al marcar se registra en el
+  // historial (cuenta para el ritmo diario); al desmarcar solo se quita la etiqueta.
+  async function toggleIg(tag: string, accion: string) {
+    const activo = tags.includes(tag)
+    const next = activo ? tags.filter(t => t !== tag) : [...tags, tag]
+    setTags(next)
+    await fetch(`/api/clients/${client.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(activo ? { tags: next } : { _accion: accion }),
     })
   }
 
@@ -128,6 +140,21 @@ export default function ClientRow({ client }: Props) {
           style={{ padding: '6px 8px', borderRadius: 6, border: `1px solid ${isSinDatos ? '#f59e0b' : 'var(--border)'}`, background: isSinDatos ? '#f59e0b20' : 'transparent', cursor: 'pointer', fontSize: '0.8rem' }}>
           ⚠️
         </button>
+        {client.instagram && ([
+          { tag: 'ig_seguido', accion: 'instagram_seguido',  icon: '👣', title: 'Lo sigo en Instagram', color: '#DD2A7B' },
+          { tag: 'ig_like',    accion: 'instagram_like',     icon: '❤️', title: 'Le di like',           color: '#DD2A7B' },
+          { tag: 'me_sigue',   accion: 'instagram_te_sigue', icon: '💚', title: 'Me sigue',             color: '#22c55e' },
+        ].map(m => (
+          <button key={m.tag} onClick={() => toggleIg(m.tag, m.accion)} title={m.title}
+            style={{
+              padding: '6px 8px', borderRadius: 6, cursor: 'pointer', fontSize: '0.8rem',
+              border: `1px solid ${tags.includes(m.tag) ? m.color : 'var(--border)'}`,
+              background: tags.includes(m.tag) ? `${m.color}20` : 'transparent',
+              opacity: tags.includes(m.tag) ? 1 : 0.45,
+            }}>
+            {m.icon}
+          </button>
+        )))}
         {client.phone && (
           <>
             <button onClick={() => setWaOpen(true)} className="btn btn-ghost" style={{ padding: '6px 10px' }} title="Enviar WhatsApp">
