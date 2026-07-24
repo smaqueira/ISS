@@ -54,6 +54,7 @@ export default async function ClientsPage({ searchParams }: {
 
   if (filters.tag === 'listo')         baseQ = baseQ.contains('tags', ['listo'])
   else if (filters.tag === 'sin_datos') baseQ = baseQ.contains('tags', ['sin_datos'])
+  else if (filters.tag === 'me_sigue')  baseQ = baseQ.contains('tags', ['me_sigue'])
   else if (filters.tag === 'sin_clasificar') {
     baseQ = baseQ.not('tags', 'cs', '{"listo"}').not('tags', 'cs', '{"sin_datos"}')
   }
@@ -101,6 +102,7 @@ export default async function ClientsPage({ searchParams }: {
     { count: seguimientoVencido },
     { count: conIgCount },
     { count: sinIgCount },
+    { count: meSigueCount },
   ] = await Promise.all([
     db.from('clients').select('*', { count: 'exact', head: true }),
     db.from('clients').select('*', { count: 'exact', head: true }).contains('tags', ['listo']),
@@ -117,6 +119,7 @@ export default async function ClientsPage({ searchParams }: {
     db.from('clients').select('*', { count: 'exact', head: true }).lt('next_followup', hoy).not('next_followup', 'is', null),
     db.from('clients').select('*', { count: 'exact', head: true }).not('instagram', 'is', null).neq('instagram', ''),
     db.from('clients').select('*', { count: 'exact', head: true }).or('instagram.is.null,instagram.eq.'),
+    db.from('clients').select('*', { count: 'exact', head: true }).contains('tags', ['me_sigue']),
   ])
 
   const totalGanados = (clientes || 0) + (clientesR || 0)
@@ -256,6 +259,7 @@ export default async function ClientsPage({ searchParams }: {
         <Link href="/admin/clients?vencidos=1" style={chip(activeFilter === 'vencidos')}>🔴 Vencidos ({seguimientoVencido || 0})</Link>
         <Link href="/admin/clients?ig=con" style={{ ...chip(filters.ig === 'con'), borderColor: filters.ig === 'con' ? 'var(--accent)' : '#DD2A7B55', color: filters.ig === 'con' ? 'white' : '#DD2A7B' }}>📸 Con Instagram ({conIgCount || 0})</Link>
         <Link href="/admin/clients?ig=sin" style={{ ...chip(filters.ig === 'sin'), borderColor: filters.ig === 'sin' ? 'var(--accent)' : 'var(--border)', color: filters.ig === 'sin' ? 'white' : 'var(--muted)' }}>🚫 Sin Instagram ({sinIgCount || 0})</Link>
+        <Link href="/admin/clients?tag=me_sigue" style={{ ...chip(activeFilter === 'me_sigue'), borderColor: activeFilter === 'me_sigue' ? 'var(--accent)' : '#22c55e55', color: activeFilter === 'me_sigue' ? 'white' : '#22c55e' }}>💚 Me siguen ({meSigueCount || 0})</Link>
       </div>
 
       {/* Prioridad + Temperatura */}
