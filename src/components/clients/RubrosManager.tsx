@@ -21,19 +21,27 @@ export default function RubrosManager({ rubros }: { rubros: Rubro[] }) {
 
   function empezar(name: string) { setEditando(name); setValor(name) }
 
-  async function renombrar(desde: string, hacia: string) {
-    await fetch('/api/clients/rubros', {
+  async function renombrar(desde: string, hacia: string): Promise<number> {
+    const r = await fetch('/api/clients/rubros', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ desde, hacia }),
     })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok) throw new Error(d?.error || `Error ${r.status}`)
+    return d?.updated ?? 0
   }
 
   async function guardar(desde: string) {
     const hacia = valor.trim()
     if (!hacia || hacia === desde) { setEditando(null); return }
     setGuardando(true)
-    try { await renombrar(desde, hacia); setEditando(null); router.refresh() }
-    finally { setGuardando(false) }
+    try {
+      const n = await renombrar(desde, hacia)
+      if (n === 0) alert(`No se encontró ningún contacto con el rubro "${desde}".`)
+      setEditando(null); router.refresh()
+    } catch (e) {
+      alert('No se pudo renombrar: ' + (e instanceof Error ? e.message : String(e)))
+    } finally { setGuardando(false) }
   }
 
   function toggleSel(name: string) {
@@ -45,8 +53,12 @@ export default function RubrosManager({ rubros }: { rubros: Rubro[] }) {
     if (!dest) return
     setFusionando(true)
     try {
-      for (const name of selArr) if (name !== dest) await renombrar(name, dest)
+      let total = 0
+      for (const name of selArr) if (name !== dest) total += await renombrar(name, dest)
       setSel(new Set()); setDestino(''); router.refresh()
+      alert(`✓ ${total} contactos pasaron a "${dest}".`)
+    } catch (e) {
+      alert('No se pudo fusionar: ' + (e instanceof Error ? e.message : String(e)))
     } finally { setFusionando(false) }
   }
 
