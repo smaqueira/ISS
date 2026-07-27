@@ -24,6 +24,22 @@ export default function ClientRow({ client }: Props) {
   const [tags, setTags] = useState<string[]>(client.tags || [])
   const [waOpen, setWaOpen] = useState(false)
   const [instagram, setInstagram] = useState<string>(client.instagram || '')
+  const [igInput, setIgInput] = useState('')
+  const [buscandoIg, setBuscandoIg] = useState(false)
+
+  async function buscarIg() {
+    setBuscandoIg(true)
+    try {
+      const r = await fetch('/api/clients/buscar-ig', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: client.name, city: client.city }),
+      })
+      const d = await r.json()
+      if (d.handle) setIgInput(d.handle)
+      else alert(`No se encontró Instagram para "${client.name}". Cargalo a mano si lo tenés.`)
+    } catch { alert('No se pudo buscar.') }
+    finally { setBuscandoIg(false) }
+  }
 
   async function guardarInstagram(v: string) {
     const val = v.trim()
@@ -167,13 +183,21 @@ export default function ClientRow({ client }: Props) {
             {m.icon}
           </button>
         ))) : (
-          <input
-            placeholder="@ IG"
-            title="Pegá el @ de Instagram y Enter para guardarlo"
-            onKeyDown={e => { if (e.key === 'Enter') guardarInstagram((e.target as HTMLInputElement).value) }}
-            onBlur={e => guardarInstagram(e.target.value)}
-            style={{ width: 84, background: 'var(--bg)', border: '1px solid #DD2A7B55', borderRadius: 6, padding: '5px 8px', color: 'var(--text)', fontSize: '0.75rem' }}
-          />
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <input
+              value={igInput}
+              onChange={e => setIgInput(e.target.value)}
+              placeholder="@ IG"
+              title="Pegá el @ o buscalo con 🔎, y Enter para guardar"
+              onKeyDown={e => { if (e.key === 'Enter') guardarInstagram(igInput) }}
+              onBlur={() => { if (igInput.trim()) guardarInstagram(igInput) }}
+              style={{ width: 84, background: 'var(--bg)', border: '1px solid #DD2A7B55', borderRadius: 6, padding: '5px 8px', color: 'var(--text)', fontSize: '0.75rem' }}
+            />
+            <button onClick={buscarIg} disabled={buscandoIg} title="Buscar Instagram en Google (Serper)"
+              style={{ padding: '5px 7px', borderRadius: 6, border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', fontSize: '0.8rem' }}>
+              {buscandoIg ? '⏳' : '🔎'}
+            </button>
+          </div>
         )}
         {client.phone && (
           <>
