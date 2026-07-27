@@ -35,7 +35,7 @@ export default function ClientRow({ client }: Props) {
         body: JSON.stringify({ name: client.name, city: client.city }),
       })
       const d = await r.json()
-      if (d.handle) setIgInput(d.handle)
+      if (d.handle) setIgInput('@' + d.handle)
       else alert(`No se encontró Instagram para "${client.name}". Cargalo a mano si lo tenés.`)
     } catch { alert('No se pudo buscar.') }
     finally { setBuscandoIg(false) }
