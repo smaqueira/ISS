@@ -4,6 +4,7 @@ import ClientsAccordion from '@/components/clients/ClientsAccordion'
 import Link from 'next/link'
 import DeleteAllButton from '@/components/clients/DeleteAllButton'
 import TermometroEnvio from '@/components/clients/TermometroEnvio'
+import BuscarIgTanda from '@/components/clients/BuscarIgTanda'
 import type { Client } from '@/lib/types'
 import { cookies } from 'next/headers'
 import { STATUS_LABELS, STATUS_COLORS, STATUS_OPTIONS, PRIORIDAD_OPTIONS, TEMPERATURA_OPTIONS, STATUS_GROUPS } from '@/lib/crm'
@@ -324,6 +325,9 @@ export default async function ClientsPage({ searchParams }: {
           })}
         </div>
       )}
+
+      {/* Buscar Instagram en tanda para el filtro actual (rubro/zona) */}
+      <BuscarIgTanda rubro={filters.rubro} city={filters.city} />
 
       {/* Prioridad + Temperatura */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
