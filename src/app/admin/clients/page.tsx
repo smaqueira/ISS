@@ -132,14 +132,21 @@ export default async function ClientsPage({ searchParams }: {
   const total = needsAllRows ? clients.length : dbTotal
   const totalPages = needsAllRows ? 1 : Math.ceil(dbTotal / PAGE_SIZE)
 
-  // Rubros disponibles para filtrar (combinable con el filtro actual: Listos + restaurantes, etc.)
-  const { data: rubroRows } = await db.from('clients').select('rubro')
+  // Rubros y localidades para filtrar (combinables). Paginado para contar TODOS
+  // los contactos (Supabase corta en 1000 por consulta).
   const rubroCount: Record<string, number> = {}
-  for (const r of rubroRows || []) {
-    const v = ((r.rubro as string) || '').trim()
-    if (v) rubroCount[v] = (rubroCount[v] || 0) + 1
+  const cityCount: Record<string, number> = {}
+  for (let offset = 0; ; offset += 1000) {
+    const { data: chunk } = await db.from('clients').select('rubro, city').order('id').range(offset, offset + 999)
+    if (!chunk || chunk.length === 0) break
+    for (const r of chunk) {
+      const rv = ((r.rubro as string) || '').trim(); if (rv) rubroCount[rv] = (rubroCount[rv] || 0) + 1
+      const cv = ((r.city as string) || '').trim(); if (cv) cityCount[cv] = (cityCount[cv] || 0) + 1
+    }
+    if (chunk.length < 1000) break
   }
   const rubrosTop = Object.entries(rubroCount).sort((a, b) => b[1] - a[1]).slice(0, 20)
+  const cityTop = Object.entries(cityCount).sort((a, b) => b[1] - a[1]).slice(0, 18)
 
   // Construye una URL preservando los filtros actuales (para combinar rubro con Listos, etc.)
   function urlCon(overrides: Record<string, string | undefined>) {
@@ -294,6 +301,24 @@ export default async function ClientsPage({ searchParams }: {
             return (
               <Link key={r} href={urlCon({ rubro: activo ? undefined : r })} style={chip(activo)}>
                 {r} ({n})
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Filtrar por barrio / localidad — se COMBINA con lo de arriba (ej: Con Instagram + Parrillas + Palermo) */}
+      {cityTop.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Barrio / Localidad:</span>
+          {filters.city && (
+            <Link href={urlCon({ city: undefined })} style={{ ...chip(false), color: '#ef4444', borderColor: '#ef444455' }}>✕ Quitar zona</Link>
+          )}
+          {cityTop.map(([c, n]) => {
+            const activo = (filters.city || '').toLowerCase() === c.toLowerCase()
+            return (
+              <Link key={c} href={urlCon({ city: activo ? undefined : c })} style={activo ? chip(true) : { ...chip(false), borderColor: '#7EC8C855', color: '#7EC8C8' }}>
+                {c} ({n})
               </Link>
             )
           })}
