@@ -16,7 +16,7 @@ export default async function ClientsPage({ searchParams }: {
     vista?: string; tag?: string; page?: string
     prioridad?: string; temperatura?: string; vencidos?: string
     city?: string; desde?: string; hasta?: string; fu_desde?: string; fu_hasta?: string
-    ig?: string
+    ig?: string; rubro?: string
   }>
 }) {
   const cookieStore = await cookies()
@@ -46,6 +46,7 @@ export default async function ClientsPage({ searchParams }: {
   if (filters.vencidos === '1') baseQ = baseQ.lt('next_followup', hoy)
   if (filters.ig === 'con')      baseQ = baseQ.not('instagram', 'is', null).neq('instagram', '')
   else if (filters.ig === 'sin') baseQ = baseQ.or('instagram.is.null,instagram.eq.')
+  if (filters.rubro)      baseQ = baseQ.ilike('rubro', filters.rubro)
   if (filters.city)     baseQ = baseQ.ilike('city', `%${filters.city}%`)
   if (filters.desde)    baseQ = baseQ.gte('last_contact', filters.desde)
   if (filters.hasta)    baseQ = baseQ.lte('last_contact', filters.hasta)
@@ -130,6 +131,24 @@ export default async function ClientsPage({ searchParams }: {
 
   const total = needsAllRows ? clients.length : dbTotal
   const totalPages = needsAllRows ? 1 : Math.ceil(dbTotal / PAGE_SIZE)
+
+  // Rubros disponibles para filtrar (combinable con el filtro actual: Listos + restaurantes, etc.)
+  const { data: rubroRows } = await db.from('clients').select('rubro')
+  const rubroCount: Record<string, number> = {}
+  for (const r of rubroRows || []) {
+    const v = ((r.rubro as string) || '').trim()
+    if (v) rubroCount[v] = (rubroCount[v] || 0) + 1
+  }
+  const rubrosTop = Object.entries(rubroCount).sort((a, b) => b[1] - a[1]).slice(0, 20)
+
+  // Construye una URL preservando los filtros actuales (para combinar rubro con Listos, etc.)
+  function urlCon(overrides: Record<string, string | undefined>) {
+    const base: Record<string, string | undefined> = { ...(filters as Record<string, string | undefined>), page: undefined, vista: undefined, ...overrides }
+    const params = new URLSearchParams()
+    for (const [k, v] of Object.entries(base)) if (v) params.set(k, v)
+    const qs = params.toString()
+    return qs ? `/admin/clients?${qs}` : '/admin/clients'
+  }
 
   const activeFilter = filters.vista === 'zona' ? 'zona'
     : filters.vista === 'rubro' ? 'rubro'
@@ -261,6 +280,24 @@ export default async function ClientsPage({ searchParams }: {
         <Link href="/admin/clients?ig=sin" style={{ ...chip(filters.ig === 'sin'), borderColor: filters.ig === 'sin' ? 'var(--accent)' : 'var(--border)', color: filters.ig === 'sin' ? 'white' : 'var(--muted)' }}>🚫 Sin Instagram ({sinIgCount || 0})</Link>
         <Link href="/admin/clients?tag=me_sigue" style={{ ...chip(activeFilter === 'me_sigue'), borderColor: activeFilter === 'me_sigue' ? 'var(--accent)' : '#22c55e55', color: activeFilter === 'me_sigue' ? 'white' : '#22c55e' }}>💚 Me siguen ({meSigueCount || 0})</Link>
       </div>
+
+      {/* Filtrar por comercio / rubro — se COMBINA con el filtro de arriba (ej: Listos + Restaurantes) */}
+      {rubrosTop.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Comercio:</span>
+          {filters.rubro && (
+            <Link href={urlCon({ rubro: undefined })} style={{ ...chip(false), color: '#ef4444', borderColor: '#ef444455' }}>✕ Quitar rubro</Link>
+          )}
+          {rubrosTop.map(([r, n]) => {
+            const activo = (filters.rubro || '').toLowerCase() === r.toLowerCase()
+            return (
+              <Link key={r} href={urlCon({ rubro: activo ? undefined : r })} style={chip(activo)}>
+                {r} ({n})
+              </Link>
+            )
+          })}
+        </div>
+      )}
 
       {/* Prioridad + Temperatura */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
