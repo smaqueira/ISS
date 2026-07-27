@@ -23,6 +23,18 @@ export default function ClientRow({ client }: Props) {
   const router = useRouter()
   const [tags, setTags] = useState<string[]>(client.tags || [])
   const [waOpen, setWaOpen] = useState(false)
+  const [instagram, setInstagram] = useState<string>(client.instagram || '')
+
+  async function guardarInstagram(v: string) {
+    const val = v.trim()
+    if (!val || val === instagram) return
+    setInstagram(val)
+    await fetch(`/api/clients/${client.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instagram: val }),
+    })
+    router.refresh()
+  }
 
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault()
@@ -109,7 +121,7 @@ export default function ClientRow({ client }: Props) {
         <div style={{ fontSize: '0.77rem', color: 'var(--muted)' }}>
           {client.rubro || '—'} · {client.city || '—'}
           {client.phone && <span> · 📱 {client.phone}</span>}
-          {client.instagram && <span style={{ color: '#DD2A7B', fontWeight: 600 }} title={`Instagram: ${client.instagram}`}> · 📸 IG</span>}
+          {instagram && <span style={{ color: '#DD2A7B', fontWeight: 600 }} title={`Instagram: ${instagram}`}> · 📸 IG</span>}
           {tags.includes('me_sigue') && <span style={{ color: '#22c55e', fontWeight: 600 }} title="Te sigue en Instagram"> · 💚 Te sigue</span>}
           {!client.phone && client.notes && <span style={{ fontStyle: 'italic' }}> · {client.notes}</span>}
         </div>
@@ -140,7 +152,7 @@ export default function ClientRow({ client }: Props) {
           style={{ padding: '6px 8px', borderRadius: 6, border: `1px solid ${isSinDatos ? '#f59e0b' : 'var(--border)'}`, background: isSinDatos ? '#f59e0b20' : 'transparent', cursor: 'pointer', fontSize: '0.8rem' }}>
           ⚠️
         </button>
-        {client.instagram && ([
+        {instagram ? ([
           { tag: 'ig_seguido', accion: 'instagram_seguido',  icon: '👣', title: 'Lo sigo en Instagram', color: '#DD2A7B' },
           { tag: 'ig_like',    accion: 'instagram_like',     icon: '❤️', title: 'Le di like',           color: '#DD2A7B' },
           { tag: 'me_sigue',   accion: 'instagram_te_sigue', icon: '💚', title: 'Me sigue',             color: '#22c55e' },
@@ -154,7 +166,15 @@ export default function ClientRow({ client }: Props) {
             }}>
             {m.icon}
           </button>
-        )))}
+        ))) : (
+          <input
+            placeholder="@ IG"
+            title="Pegá el @ de Instagram y Enter para guardarlo"
+            onKeyDown={e => { if (e.key === 'Enter') guardarInstagram((e.target as HTMLInputElement).value) }}
+            onBlur={e => guardarInstagram(e.target.value)}
+            style={{ width: 84, background: 'var(--bg)', border: '1px solid #DD2A7B55', borderRadius: 6, padding: '5px 8px', color: 'var(--text)', fontSize: '0.75rem' }}
+          />
+        )}
         {client.phone && (
           <>
             <button onClick={() => setWaOpen(true)} className="btn btn-ghost" style={{ padding: '6px 10px' }} title="Enviar WhatsApp">
