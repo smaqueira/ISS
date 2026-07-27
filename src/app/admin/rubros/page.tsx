@@ -26,7 +26,7 @@ export default async function RubrosPage() {
       </div>
 
       <div style={{ background: '#22c55e10', border: '1px solid #22c55e44', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6 }}>
-        💡 Para unificar 3 variantes iguales (ej: <em>Bar con gastronomía</em>, <em>Bares con gastronomia</em>, <em>Bares con gastronomía</em>): renombrá las dos de menor cantidad al nombre exacto de la que querés dejar. El editor te autocompleta los rubros que ya existen.
+        💡 Para unificar variantes iguales (ej: <em>Bar con gastronomía</em>, <em>Bares con gastronomia</em>, <em>Bares con gastronomía</em>): <strong>tildá las que son lo mismo</strong>, elegí cuál queda y tocá <strong>🔀 Fusionar</strong>. También podés <strong>✏️ Renombrar</strong> una sola.
       </div>
 
       <RubrosManager rubros={rubros} />
