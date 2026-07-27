@@ -285,6 +285,7 @@ export default async function ClientsPage({ searchParams }: {
       {rubrosTop.length > 0 && (
         <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <span style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>Comercio:</span>
+          <Link href="/admin/rubros" style={{ ...chip(false), fontSize: '0.7rem' }} title="Corregir/fusionar rubros mal escritos">✏️ Editar</Link>
           {filters.rubro && (
             <Link href={urlCon({ rubro: undefined })} style={{ ...chip(false), color: '#ef4444', borderColor: '#ef444455' }}>✕ Quitar rubro</Link>
           )}
