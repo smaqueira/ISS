@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import AltaDesdeIg from '@/components/clients/AltaDesdeIg'
+import { RUBROS_EXCLUIDOS } from '@/lib/prospecting/excluidos'
 
 interface Result {
   name: string
@@ -16,8 +17,8 @@ interface Result {
 
 const RUBROS_GASTRONOMIA = [
   'restaurante', 'parrilla', 'bar', 'cafeteria', 'pizzeria', 'sushi',
-  'bodegon', 'rotiseria', 'cantina', 'hamburgueseria', 'catering', 'hotel',
-  'supermercado', 'verduleria', 'carniceria', 'almacen', 'buffet', 'comida rapida',
+  'bodegon', 'rotiseria', 'cantina', 'hamburgueseria', 'catering',
+  'verduleria', 'almacen', 'buffet', 'comida rapida',
 ]
 
 const ZONAS_CABA = [
@@ -137,9 +138,12 @@ export default function ProspectingPage() {
   return (
     <div>
       <h1 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 6 }}>Prospección automática</h1>
-      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginBottom: 24 }}>
+      <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginBottom: 12 }}>
         Buscá negocios y la IA los califica e importa al CRM automáticamente.
       </p>
+      <div style={{ fontSize: '0.76rem', color: '#f59e0b', background: '#f59e0b12', border: '1px solid #f59e0b44', borderRadius: 8, padding: '7px 12px', marginBottom: 24 }}>
+        🚫 Rubros excluidos de la prospección: {RUBROS_EXCLUIDOS.join(', ')} — no se importan aunque los busques.
+      </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <button style={tabStyle('single')} onClick={() => setMode('single')}>🔍 Simple</button>

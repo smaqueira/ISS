@@ -3,6 +3,7 @@ import { searchPlaces } from '@/lib/prospecting/serper'
 import { classifyLead } from '@/lib/ai/classify'
 import { createClient } from '@supabase/supabase-js'
 import { getBusinessConfig } from '@/lib/business-context'
+import { rubroExcluido } from '@/lib/prospecting/excluidos'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -18,9 +19,13 @@ export async function GET() {
   const db = getDb()
   const biz = await getBusinessConfig(db)
 
-  // Rotar el rubro según el día del mes
+  // Rotar el rubro según el día del mes, salteando los rubros excluidos
+  const disponibles = biz.rubrosProspectar.filter(r => !rubroExcluido(r))
+  if (!disponibles.length) {
+    return NextResponse.json({ ok: true, imported: 0, message: 'No hay rubros para prospectar (todos excluidos o sin configurar)' })
+  }
   const diaDelMes = new Date().getDate()
-  const rubro = biz.rubrosProspectar[diaDelMes % biz.rubrosProspectar.length]
+  const rubro = disponibles[diaDelMes % disponibles.length]
 
   let imported = 0
   let skipped = 0

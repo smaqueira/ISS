@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { searchPlaces } from '@/lib/prospecting/serper'
 import { classifyLead } from '@/lib/ai/classify'
+import { rubroExcluido } from '@/lib/prospecting/excluidos'
 
 export async function POST(req: NextRequest) {
   const { query, city, auto_import } = await req.json()
   if (!query || !city) return NextResponse.json({ error: 'query y city requeridos' }, { status: 400 })
+  if (rubroExcluido(query)) {
+    return NextResponse.json({ results: [], imported: 0, excluido: true, message: `El rubro "${query}" está excluido de la prospección.` })
+  }
 
   const places = await searchPlaces(query, city)
   if (!places.length) return NextResponse.json({ results: [] })
