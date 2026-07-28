@@ -1,7 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AltaDesdeIg from '@/components/clients/AltaDesdeIg'
-import { RUBROS_EXCLUIDOS } from '@/lib/prospecting/excluidos'
+import { RUBROS_EXCLUIDOS, rubroExcluido } from '@/lib/prospecting/excluidos'
+
+const DEFAULT_RUBROS = ['restaurante', 'parrilla', 'sushi', 'bodegon', 'marisqueria']
 
 interface Result {
   name: string
@@ -54,6 +56,35 @@ export default function ProspectingPage() {
   const [results, setResults] = useState<Result[]>([])
   const [imported, setImported] = useState<number | null>(null)
   const [progress, setProgress] = useState('')
+  const [rubros, setRubros] = useState<string[]>(DEFAULT_RUBROS)
+  const [nuevoRubro, setNuevoRubro] = useState('')
+  const [rubrosSaved, setRubrosSaved] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/settings').then(r => r.json()).then((arr: { key: string; value: string }[]) => {
+      const val = (arr || []).find(r => r.key === 'BUSINESS_RUBROS_PROSPECTAR')?.value || ''
+      const lista = val.split('\n').map(s => s.trim()).filter(Boolean)
+      if (lista.length) setRubros(lista)
+    }).catch(() => {})
+  }, [])
+
+  async function guardarRubros(lista: string[]) {
+    setRubros(lista)
+    await fetch('/api/settings', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([{ key: 'BUSINESS_RUBROS_PROSPECTAR', value: lista.join('\n') }]),
+    })
+    setRubrosSaved(true); setTimeout(() => setRubrosSaved(false), 1500)
+  }
+
+  function agregarRubro() {
+    const r = nuevoRubro.trim().toLowerCase()
+    if (!r || rubros.includes(r)) { setNuevoRubro(''); return }
+    if (rubroExcluido(r)) { alert(`"${r}" está en la lista de rubros excluidos y no se puede prospectar.`); setNuevoRubro(''); return }
+    guardarRubros([...rubros, r]); setNuevoRubro('')
+  }
+
+  function quitarRubro(r: string) { guardarRubros(rubros.filter(x => x !== r)) }
 
   async function search(autoImport = false) {
     setLoading(true)
@@ -74,15 +105,15 @@ export default function ProspectingPage() {
 
     } else if (mode === 'bulk') {
       if (!city) { setLoading(false); return }
-      const rubros = selectedRubros.length ? selectedRubros : RUBROS_GASTRONOMIA.slice(0, 6)
+      const listaRubros = selectedRubros.length ? selectedRubros : rubros
       let totalImported = 0
       const allResults: Result[] = []
-      for (let i = 0; i < rubros.length; i++) {
-        setProgress(`Buscando ${rubros[i]} en ${city} (${i + 1}/${rubros.length})...`)
+      for (let i = 0; i < listaRubros.length; i++) {
+        setProgress(`Buscando ${listaRubros[i]} en ${city} (${i + 1}/${listaRubros.length})...`)
         const res = await fetch('/api/prospecting', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: rubros[i], city, auto_import: true }),
+          body: JSON.stringify({ query: listaRubros[i], city, auto_import: true }),
         })
         const data = await res.json()
         allResults.push(...(data.results || []))
@@ -92,14 +123,14 @@ export default function ProspectingPage() {
       setImported(totalImported)
 
     } else if (mode === 'zona') {
-      const zonas = selectedZonas.length ? selectedZonas : ZONAS_CABA.slice(0, 4)
-      const rubros = selectedRubros.length ? selectedRubros : ['restaurante', 'parrilla', 'bar', 'cafeteria']
+      const zonas = selectedZonas.length ? selectedZonas : [...ZONAS_CABA, ...ZONAS_GBA_NORTE, ...ZONAS_GBA_SUR, ...ZONAS_GBA_OESTE]
+      const listaRubros = selectedRubros.length ? selectedRubros : rubros
       let totalImported = 0
       const allResults: Result[] = []
-      const total = zonas.length * rubros.length
+      const total = zonas.length * listaRubros.length
       let count = 0
       for (const zona of zonas) {
-        for (const rubro of rubros) {
+        for (const rubro of listaRubros) {
           count++
           setProgress(`${rubro} en ${zona} (${count}/${total})...`)
           const res = await fetch('/api/prospecting', {
@@ -145,6 +176,37 @@ export default function ProspectingPage() {
         🚫 Rubros excluidos de la prospección: {RUBROS_EXCLUIDOS.join(', ')} — no se importan aunque los busques.
       </div>
 
+      {/* Editor de rubros a prospectar (editable, guardado en la config) */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+          Rubros a prospectar {rubrosSaved && <span style={{ color: '#22c55e', marginLeft: 8 }}>✓ guardado</span>}
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+          {rubros.map(r => (
+            <span key={r} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 6px 4px 12px', borderRadius: 20, border: '1px solid var(--accent)', background: 'var(--accent)15', fontSize: '0.8rem' }}>
+              {r}
+              <button onClick={() => quitarRubro(r)} title="Quitar" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1rem', lineHeight: 1 }}>×</button>
+            </span>
+          ))}
+          {rubros.length === 0 && <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Sin rubros — agregá alguno abajo.</span>}
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input value={nuevoRubro} onChange={e => setNuevoRubro(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') agregarRubro() }}
+            placeholder="Agregar rubro (ej: cerveceria)"
+            style={{ flex: 1, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text)', fontSize: '0.85rem' }} />
+          <button onClick={agregarRubro} className="btn btn-primary" style={{ fontSize: '0.82rem' }}>+ Agregar</button>
+        </div>
+        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>Sugerencias:</span>
+          {RUBROS_GASTRONOMIA.filter(r => !rubros.includes(r) && !rubroExcluido(r)).map(r => (
+            <button key={r} onClick={() => guardarRubros([...rubros, r])} style={{ fontSize: '0.72rem', padding: '2px 9px', borderRadius: 12, border: '1px dashed var(--border)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer' }}>+ {r}</button>
+          ))}
+        </div>
+        <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 8 }}>
+          Esta lista la usan tanto la búsqueda manual (por rubros/zonas) como la prospección automática diaria.
+        </div>
+      </div>
+
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <button style={tabStyle('single')} onClick={() => setMode('single')}>🔍 Simple</button>
         <button style={tabStyle('bulk')} onClick={() => setMode('bulk')}>⚡ Por rubros</button>
@@ -178,10 +240,10 @@ export default function ProspectingPage() {
             </div>
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 8 }}>
-                Rubros {selectedRubros.length > 0 ? `(${selectedRubros.length} seleccionados)` : '(primeros 6 si no seleccionás)'}
+                Rubros {selectedRubros.length > 0 ? `(${selectedRubros.length} seleccionados)` : '(todos los de tu lista si no seleccionás)'}
               </label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {RUBROS_GASTRONOMIA.map(r => (
+                {rubros.map(r => (
                   <button key={r} onClick={() => toggle(r, selectedRubros, setSelectedRubros)} style={chipStyle(selectedRubros.includes(r))}>{r}</button>
                 ))}
               </div>
@@ -193,10 +255,10 @@ export default function ProspectingPage() {
           <>
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--muted)', marginBottom: 8 }}>
-                Rubros {selectedRubros.length > 0 ? `(${selectedRubros.length})` : '(restaurante, parrilla, bar, cafeteria por defecto)'}
+                Rubros {selectedRubros.length > 0 ? `(${selectedRubros.length})` : '(todos los de tu lista si no seleccionás)'}
               </label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
-                {RUBROS_GASTRONOMIA.slice(0, 8).map(r => (
+                {rubros.map(r => (
                   <button key={r} onClick={() => toggle(r, selectedRubros, setSelectedRubros)} style={chipStyle(selectedRubros.includes(r))}>{r}</button>
                 ))}
               </div>

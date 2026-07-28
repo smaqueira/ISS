@@ -10,7 +10,7 @@ export interface BusinessConfig {
 const DEFAULTS: BusinessConfig = {
   name: 'Mi Negocio',
   description: 'Negocio de ventas en Argentina.',
-  rubrosProspectar: ['empresa', 'negocio'],
+  rubrosProspectar: ['restaurante', 'parrilla', 'sushi', 'bodegon', 'marisqueria'],
   zona: 'Buenos Aires Argentina',
 }
 
