@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import ClientRow from '@/components/ui/ClientRow'
+import BulkClients from '@/components/clients/BulkClients'
 import ClientsAccordion from '@/components/clients/ClientsAccordion'
 import Link from 'next/link'
 import DeleteAllButton from '@/components/clients/DeleteAllButton'
@@ -395,7 +395,7 @@ export default async function ClientsPage({ searchParams }: {
           ? <ClientsAccordion grouped={groupedZona} />
           : filters.vista === 'rubro'
           ? <ClientsAccordion grouped={groupedRubro} />
-          : clients.map(c => <ClientRow key={c.id} client={c} />)
+          : <BulkClients clients={clients} isAdmin={isAdmin} />
         }
       </div>
 

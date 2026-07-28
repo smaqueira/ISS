@@ -6,7 +6,7 @@ import type { Client } from '@/lib/types'
 import WhatsAppModal from '@/components/clients/WhatsAppModal'
 import { STATUS_LABELS, STATUS_COLORS, STATUS_OPTIONS, PRIORIDAD_OPTIONS, TEMPERATURA_OPTIONS } from '@/lib/crm'
 
-interface Props { client: Client }
+interface Props { client: Client; selected?: boolean; onToggle?: (id: string) => void }
 
 function isOverdue(date?: string) {
   if (!date) return false
@@ -19,7 +19,7 @@ function isToday(date?: string) {
 
 const RESERVED_TAGS = ['listo', 'sin_datos', 'me_sigue', 'ig_seguido', 'ig_like']
 
-export default function ClientRow({ client }: Props) {
+export default function ClientRow({ client, selected, onToggle }: Props) {
   const router = useRouter()
   const [tags, setTags] = useState<string[]>(client.tags || [])
   const [waOpen, setWaOpen] = useState(false)
@@ -107,7 +107,10 @@ export default function ClientRow({ client }: Props) {
   const borderColor = alertColor || (isListo ? '#22c55e' : isSinDatos ? '#f59e0b' : 'transparent')
 
   return (
-    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, borderLeft: `3px solid ${borderColor}` }}>
+    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, borderLeft: `3px solid ${borderColor}`, background: selected ? 'var(--accent)10' : undefined }}>
+      {onToggle && (
+        <input type="checkbox" checked={!!selected} onChange={() => onToggle(client.id)} title="Seleccionar" style={{ cursor: 'pointer', flexShrink: 0, width: 16, height: 16 }} />
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 600, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
           {isListo    && <span style={{ fontSize: '0.68rem', background: '#22c55e20', color: '#22c55e', borderRadius: 4, padding: '1px 5px' }}>✓ listo</span>}

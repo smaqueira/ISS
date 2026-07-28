@@ -16,6 +16,24 @@ export default function RubrosManager({ rubros }: { rubros: Rubro[] }) {
   const [fusionando, setFusionando] = useState(false)
   const [dups, setDups] = useState<Dup[]>([])
   const [reintentar, setReintentar] = useState<{ desdes: string[]; hacia: string } | null>(null)
+  const [borrarObjetivo, setBorrarObjetivo] = useState<{ name: string; count: number } | null>(null)
+  const [textoBorrar, setTextoBorrar] = useState('')
+  const [borrando, setBorrando] = useState(false)
+
+  async function confirmarBorrar() {
+    if (!borrarObjetivo || textoBorrar.trim().toUpperCase() !== 'BORRAR') return
+    setBorrando(true)
+    try {
+      const r = await fetch('/api/clients/bulk-delete', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rubro: borrarObjetivo.name }),
+      })
+      const d = await r.json()
+      if (!r.ok) { alert('No se pudo borrar: ' + (d?.error || r.status)); return }
+      alert(`✓ ${d.deleted} contactos del rubro "${borrarObjetivo.name}" borrados.`)
+      setBorrarObjetivo(null); setTextoBorrar(''); router.refresh()
+    } finally { setBorrando(false) }
+  }
 
   const countMap: Record<string, number> = Object.fromEntries(rubros.map(r => [r.name, r.count]))
   const selArr = [...sel]
@@ -100,6 +118,26 @@ export default function RubrosManager({ rubros }: { rubros: Rubro[] }) {
         {rubros.map(r => <option key={r.name} value={r.name} />)}
       </datalist>
 
+      {/* Confirmación de borrado de categoría entera */}
+      {borrarObjetivo && (
+        <div style={{ border: '1px solid #ef4444', background: '#ef444412', borderRadius: 10, padding: '12px 14px', marginBottom: 8 }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#ef4444', marginBottom: 6 }}>
+            ⚠️ Vas a borrar los <strong>{borrarObjetivo.count}</strong> contactos del rubro <strong>&quot;{borrarObjetivo.name}&quot;</strong>. Es irreversible.
+          </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginBottom: 8 }}>Escribí <strong>BORRAR</strong> para confirmar:</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input value={textoBorrar} onChange={e => setTextoBorrar(e.target.value)} placeholder="BORRAR"
+              onKeyDown={e => { if (e.key === 'Enter') confirmarBorrar() }}
+              style={{ flex: 1, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', color: 'var(--text)', fontSize: '0.85rem' }} />
+            <button onClick={confirmarBorrar} disabled={borrando || textoBorrar.trim().toUpperCase() !== 'BORRAR'} className="btn btn-primary"
+              style={{ fontSize: '0.8rem', background: '#ef4444', opacity: textoBorrar.trim().toUpperCase() === 'BORRAR' ? 1 : 0.5 }}>
+              {borrando ? 'Borrando…' : `Borrar ${borrarObjetivo.count}`}
+            </button>
+            <button onClick={() => { setBorrarObjetivo(null); setTextoBorrar('') }} className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>Cancelar</button>
+          </div>
+        </div>
+      )}
+
       {/* Duplicados a resolver */}
       {dups.length > 0 && (
         <div style={{ border: '1px solid #f59e0b', background: '#f59e0b12', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 8 }}>
@@ -166,6 +204,7 @@ export default function RubrosManager({ rubros }: { rubros: Rubro[] }) {
               <span style={{ flex: 1, fontWeight: 600, fontSize: '0.9rem' }}>{r.name}</span>
               <span style={{ fontSize: '0.75rem', color: 'var(--muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 20, padding: '2px 10px' }}>{r.count}</span>
               <button onClick={() => empezar(r.name)} className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: '0.8rem' }}>✏️ Renombrar</button>
+              <button onClick={() => { setBorrarObjetivo({ name: r.name, count: r.count }); setTextoBorrar('') }} title="Borrar todos los de este rubro" className="btn btn-ghost" style={{ padding: '6px 10px', fontSize: '0.8rem', color: '#ef4444' }}>🗑️</button>
             </>
           )}
         </div>
