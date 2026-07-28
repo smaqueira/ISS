@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import AltaDesdeIg from '@/components/clients/AltaDesdeIg'
 
 interface Result {
   name: string
@@ -47,7 +48,7 @@ export default function ProspectingPage() {
   const [city, setCity] = useState('')
   const [selectedRubros, setSelectedRubros] = useState<string[]>([])
   const [selectedZonas, setSelectedZonas] = useState<string[]>([])
-  const [mode, setMode] = useState<'single' | 'bulk' | 'zona'>('single')
+  const [mode, setMode] = useState<'single' | 'bulk' | 'zona' | 'ig'>('single')
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<Result[]>([])
   const [imported, setImported] = useState<number | null>(null)
@@ -144,8 +145,12 @@ export default function ProspectingPage() {
         <button style={tabStyle('single')} onClick={() => setMode('single')}>🔍 Simple</button>
         <button style={tabStyle('bulk')} onClick={() => setMode('bulk')}>⚡ Por rubros</button>
         <button style={tabStyle('zona')} onClick={() => setMode('zona')}>🗺️ Por zonas CABA / GBA</button>
+        <button style={tabStyle('ig')} onClick={() => setMode('ig')}>📸 Desde Instagram</button>
       </div>
 
+      {mode === 'ig' && <AltaDesdeIg />}
+
+      {mode !== 'ig' && (
       <div className="card" style={{ marginBottom: 20 }}>
 
         {mode === 'single' && (
@@ -251,6 +256,7 @@ export default function ProspectingPage() {
           </button>
         </div>
       </div>
+      )}
 
       {imported != null && (
         <div style={{ background: '#22c55e20', border: '1px solid #22c55e40', borderRadius: 10, padding: '12px 16px', marginBottom: 16, fontSize: '0.9rem' }}>
