@@ -120,6 +120,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
     await logHistory(db, id, label, detalle)
     const patch: Record<string, string> = { last_contact: new Date().toISOString() }
     if (!prev?.fecha_primer_contacto) patch.fecha_primer_contacto = new Date().toISOString()
+
+    // Cantidad de mensajes ya enviados a este contacto (incluye el de recién)
+    const { count: envios } = await db.from('client_history').select('*', { count: 'exact', head: true })
+      .eq('client_id', id).in('accion', ['WhatsApp enviado', 'Instagram enviado'])
+    const sinAvanzar = ['prospecto', 'nuevo', 'contactado'].includes(prev?.status || '')
+
+    if ((envios || 0) >= 3 && sinAvanzar) {
+      // 3+ toques sin respuesta → frenar: marcar "sin respuesta" y no reprogramar
+      patch.status = 'sin_respuesta'
+      await logHistory(db, id, 'Estado cambiado', 'Sin respuesta tras 3 toques — se frena el seguimiento')
+    } else {
+      // Agendar el próximo toque a +3 días y avanzar el estado si aún es prospecto
+      patch.next_followup = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0]
+      if (prev?.status === 'prospecto' || prev?.status === 'nuevo') {
+        patch.status = 'contactado'
+        await logHistory(db, id, 'Estado cambiado', 'Prospecto → Contactado (envío)')
+      }
+    }
     await db.from('clients').update(patch).eq('id', id)
   }
 
