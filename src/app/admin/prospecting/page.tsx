@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import AltaDesdeIg from '@/components/clients/AltaDesdeIg'
 import { RUBROS_EXCLUIDOS, rubroExcluido } from '@/lib/prospecting/excluidos'
 
-const DEFAULT_RUBROS = ['restaurante', 'parrilla', 'sushi', 'bodegon', 'marisqueria']
+const DEFAULT_RUBROS = ['restaurante', 'cerveceria', 'parrilla', 'sushi']
 
 interface Result {
   name: string
