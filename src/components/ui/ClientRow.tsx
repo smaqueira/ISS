@@ -59,6 +59,19 @@ export default function ClientRow({ client, selected, onToggle }: Props) {
     router.refresh()
   }
 
+  async function registrarPedido() {
+    const val = prompt(`💵 Pedido de ${client.name} — monto en $:`)
+    if (val == null) return
+    const total = Number(val.replace(/[^0-9.]/g, ''))
+    if (!total) { alert('Poné un monto válido.'); return }
+    const r = await fetch('/api/orders', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: client.id, total, status: 'confirmado' }),
+    })
+    if (!r.ok) { alert('No se pudo registrar el pedido.'); return }
+    router.refresh()
+  }
+
   async function toggleTag(tag: string) {
     const next = tags.includes(tag)
       ? tags.filter(t => t !== tag)
@@ -213,6 +226,9 @@ export default function ClientRow({ client, selected, onToggle }: Props) {
             {waOpen && <WhatsAppModal clientId={client.id} onClose={() => setWaOpen(false)} />}
           </>
         )}
+        <button onClick={registrarPedido} className="btn btn-ghost" style={{ padding: '6px 10px', color: '#22c55e' }} title="Registrar pedido">
+          💵
+        </button>
         <button onClick={handleDelete} className="btn btn-ghost" style={{ padding: '6px 10px', color: '#ef4444', opacity: 0.6 }} title="Eliminar">
           🗑️
         </button>

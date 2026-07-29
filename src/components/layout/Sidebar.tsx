@@ -14,6 +14,7 @@ const GROUPS = [
       { href: '/admin/inbox',      label: 'Inbox',       icon: '📥' },
       { href: '/admin/vender',     label: 'Vender',      icon: '💰' },
       { href: '/admin/orders',     label: 'Pedidos',     icon: '📦' },
+      { href: '/admin/facturacion', label: 'Facturación', icon: '💰' },
       { href: '/admin/seguimiento',label: 'Seguimiento', icon: '🔔' },
       { href: '/admin/clients',    label: 'Clientes',    icon: '👥' },
       { href: '/admin/instagram-hoy', label: 'Instagram hoy', icon: '📸' },

@@ -30,5 +30,15 @@ export async function POST(req: NextRequest) {
   const numero = data.numero || data.id.slice(0, 8).toUpperCase()
   await db.from('interactions').insert({ client_id: order.client_id, channel: 'sistema', type: 'pedido', notes: `Pedido #${numero} creado`, ai_generated: false })
 
+  // Marcar al cliente como cliente (o recurrente si ya compró) y actualizar último contacto
+  if (order.client_id) {
+    const { count } = await db.from('orders').select('*', { count: 'exact', head: true }).eq('client_id', order.client_id)
+    await db.from('clients').update({
+      status: (count || 0) > 1 ? 'cliente_recurrente' : 'cliente',
+      last_contact: new Date().toISOString(),
+    }).eq('id', order.client_id)
+    await db.from('client_history').insert({ client_id: order.client_id, accion: 'Pedido registrado', detalle: `#${numero}${data.total ? ` · $${data.total}` : ''}`, usuario: 'sistema' })
+  }
+
   return NextResponse.json(data, { status: 201 })
 }
