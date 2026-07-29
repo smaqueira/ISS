@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export const dynamic = 'force-dynamic'
@@ -10,7 +10,19 @@ interface Grupo { tipo: string; label: string; valor: string; items: Cli[] }
 
 const normIg = (v: string) => v.toLowerCase().replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/^@/, '').replace(/[/?].*$/, '').trim()
 
-export async function GET() {
+// Normalización "fuerte" del nombre para detectar parecidos: minúsculas, sin
+// acentos, sin puntuación, sin palabras comunes, espacios colapsados.
+const PALABRAS_COMUNES = new Set(['el', 'la', 'los', 'las', 'de', 'del', 'y', 'bar', 'resto', 'restaurante', 'parrilla', 'cerveceria', 'the'])
+function normNombre(v: string): string {
+  return v.toLowerCase().normalize('NFD')
+    .split('').filter(c => { const x = c.charCodeAt(0); return x < 0x300 || x > 0x36f }).join('')
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .split(/\s+/).filter(w => w && !PALABRAS_COMUNES.has(w)).join(' ')
+    .trim()
+}
+
+export async function GET(req: NextRequest) {
+  const fuzzy = new URL(req.url).searchParams.get('fuzzy') === '1'
   const db = await createClient()
 
   // Traer todos (paginado)
@@ -30,6 +42,13 @@ export async function GET() {
     { tipo: 'email', label: 'Mismo email', key: c => { const e = (c.email || '').toLowerCase().trim(); return e.includes('@') ? e : null } },
     { tipo: 'nombre', label: 'Mismo nombre + ciudad', key: c => { const n = (c.name || '').toLowerCase().trim(); const ci = (c.city || '').toLowerCase().trim(); return n ? `${n}||${ci}` : null } },
   ]
+
+  if (fuzzy) {
+    defs.push(
+      { tipo: 'telefono-parecido', label: 'Teléfono parecido (mismos últimos 8 dígitos)', key: c => { const p = (c.phone || '').replace(/\D/g, ''); return p.length >= 8 ? p.slice(-8) : null } },
+      { tipo: 'nombre-parecido', label: 'Nombre parecido', key: c => { const n = normNombre(c.name || ''); const ci = (c.city || '').toLowerCase().trim(); return n.length > 2 ? `${n}||${ci}` : null } },
+    )
+  }
 
   const grupos: Grupo[] = []
   for (const def of defs) {
