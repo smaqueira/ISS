@@ -18,6 +18,7 @@ const GROUPS = [
       { href: '/admin/facturacion', label: 'Facturación', icon: '💰' },
       { href: '/admin/seguimiento',label: 'Seguimiento', icon: '🔔' },
       { href: '/admin/clients',    label: 'Clientes',    icon: '👥' },
+      { href: '/admin/clientes',   label: 'Reactivar',   icon: '💰' },
       { href: '/admin/instagram-hoy', label: 'Instagram hoy', icon: '📸' },
       { href: '/admin/cotizaciones',label: 'Cotizaciones',icon: '📄' },
     ],
