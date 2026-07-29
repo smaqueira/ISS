@@ -4,6 +4,7 @@ import { classifyLead } from '@/lib/ai/classify'
 import { createClient } from '@supabase/supabase-js'
 import { getBusinessConfig } from '@/lib/business-context'
 import { rubroExcluido } from '@/lib/prospecting/excluidos'
+import { cargarExistentes } from '@/lib/prospecting/existentes'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -38,10 +39,8 @@ export async function GET() {
       return NextResponse.json({ ok: true, rubro, imported: 0, message: 'Sin resultados de búsqueda' })
     }
 
-    // Traer clientes existentes para no duplicar
-    const { data: existingClients } = await db.from('clients').select('name, phone')
-    const existingNames = new Set((existingClients || []).map(c => c.name?.toLowerCase().trim()))
-    const existingPhones = new Set((existingClients || []).map(c => c.phone).filter(Boolean))
+    // Traer TODOS los clientes existentes (paginado) para no duplicar
+    const { names: existingNames, phones: existingPhones } = await cargarExistentes(db)
 
     for (const place of places) {
       // Solo importar si tiene teléfono o sitio web (para poder contactar)

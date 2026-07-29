@@ -9,6 +9,7 @@ export default function AltaDesdeIg() {
   const [progreso, setProgreso] = useState('')
   const [filas, setFilas] = useState<Fila[]>([])
   const [creados, setCreados] = useState<number | null>(null)
+  const [repetidos, setRepetidos] = useState<number | null>(null)
 
   function parseHandles(): string[] {
     return [...new Set(
@@ -44,6 +45,7 @@ export default function AltaDesdeIg() {
     setEstado('creando')
     const aCrear = filas.filter(f => f.crear && f.name.trim())
     let ok = 0
+    let repetidos = 0
     for (let i = 0; i < aCrear.length; i++) {
       const f = aCrear[i]
       setProgreso(`Creando ${i + 1}/${aCrear.length}: ${f.name}`)
@@ -52,10 +54,12 @@ export default function AltaDesdeIg() {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: f.name.trim(), instagram: '@' + f.handle }),
         })
-        if (r.ok) ok++
+        const d = await r.json().catch(() => ({}))
+        if (r.ok && d?.existing) repetidos++
+        else if (r.ok) ok++
       } catch { /* seguir */ }
     }
-    setCreados(ok); setEstado('idle'); setProgreso(''); setFilas([]); setTexto('')
+    setCreados(ok); setRepetidos(repetidos); setEstado('idle'); setProgreso(''); setFilas([]); setTexto('')
   }
 
   function set(handle: string, patch: Partial<Fila>) {
@@ -113,6 +117,7 @@ export default function AltaDesdeIg() {
       {creados != null && (
         <div style={{ marginTop: 12, background: '#22c55e18', border: '1px solid #22c55e44', borderRadius: 8, padding: '10px 14px', fontSize: '0.85rem', color: '#22c55e' }}>
           ✅ {creados} contactos creados como prospectos (con su Instagram cargado).
+          {repetidos ? <span style={{ color: '#f59e0b', marginLeft: 8 }}>· {repetidos} ya existían (no se duplicaron)</span> : null}
         </div>
       )}
     </div>

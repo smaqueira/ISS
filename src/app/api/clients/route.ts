@@ -20,6 +20,16 @@ export async function POST(req: NextRequest) {
   const db = await createClient()
   const body = await req.json()
 
+  // Evitar duplicados: si ya existe un contacto con ese Instagram, no crear
+  if (typeof body.instagram === 'string' && body.instagram.trim()) {
+    const h = body.instagram.toLowerCase()
+      .replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/^@/, '').replace(/[/?].*$/, '').trim()
+    if (h) {
+      const { data: dup } = await db.from('clients').select('id').or(`instagram.eq.@${h},instagram.eq.${h}`).limit(1)
+      if (dup && dup.length) return NextResponse.json({ existing: true, id: dup[0].id }, { status: 200 })
+    }
+  }
+
   // IA: clasificar automáticamente
   const ai = await classifyLead({ name: body.name, rubro: body.rubro, description: body.notes })
 

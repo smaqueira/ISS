@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { searchPlaces } from '@/lib/prospecting/serper'
 import { classifyLead } from '@/lib/ai/classify'
 import { rubroExcluido } from '@/lib/prospecting/excluidos'
+import { cargarExistentes } from '@/lib/prospecting/existentes'
 
 export async function POST(req: NextRequest) {
   const { query, city, auto_import } = await req.json()
@@ -16,10 +17,8 @@ export async function POST(req: NextRequest) {
 
   const db = await createClient()
 
-  // Traer todos los clientes existentes para comparar por nombre y teléfono
-  const { data: existingClients } = await db.from('clients').select('id, name, phone')
-  const existingNames = new Set((existingClients || []).map(c => c.name?.toLowerCase().trim()))
-  const existingPhones = new Set((existingClients || []).map(c => c.phone).filter(Boolean))
+  // Traer TODOS los clientes existentes (paginado) para no traer duplicados
+  const { names: existingNames, phones: existingPhones } = await cargarExistentes(db)
 
   // Clasificar cada lugar con IA y marcar si ya existe
   const results = await Promise.all(places.map(async (place) => {
