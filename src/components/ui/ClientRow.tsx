@@ -105,6 +105,7 @@ export default function ClientRow({ client, selected, onToggle }: Props) {
   const tempColor   = TEMPERATURA_OPTIONS.find(o => o.value === client.temperatura)?.color
 
   const borderColor = alertColor || (isListo ? '#22c55e' : isSinDatos ? '#f59e0b' : 'transparent')
+  const igUser = instagram.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/^@/, '').replace(/[/?].*$/, '').trim()
 
   return (
     <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, borderLeft: `3px solid ${borderColor}`, background: selected ? 'var(--accent)10' : undefined }}>
@@ -140,7 +141,9 @@ export default function ClientRow({ client, selected, onToggle }: Props) {
         <div style={{ fontSize: '0.77rem', color: 'var(--muted)' }}>
           {client.rubro || '—'} · {client.city || '—'}
           {client.phone && <span> · 📱 {client.phone}</span>}
-          {instagram && <span style={{ color: '#DD2A7B', fontWeight: 600 }} title={`Instagram: ${instagram}`}> · 📸 IG</span>}
+          {instagram && igUser && (
+            <span> · <a href={`https://instagram.com/${igUser}`} target="_blank" rel="noreferrer" style={{ color: '#DD2A7B', fontWeight: 600, textDecoration: 'none' }} title="Abrir Instagram">📸 @{igUser}</a></span>
+          )}
           {tags.includes('me_sigue') && <span style={{ color: '#22c55e', fontWeight: 600 }} title="Te sigue en Instagram"> · 💚 Te sigue</span>}
           {!client.phone && client.notes && <span style={{ fontStyle: 'italic' }}> · {client.notes}</span>}
         </div>
