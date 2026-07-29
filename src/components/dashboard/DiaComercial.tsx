@@ -13,6 +13,7 @@ export default function DiaComercial() {
   const [hora, setHora] = useState(horaAR())
   const [plan, setPlan] = useState<string>('')
   const [generando, setGenerando] = useState(false)
+  const [mayoristas, setMayoristas] = useState<{ key: string; label: string; contactados: number; ok: boolean }[]>([])
 
   async function generarPlan() {
     setGenerando(true)
@@ -26,6 +27,7 @@ export default function DiaComercial() {
 
   const cargar = useCallback(() => {
     fetch('/api/dia').then(r => r.json()).then(setData).catch(() => {})
+    fetch('/api/dia/mayoristas').then(r => r.json()).then(d => setMayoristas(d.rubros || [])).catch(() => {})
   }, [])
   useEffect(() => {
     cargar()
@@ -84,6 +86,22 @@ export default function DiaComercial() {
           ))}
         </div>
       </div>
+
+      {/* Módulo Mayoristas: ¿contactaste hoy cada rubro? */}
+      {mayoristas.length > 0 && (
+        <div className="card">
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Mayoristas — ¿contactaste hoy?</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {mayoristas.map(m => (
+              <div key={m.key} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.85rem' }}>
+                <span style={{ fontWeight: 700, color: m.ok ? '#22c55e' : '#ef4444', width: 42 }}>{m.ok ? 'SÍ' : 'NO'}</span>
+                <a href={`/admin/clients?rubro=${encodeURIComponent(m.label)}`} style={{ flex: 1, color: 'var(--text)', textDecoration: 'none' }}>{m.label}</a>
+                <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{m.contactados} contactados</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Plan del día con IA */}
       <div style={{ border: '1px solid var(--accent)55', borderRadius: 12, padding: '12px 14px' }}>
