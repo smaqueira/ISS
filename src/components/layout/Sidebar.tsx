@@ -10,6 +10,7 @@ const GROUPS = [
       { href: '/admin',            label: 'Hoy',         icon: '⚡' },
       { href: '/admin/dia',        label: 'Iniciar día', icon: '🌅' },
       { href: '/admin/contactar-hoy', label: 'Contactar hoy', icon: '🎯' },
+      { href: '/admin/stock-hoy',   label: 'Stock hoy',    icon: '🐟' },
       { href: '/admin/asistente',  label: 'Asistente',   icon: '🧠' },
       { href: '/admin/inbox',      label: 'Inbox',       icon: '📥' },
       { href: '/admin/vender',     label: 'Vender',      icon: '💰' },
