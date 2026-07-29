@@ -11,6 +11,18 @@ function horaAR(): string {
 export default function DiaComercial() {
   const [data, setData] = useState<Data | null>(null)
   const [hora, setHora] = useState(horaAR())
+  const [plan, setPlan] = useState<string>('')
+  const [generando, setGenerando] = useState(false)
+
+  async function generarPlan() {
+    setGenerando(true)
+    try {
+      const r = await fetch('/api/dia/plan')
+      const d = await r.json()
+      setPlan(d.plan || ('⚠️ ' + (d.error || 'No se pudo generar')))
+    } catch { setPlan('⚠️ No se pudo generar el plan.') }
+    finally { setGenerando(false) }
+  }
 
   const cargar = useCallback(() => {
     fetch('/api/dia').then(r => r.json()).then(setData).catch(() => {})
@@ -71,6 +83,20 @@ export default function DiaComercial() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Plan del día con IA */}
+      <div style={{ border: '1px solid var(--accent)55', borderRadius: 12, padding: '12px 14px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>🧠 Plan del día (IA)</span>
+          <button onClick={generarPlan} disabled={generando} className="btn btn-primary" style={{ fontSize: '0.8rem' }}>
+            {generando ? 'Pensando…' : plan ? '↻ Regenerar' : 'Generar plan'}
+          </button>
+        </div>
+        {plan && (
+          <div style={{ marginTop: 10, fontSize: '0.85rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{plan}</div>
+        )}
+        {!plan && <div style={{ marginTop: 6, fontSize: '0.76rem', color: 'var(--muted)' }}>Te arma el plan de hoy priorizado por facturación, según tu estado, stock y clientes a reactivar.</div>}
       </div>
 
       {/* Objetivos por módulo */}
