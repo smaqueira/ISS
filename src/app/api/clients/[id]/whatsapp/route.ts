@@ -33,7 +33,7 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
 
   const nombreLugar = (client.name || '').trim()
   const whatsapp = esPrimerContacto
-    ? elegirPrimerContacto(id, nombreLugar)
+    ? elegirPrimerContacto(id, nombreLugar, client.rubro)
     : `¡Hola! ${wave} ¿Cómo estás?\n\nTe escribimos de *${nombre}*, especialistas en ${descripcion}.\n\n${cuerpo}\n\nPodés ver todos nuestros productos y precios en:\n${catalogoUrl}\n\n${spark} Nuestro compromiso es que disfrutes productos frescos y de la mejor calidad en cada entrega.\n\n¿Te gustaría recibir nuestro catálogo o hacer un pedido? Estamos para ayudarte.`
 
   const phone = client.phone.replace(/\D/g, '')

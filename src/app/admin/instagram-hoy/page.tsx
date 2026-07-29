@@ -66,7 +66,7 @@ export default async function InstagramHoyPage({ searchParams }: { searchParams:
     rubro: c.rubro,
     city: c.city,
     handle: c.handle,
-    message: elegirPrimerContacto(c.id, (c.name || '').trim()),
+    message: elegirPrimerContacto(c.id, (c.name || '').trim(), c.rubro),
     seguidoInicial: c.tags.includes('ig_seguido'),
     likeInicial: c.tags.includes('ig_like'),
     teSigueInicial: c.tags.includes('me_sigue'),
