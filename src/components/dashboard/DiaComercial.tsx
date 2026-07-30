@@ -1,11 +1,17 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 
-interface Obj { id: string; label: string; modulo: string; tipo: 'auto' | 'manual'; target: number; actual: number; done: boolean; frac: number }
+interface Obj { id: string; label: string; modulo: string; tipo: 'auto' | 'manual'; target: number; actual: number; done: boolean; frac: number; checkedAt?: string | null }
 interface Data { fecha: string; objetivos: Obj[]; pendientes: Obj[]; score: number; cerrable: boolean; scoreModulos: { nombre: string; score: number }[] }
 
 function horaAR(): string {
   return new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(11, 16)
+}
+function horaDe(iso?: string | null): string {
+  if (!iso) return ''
+  const d = new Date(new Date(iso).getTime() - 3 * 3600 * 1000)
+  if (isNaN(d.getTime())) return ''
+  return d.toISOString().slice(11, 16)
 }
 
 export default function DiaComercial() {
@@ -36,7 +42,7 @@ export default function DiaComercial() {
   }, [cargar])
 
   async function toggle(id: string) {
-    setData(prev => prev ? { ...prev, objetivos: prev.objetivos.map(o => o.id === id ? { ...o, done: !o.done, actual: o.done ? 0 : 1, frac: o.done ? 0 : 1 } : o) } : prev)
+    setData(prev => prev ? { ...prev, objetivos: prev.objetivos.map(o => o.id === id ? { ...o, done: !o.done, actual: o.done ? 0 : 1, frac: o.done ? 0 : 1, checkedAt: o.done ? null : new Date().toISOString() } : o) } : prev)
     await fetch('/api/dia', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ check: id }) })
     cargar()
   }
@@ -130,6 +136,9 @@ export default function DiaComercial() {
                   <span style={{ fontSize: '1rem' }}>{o.done ? '✅' : '⬜'}</span>
                 )}
                 <span style={{ flex: 1, color: o.done ? 'var(--muted)' : 'var(--text)', textDecoration: o.done ? 'line-through' : 'none' }}>{o.label}</span>
+                {o.tipo === 'manual' && o.done && o.checkedAt && (
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#22c55e' }} title="Hora en que lo marcaste">🕒 {horaDe(o.checkedAt)}</span>
+                )}
                 {o.tipo === 'auto' && (
                   <span style={{ fontSize: '0.78rem', fontWeight: 700, color: o.done ? '#22c55e' : '#ef4444' }}>{o.actual}/{o.target}</span>
                 )}

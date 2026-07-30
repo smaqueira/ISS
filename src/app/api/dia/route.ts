@@ -13,6 +13,20 @@ function inicioDiaARiso(): string {
   return new Date(Date.UTC(ar.getUTCFullYear(), ar.getUTCMonth(), ar.getUTCDate(), 3, 0, 0)).toISOString()
 }
 
+// Lee el valor guardado del día. Nuevo formato: { id: fechaISO }. Formato viejo:
+// [id, id] (array) — se lee como tildado sin hora, para no perder días pasados.
+function parseChecks(value?: string | null): Record<string, string> {
+  try {
+    const parsed = JSON.parse(value || '{}')
+    if (Array.isArray(parsed)) {
+      const out: Record<string, string> = {}
+      for (const id of parsed) out[id] = ''
+      return out
+    }
+    return (parsed && typeof parsed === 'object') ? parsed as Record<string, string> : {}
+  } catch { return {} }
+}
+
 // Tareas manuales (se tildan a mano; también se resetean cada día)
 const MANUAL = [
   { id: 'reel', label: 'Reel del día publicado', modulo: 'Instagram', peso: 1 },
@@ -46,8 +60,7 @@ export async function GET() {
   const facturadoHoy = ordenes.reduce((s, o) => s + (Number(o.total) || 0), 0)
   const metaMes = Math.max(0, Number(metaRes.data?.value) || 0)
   const metaDia = metaMes ? Math.round(metaMes / 26) : 0
-  let checks: string[] = []
-  try { checks = JSON.parse(setRes.data?.value || '[]') } catch { checks = [] }
+  const checks = parseChecks(setRes.data?.value)
 
   const auto = [
     { id: 'md', label: '20 MD enviados', modulo: 'Ventas', target: 20, actual: md, peso: 3 },
@@ -58,8 +71,8 @@ export async function GET() {
   ].map(o => ({ ...o, tipo: 'auto' as const, done: o.actual >= o.target, frac: Math.min(o.actual / o.target, 1) }))
 
   const man = MANUAL.map(m => {
-    const done = checks.includes(m.id)
-    return { ...m, tipo: 'manual' as const, target: 1, actual: done ? 1 : 0, done, frac: done ? 1 : 0 }
+    const done = m.id in checks
+    return { ...m, tipo: 'manual' as const, target: 1, actual: done ? 1 : 0, done, frac: done ? 1 : 0, checkedAt: checks[m.id] || null }
   })
 
   const objetivos = [...auto, ...man]
@@ -89,9 +102,9 @@ export async function POST(req: NextRequest) {
   const db = await createClient()
   const key = `DIA_${fechaAR()}`
   const { data } = await db.from('settings').select('value').eq('key', key).single()
-  let checks: string[] = []
-  try { checks = JSON.parse(data?.value || '[]') } catch { checks = [] }
-  checks = checks.includes(check) ? checks.filter(c => c !== check) : [...checks, check]
+  const checks = parseChecks(data?.value)
+  if (check in checks) delete checks[check]
+  else checks[check] = new Date().toISOString()
   await db.from('settings').upsert({ key, value: JSON.stringify(checks) })
   return NextResponse.json({ checks })
 }
