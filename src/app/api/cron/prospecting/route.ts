@@ -85,7 +85,7 @@ export async function GET() {
           notes: `Prospectado automáticamente. Dirección: ${place.address || ''}${place.rating ? `. Rating: ${place.rating}` : ''}`,
           status: 'nuevo',
           score: scoreLead(place),
-          channel: 'sistema',
+          channel: place.phone ? 'whatsapp' : 'web',
           tags: ['prospectado-auto'],
         })
 
