@@ -6,7 +6,7 @@ import type { Client, ClientMarcas } from '@/lib/types'
 import WhatsAppModal from '@/components/clients/WhatsAppModal'
 import { STATUS_LABELS, STATUS_COLORS, STATUS_OPTIONS, PRIORIDAD_OPTIONS, TEMPERATURA_OPTIONS } from '@/lib/crm'
 
-interface Props { client: Client; selected?: boolean; onToggle?: (id: string) => void; marcas?: ClientMarcas }
+interface Props { client: Client; selected?: boolean; onToggle?: (id: string) => void; marcas?: ClientMarcas; badge?: { text: string; color: string } }
 
 function isOverdue(date?: string) {
   if (!date) return false
@@ -33,7 +33,7 @@ function colorRecencia(iso?: string) {
 
 const RESERVED_TAGS = ['listo', 'sin_datos', 'me_sigue', 'ig_seguido', 'ig_like']
 
-export default function ClientRow({ client, selected, onToggle, marcas: marcasProp }: Props) {
+export default function ClientRow({ client, selected, onToggle, marcas: marcasProp, badge }: Props) {
   const router = useRouter()
   const [tags, setTags] = useState<string[]>(client.tags || [])
   const [waOpen, setWaOpen] = useState(false)
@@ -186,6 +186,7 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 600, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+          {badge && <span title="Prioridad para contactar hoy" style={{ fontSize: '0.66rem', fontWeight: 800, background: badge.color + '22', color: badge.color, border: `1px solid ${badge.color}66`, borderRadius: 4, padding: '1px 6px' }}>{badge.text}</span>}
           {isListo    && <span style={{ fontSize: '0.68rem', background: '#22c55e20', color: '#22c55e', borderRadius: 4, padding: '1px 5px' }}>✓ listo</span>}
           {isSinDatos && <span style={{ fontSize: '0.68rem', background: '#f59e0b20', color: '#f59e0b', borderRadius: 4, padding: '1px 5px' }}>⚠ datos</span>}
           {alertColor && (

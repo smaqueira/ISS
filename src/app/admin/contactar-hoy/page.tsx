@@ -3,21 +3,33 @@ import ClientRow from '@/components/ui/ClientRow'
 import Link from 'next/link'
 import type { Client, ClientMarcas } from '@/lib/types'
 import { getMarcas } from '@/lib/marcas'
+import { ordenarPorPrioridad } from '@/lib/prioridad'
 
 export const dynamic = 'force-dynamic'
 
 const SELECT = 'id, name, type, status, rubro, city, phone, email, instagram, website, score, channel, notes, tags, last_contact, next_followup, created_at, prioridad, temperatura, proxima_accion, probabilidad_cierre'
 
-function Bloque({ emoji, titulo, desc, color, clientes, marcas }: { emoji: string; titulo: string; desc: string; color: string; clientes: Client[]; marcas: Record<string, ClientMarcas> }) {
+// Color del badge de prioridad según el puntaje
+function badgePrioridad(score: number, motivo: string): { text: string; color: string } | undefined {
+  if (!motivo) return undefined
+  const color = score >= 80 ? '#ef4444' : score >= 60 ? '#f59e0b' : '#7EC8C8'
+  const fuego = score >= 80 ? '🔥 ' : ''
+  return { text: `${fuego}${motivo}`, color }
+}
+
+function Bloque({ emoji, titulo, desc, color, clientes, marcas, priorizar }: { emoji: string; titulo: string; desc: string; color: string; clientes: Client[]; marcas: Record<string, ClientMarcas>; priorizar?: boolean }) {
+  const filas = priorizar
+    ? ordenarPorPrioridad(clientes).map(({ client, prioridad }) => ({ client, badge: badgePrioridad(prioridad.score, prioridad.motivo) }))
+    : clientes.map(client => ({ client, badge: undefined }))
   return (
     <div style={{ marginBottom: 24 }}>
       <div style={{ marginBottom: 8 }}>
         <div style={{ fontSize: '0.95rem', fontWeight: 800, color }}>{emoji} {titulo} <span style={{ color: 'var(--muted)', fontWeight: 600 }}>({clientes.length})</span></div>
         <div style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>{desc}</div>
       </div>
-      {clientes.length === 0
+      {filas.length === 0
         ? <div style={{ fontSize: '0.82rem', color: 'var(--muted)', padding: '8px 0' }}>Nada pendiente acá. 🎉</div>
-        : clientes.map(c => <ClientRow key={c.id} client={c} marcas={marcas[c.id]} />)}
+        : filas.map(({ client, badge }) => <ClientRow key={client.id} client={client} marcas={marcas[client.id]} badge={badge} />)}
     </div>
   )
 }
@@ -57,7 +69,7 @@ export default async function ContactarHoyPage() {
       </div>
 
       <Bloque emoji="🆕" titulo="Nuevos para primer contacto" color="#DD2A7B"
-        desc="Prospectos sin contactar, mejores por score. Seguí el ritmo del termómetro." clientes={nuevos} marcas={marcas} />
+        desc="Prospectos sin contactar, ordenados por probabilidad de compra (rubro clave, si te siguen, temperatura y canal). Seguí el ritmo del termómetro." clientes={nuevos} marcas={marcas} priorizar />
 
       <Bloque emoji="🔁" titulo="Seguimientos pendientes" color="#f59e0b"
         desc="Ya los contactaste y tienen fecha de seguimiento para hoy o vencida. Acá se cierra la venta." clientes={seguimientos} marcas={marcas} />
