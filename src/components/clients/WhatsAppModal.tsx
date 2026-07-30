@@ -189,16 +189,18 @@ export default function WhatsAppModal({ clientId, onClose, onSent }: Props) {
                 >
                   {copied ? '✓ Copiado' : '📋 Copiar mensaje'}
                 </button>
-                <button
-                  onClick={openWhatsApp}
-                  style={{
-                    flex: 2, padding: '10px', borderRadius: 8, border: 'none',
-                    cursor: 'pointer', background: '#25D366',
-                    color: 'white', fontWeight: 700, fontSize: '0.85rem',
-                  }}
-                >
-                  💬 Abrir WhatsApp
-                </button>
+                {phone && (
+                  <button
+                    onClick={openWhatsApp}
+                    style={{
+                      flex: 2, padding: '10px', borderRadius: 8, border: 'none',
+                      cursor: 'pointer', background: '#25D366',
+                      color: 'white', fontWeight: 700, fontSize: '0.85rem',
+                    }}
+                  >
+                    💬 Abrir WhatsApp
+                  </button>
+                )}
               </div>
 
               {/* Enviar el MISMO mensaje por Instagram (canal alternativo, más seguro en frío) */}

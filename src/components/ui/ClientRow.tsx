@@ -283,20 +283,19 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
             </button>
           </div>
         )}
-        {client.phone && (
-          <>
-            <button onClick={() => setWaOpen(true)} className="btn btn-ghost" style={{ padding: '6px 10px' }} title="Enviar WhatsApp">
-              📱
-            </button>
-            {waOpen && <WhatsAppModal clientId={client.id} onClose={() => setWaOpen(false)}
-              onSent={canal => {
-                const now = new Date().toISOString()
-                const label = canal === 'instagram' ? 'MD Instagram' : 'MD WhatsApp'
-                setMarcasExtra(m => ({ ...m, contacto: now, ultimoFecha: now, ultimoAccion: label }))
-                router.refresh()
-              }} />}
-          </>
+        {(client.phone || instagram) && (
+          <button onClick={() => setWaOpen(true)} className="btn btn-ghost" style={{ padding: '6px 10px' }}
+            title={client.phone ? 'Enviar mensaje (WhatsApp / Instagram)' : 'Enviar mensaje por Instagram'}>
+            {client.phone ? '📱' : '💬'}
+          </button>
         )}
+        {waOpen && <WhatsAppModal clientId={client.id} onClose={() => setWaOpen(false)}
+          onSent={canal => {
+            const now = new Date().toISOString()
+            const label = canal === 'instagram' ? 'MD Instagram' : 'MD WhatsApp'
+            setMarcasExtra(m => ({ ...m, contacto: now, ultimoFecha: now, ultimoAccion: label }))
+            router.refresh()
+          }} />}
         <button onClick={marcarMdManual} className="btn btn-ghost" style={{ padding: '6px 10px' }} title="Marcar MD enviado (lo escribí por fuera del sistema)">
           📤
         </button>
