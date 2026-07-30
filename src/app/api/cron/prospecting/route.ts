@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { searchPlaces } from '@/lib/prospecting/serper'
-import { classifyLead } from '@/lib/ai/classify'
 import { createClient } from '@supabase/supabase-js'
 import { getBusinessConfig } from '@/lib/business-context'
 import { rubroExcluido } from '@/lib/prospecting/excluidos'
@@ -16,6 +15,25 @@ function getDb() {
   )
 }
 
+// CABA + partidos del Gran Buenos Aires. El cron rota por un lote de zonas por día
+// (junto con el rubro), así con el tiempo cubre toda el área sin pasarse de tiempo.
+const ZONAS = [
+  'CABA', 'Vicente López', 'San Isidro', 'Tigre', 'San Martín',
+  'Tres de Febrero', 'Morón', 'Ituzaingó', 'Ramos Mejía', 'San Justo',
+  'Lomas de Zamora', 'Lanús', 'Avellaneda', 'Quilmes', 'Berazategui',
+  'Moreno', 'Pilar', 'Escobar',
+]
+const ZONAS_POR_DIA = 4
+
+// Score rápido sin IA (ya no filtramos por score; solo sirve para priorizar).
+function scoreLead(place: { phone?: string; website?: string; rating?: number }): number {
+  let s = 50
+  if (place.phone) s += 15
+  if (place.website) s += 10
+  if (place.rating && place.rating >= 4) s += 10
+  return Math.min(100, s)
+}
+
 export async function GET() {
   const db = getDb()
   const biz = await getBusinessConfig(db)
@@ -28,35 +46,33 @@ export async function GET() {
   const diaDelMes = new Date().getDate()
   const rubro = disponibles[diaDelMes % disponibles.length]
 
+  // Lote de zonas de CABA/GBA para hoy (rota cada día para cubrir todo el área)
+  const inicio = (diaDelMes * ZONAS_POR_DIA) % ZONAS.length
+  const zonasHoy = Array.from({ length: ZONAS_POR_DIA }, (_, i) => ZONAS[(inicio + i) % ZONAS.length])
+
   let imported = 0
   let skipped = 0
   const errors: string[] = []
 
   try {
-    const places = await searchPlaces(rubro, biz.zona)
-
-    if (!places.length) {
-      return NextResponse.json({ ok: true, rubro, imported: 0, message: 'Sin resultados de búsqueda' })
-    }
-
     // Traer TODOS los clientes existentes (paginado) para no duplicar
     const { names: existingNames, phones: existingPhones } = await cargarExistentes(db)
 
-    for (const place of places) {
-      // La búsqueda ya se hace por zona; no filtramos de más para no perder leads.
-      // No duplicar
-      const yaExiste =
-        existingNames.has(place.name?.toLowerCase().trim()) ||
-        (place.phone && existingPhones.has(place.phone))
-
-      if (yaExiste) {
-        skipped++
+    for (const zona of zonasHoy) {
+      let places: Awaited<ReturnType<typeof searchPlaces>> = []
+      try {
+        places = await searchPlaces(rubro, `${zona}, Buenos Aires, Argentina`)
+      } catch (err) {
+        errors.push(`búsqueda ${zona}: ${String(err)}`)
         continue
       }
 
-      try {
-        // El score se guarda para priorizar, pero no descarta leads: entra cualquiera.
-        const ai = await classifyLead({ name: place.name, rubro, description: place.address })
+      for (const place of places) {
+        // Entra cualquiera con lo que haya; solo se evita el duplicado.
+        const yaExiste =
+          existingNames.has(place.name?.toLowerCase().trim()) ||
+          (place.phone && existingPhones.has(place.phone))
+        if (yaExiste) { skipped++; continue }
 
         const { error } = await db.from('clients').insert({
           name: place.name,
@@ -64,10 +80,11 @@ export async function GET() {
           rubro,
           phone: place.phone || null,
           email: null,
+          city: zona,
           website: place.website || null,
           notes: `Prospectado automáticamente. Dirección: ${place.address || ''}${place.rating ? `. Rating: ${place.rating}` : ''}`,
           status: 'nuevo',
-          score: ai.score,
+          score: scoreLead(place),
           channel: 'sistema',
           tags: ['prospectado-auto'],
         })
@@ -79,8 +96,6 @@ export async function GET() {
           existingNames.add(place.name.toLowerCase().trim())
           if (place.phone) existingPhones.add(place.phone)
         }
-      } catch (err) {
-        errors.push(`${place.name}: ${String(err)}`)
       }
     }
 
@@ -97,14 +112,14 @@ export async function GET() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: chatId,
-            text: `🎯 *Prospección automática* — ${biz.name}\n\n+${imported} nuevos leads B2B agregados hoy\nRubro: _${rubro}_\nZona: ${biz.zona}\n\nEntran con lo que haya (nombre, dirección, teléfono o web). Revisalos en /admin/clients`,
+            text: `🎯 *Prospección automática* — ${biz.name}\n\n+${imported} nuevos leads B2B agregados hoy\nRubro: _${rubro}_\nZonas: ${zonasHoy.join(', ')}\n\nEntran con lo que haya (nombre, dirección, teléfono o web). Revisalos en /admin/clients`,
             parse_mode: 'Markdown',
           }),
         })
       }
     }
 
-    return NextResponse.json({ ok: true, rubro, imported, skipped, errors })
+    return NextResponse.json({ ok: true, rubro, zonas: zonasHoy, imported, skipped, errors })
 
   } catch (err) {
     return NextResponse.json({ ok: false, error: String(err) }, { status: 500 })
