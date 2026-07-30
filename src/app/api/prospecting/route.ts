@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { searchPlaces } from '@/lib/prospecting/serper'
 import { classifyLead } from '@/lib/ai/classify'
 import { rubroExcluido } from '@/lib/prospecting/excluidos'
-import { cargarExistentes } from '@/lib/prospecting/existentes'
+import { cargarExistentes, normName, normPhone, igFromAny } from '@/lib/prospecting/existentes'
 
 export async function POST(req: NextRequest) {
   const { query, city, auto_import } = await req.json()
@@ -18,32 +18,46 @@ export async function POST(req: NextRequest) {
   const db = await createClient()
 
   // Traer TODOS los clientes existentes (paginado) para no traer duplicados
-  const { names: existingNames, phones: existingPhones } = await cargarExistentes(db)
+  const { names: existingNames, phones: existingPhones, instagrams: existingIg } = await cargarExistentes(db)
 
-  // Clasificar cada lugar con IA y marcar si ya existe
+  // Clasificar cada lugar con IA y marcar si ya existe (por nombre, teléfono o Instagram)
   const results = await Promise.all(places.map(async (place) => {
     const ai = await classifyLead({ name: place.name, rubro: query, description: place.address })
+    const ig = igFromAny(place.website)
+    const nom = normName(place.name)
+    const tel = normPhone(place.phone)
     const existing =
-      existingNames.has(place.name?.toLowerCase().trim()) ||
-      (place.phone && existingPhones.has(place.phone))
-    return { ...place, type: ai.type, score: ai.score, channel: ai.channel, reason: ai.reason, existing }
+      (nom && existingNames.has(nom)) ||
+      (tel && existingPhones.has(tel)) ||
+      (ig && existingIg.has(ig))
+    return { ...place, ig, type: ai.type, score: ai.score, channel: ai.channel, reason: ai.reason, existing }
   }))
 
   // Si auto_import → insertar TODOS los que no existan ya (con cualquier dato).
   // El score queda guardado para priorizar, pero no descarta leads.
   if (auto_import) {
-    const toImport = results.filter(r => !r.existing)
-    for (const r of toImport) {
+    let imported = 0
+    for (const r of results) {
+      if (r.existing) continue
+      const ig = igFromAny(r.website)
+      // Re-chequear contra los ya insertados en esta misma tanda
+      const nom = normName(r.name), tel = normPhone(r.phone)
+      if ((nom && existingNames.has(nom)) || (tel && existingPhones.has(tel)) || (ig && existingIg.has(ig))) continue
       const { error } = await db.from('clients').insert({
         name: r.name, type: r.type, rubro: query,
         phone: r.phone || null, email: null,
-        city, website: r.website || null,
+        city, instagram: ig ? `@${ig}` : null,
+        website: ig ? null : (r.website || null),
         notes: r.address || null,
         status: 'nuevo', score: r.score, channel: r.channel, tags: [],
       })
-      if (error) console.error('Import error:', r.name, error.message)
+      if (error) { console.error('Import error:', r.name, error.message); continue }
+      imported++
+      if (nom) existingNames.add(nom)
+      if (tel) existingPhones.add(tel)
+      if (ig) existingIg.add(ig)
     }
-    return NextResponse.json({ results, imported: toImport.length })
+    return NextResponse.json({ results, imported })
   }
 
   return NextResponse.json({ results })

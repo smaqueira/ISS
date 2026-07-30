@@ -3,7 +3,7 @@ import { searchPlaces } from '@/lib/prospecting/serper'
 import { createClient } from '@supabase/supabase-js'
 import { getBusinessConfig } from '@/lib/business-context'
 import { rubroExcluido } from '@/lib/prospecting/excluidos'
-import { cargarExistentes } from '@/lib/prospecting/existentes'
+import { cargarExistentes, normName, normPhone, igFromAny } from '@/lib/prospecting/existentes'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -56,7 +56,7 @@ export async function GET() {
 
   try {
     // Traer TODOS los clientes existentes (paginado) para no duplicar
-    const { names: existingNames, phones: existingPhones } = await cargarExistentes(db)
+    const { names: existingNames, phones: existingPhones, instagrams: existingIg } = await cargarExistentes(db)
 
     for (const zona of zonasHoy) {
       let places: Awaited<ReturnType<typeof searchPlaces>> = []
@@ -68,10 +68,16 @@ export async function GET() {
       }
 
       for (const place of places) {
-        // Entra cualquiera con lo que haya; solo se evita el duplicado.
+        // El "sitio web" de Google suele ser el Instagram del negocio.
+        const ig = igFromAny(place.website)
+        const nom = normName(place.name)
+        const tel = normPhone(place.phone)
+        // Entra cualquiera con lo que haya; solo se evita el duplicado
+        // (por nombre, teléfono O Instagram — corta el mismo negocio con otro nombre).
         const yaExiste =
-          existingNames.has(place.name?.toLowerCase().trim()) ||
-          (place.phone && existingPhones.has(place.phone))
+          (nom && existingNames.has(nom)) ||
+          (tel && existingPhones.has(tel)) ||
+          (ig && existingIg.has(ig))
         if (yaExiste) { skipped++; continue }
 
         const { error } = await db.from('clients').insert({
@@ -81,11 +87,12 @@ export async function GET() {
           phone: place.phone || null,
           email: null,
           city: zona,
-          website: place.website || null,
+          instagram: ig ? `@${ig}` : null,
+          website: ig ? null : (place.website || null),
           notes: `Prospectado automáticamente. Dirección: ${place.address || ''}${place.rating ? `. Rating: ${place.rating}` : ''}`,
           status: 'nuevo',
           score: scoreLead(place),
-          channel: place.phone ? 'whatsapp' : 'web',
+          channel: place.phone ? 'whatsapp' : (ig ? 'instagram' : 'web'),
           tags: ['prospectado-auto'],
         })
 
@@ -93,8 +100,9 @@ export async function GET() {
           errors.push(`${place.name}: ${error.message}`)
         } else {
           imported++
-          existingNames.add(place.name.toLowerCase().trim())
-          if (place.phone) existingPhones.add(place.phone)
+          if (nom) existingNames.add(nom)
+          if (tel) existingPhones.add(tel)
+          if (ig) existingIg.add(ig)
         }
       }
     }
