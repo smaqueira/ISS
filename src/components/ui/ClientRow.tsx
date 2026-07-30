@@ -184,7 +184,7 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
           {marcas.ultimoFecha && (
             <span title={`Último trato: ${marcas.ultimoAccion || 'movimiento'} el ${fechaCorta(marcas.ultimoFecha)}`}
               style={{ fontSize: '0.64rem', fontWeight: 700, background: colorRecencia(marcas.ultimoFecha) + '22', color: colorRecencia(marcas.ultimoFecha), border: `1px solid ${colorRecencia(marcas.ultimoFecha)}55`, borderRadius: 4, padding: '1px 6px' }}>
-              🕒 {marcas.ultimoAccion || 'Movimiento'} · {fechaCorta(marcas.ultimoFecha)}
+              🕒 Último: {marcas.ultimoAccion || 'Movimiento'} · {fechaCorta(marcas.ultimoFecha)}
             </span>
           )}
         </div>
@@ -274,7 +274,13 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
             <button onClick={() => setWaOpen(true)} className="btn btn-ghost" style={{ padding: '6px 10px' }} title="Enviar WhatsApp">
               📱
             </button>
-            {waOpen && <WhatsAppModal clientId={client.id} onClose={() => setWaOpen(false)} />}
+            {waOpen && <WhatsAppModal clientId={client.id} onClose={() => setWaOpen(false)}
+              onSent={canal => {
+                const now = new Date().toISOString()
+                const label = canal === 'instagram' ? 'MD Instagram' : 'MD WhatsApp'
+                setMarcasExtra(m => ({ ...m, contacto: now, ultimoFecha: now, ultimoAccion: label }))
+                router.refresh()
+              }} />}
           </>
         )}
         <button onClick={registrarPedido} className="btn btn-ghost" style={{ padding: '6px 10px', color: '#22c55e' }} title="Registrar pedido">

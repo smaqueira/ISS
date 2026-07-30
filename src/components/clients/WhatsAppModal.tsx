@@ -5,9 +5,10 @@ import TermometroEnvio from './TermometroEnvio'
 interface Props {
   clientId: string
   onClose: () => void
+  onSent?: (canal: 'whatsapp' | 'instagram') => void
 }
 
-export default function WhatsAppModal({ clientId, onClose }: Props) {
+export default function WhatsAppModal({ clientId, onClose, onSent }: Props) {
   const [message, setMessage] = useState('')
   const [phone, setPhone] = useState('')
   const [instagram, setInstagram] = useState('')
@@ -57,6 +58,7 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _accion: 'whatsapp_enviado', _mensaje: message }),
     })
+    onSent?.('whatsapp')
   }
 
   function openInstagram() {
@@ -67,6 +69,7 @@ export default function WhatsAppModal({ clientId, onClose }: Props) {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ _accion: 'instagram_enviado', _mensaje: message }),
     })
+    onSent?.('instagram')
   }
 
   return (
