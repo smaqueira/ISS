@@ -77,6 +77,20 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
     router.refresh()
   }
 
+  // Marcar MD a mano (cuando el mensaje se mandó por fuera del sistema). Usa la
+  // misma acción que el envío real: cuenta para los 20 MD del día y agenda el
+  // próximo seguimiento.
+  async function marcarMdManual() {
+    if (!confirm(`¿Marcar que ya le enviaste un MD a ${client.name}? Queda registrado con la fecha de hoy.`)) return
+    const now = new Date().toISOString()
+    setMarcasExtra(m => ({ ...m, contacto: now, ultimoFecha: now, ultimoAccion: 'MD WhatsApp' }))
+    await fetch(`/api/clients/${client.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _accion: 'whatsapp_enviado' }),
+    })
+    router.refresh()
+  }
+
   async function registrarPedido() {
     const val = prompt(`💵 Pedido de ${client.name} — monto en $:`)
     if (val == null) return
@@ -283,6 +297,9 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
               }} />}
           </>
         )}
+        <button onClick={marcarMdManual} className="btn btn-ghost" style={{ padding: '6px 10px' }} title="Marcar MD enviado (lo escribí por fuera del sistema)">
+          📤
+        </button>
         <button onClick={registrarPedido} className="btn btn-ghost" style={{ padding: '6px 10px', color: '#22c55e' }} title="Registrar pedido">
           💵
         </button>
