@@ -7,34 +7,46 @@ const db = createClient(
 )
 
 interface ImportRow {
-  name: string
+  name?: string
   phone?: string
   email?: string
   city?: string
   type?: string
   rubro?: string
   notes?: string
+  instagram?: string
+}
+
+// Deriva un nombre si la fila no lo trae: importar SIEMPRE, con cualquier dato.
+function nombreDe(row: ImportRow): string {
+  return (row.name?.trim() || row.phone?.trim() || row.instagram?.trim() || row.email?.trim() || 'Contacto sin nombre')
 }
 
 export async function POST(req: NextRequest) {
   const { rows }: { rows: ImportRow[] } = await req.json()
   if (!rows?.length) return NextResponse.json({ imported: 0, skipped: 0 })
 
-  // Dedup: cargar name+phone+email+city+rubro existentes
-  const { data: existing } = await db.from('clients').select('name, phone, email, city, rubro')
+  // Normalizar: cada fila queda con un nombre (real o derivado)
+  for (const row of rows) row.name = nombreDe(row)
+
+  // Dedup: cargar datos existentes
+  const { data: existing } = await db.from('clients').select('name, phone, email, city, rubro, instagram')
+  const norm = (v?: string | null) => (v || '').trim().toLowerCase()
+  const igUser = (v?: string | null) => norm(v).replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/^@/, '').replace(/[/?].*$/, '')
   const existingPhones = new Set((existing || []).map(c => c.phone?.trim()).filter(Boolean))
-  const existingEmails = new Set((existing || []).map(c => c.email?.trim().toLowerCase()).filter(Boolean))
+  const existingEmails = new Set((existing || []).map(c => norm(c.email)).filter(Boolean))
+  const existingIg = new Set((existing || []).map(c => igUser(c.instagram)).filter(Boolean))
   const existingNameCityRubro = new Set(
     (existing || [])
       .filter(c => c.name)
-      .map(c => `${c.name.toLowerCase().trim()}||${(c.city || '').toLowerCase().trim()}||${(c.rubro || '').toLowerCase().trim()}`)
+      .map(c => `${norm(c.name)}||${norm(c.city)}||${norm(c.rubro)}`)
   )
 
   const nuevos = rows.filter(row => {
-    if (!row.name?.trim()) return false
     if (row.phone && existingPhones.has(row.phone.trim())) return false
-    if (row.email && existingEmails.has(row.email.trim().toLowerCase())) return false
-    const key = `${row.name.toLowerCase().trim()}||${(row.city || '').toLowerCase().trim()}||${(row.rubro || '').toLowerCase().trim()}`
+    if (row.email && existingEmails.has(norm(row.email))) return false
+    if (row.instagram && igUser(row.instagram) && existingIg.has(igUser(row.instagram))) return false
+    const key = `${norm(row.name)}||${norm(row.city)}||${norm(row.rubro)}`
     if (existingNameCityRubro.has(key)) return false
     return true
   })
@@ -43,10 +55,10 @@ export async function POST(req: NextRequest) {
 
   const debugSkipped = rows.filter(row => !nuevos.includes(row)).map(row => {
     const reasons = []
-    if (!row.name?.trim()) reasons.push('sin nombre')
     if (row.phone && existingPhones.has(row.phone.trim())) reasons.push('tel duplicado')
-    if (row.email && existingEmails.has(row.email.trim().toLowerCase())) reasons.push('email duplicado')
-    const key = `${row.name.toLowerCase().trim()}||${(row.city || '').toLowerCase().trim()}||${(row.rubro || '').toLowerCase().trim()}`
+    if (row.email && existingEmails.has(norm(row.email))) reasons.push('email duplicado')
+    if (row.instagram && igUser(row.instagram) && existingIg.has(igUser(row.instagram))) reasons.push('instagram duplicado')
+    const key = `${norm(row.name)}||${norm(row.city)}||${norm(row.rubro)}`
     if (existingNameCityRubro.has(key)) reasons.push('nombre+ciudad+rubro duplicado')
     return { name: row.name, phone: row.phone, city: row.city, reasons }
   })
@@ -65,12 +77,13 @@ export async function POST(req: NextRequest) {
   let firstError = ''
   for (let i = 0; i < nuevos.length; i += 100) {
     const batch = nuevos.slice(i, i + 100).map(row => ({
-      name: row.name.trim(),
+      name: (row.name || 'Contacto sin nombre').trim(),
       type: row.type || 'b2c',
       rubro: row.rubro?.trim() || null,
       phone: row.phone?.trim() || null,
       email: row.email?.trim() || null,
       city: row.city?.trim() || null,
+      instagram: row.instagram?.trim() || null,
       notes: row.notes?.trim() || null,
       status: 'nuevo',
       score: 50,

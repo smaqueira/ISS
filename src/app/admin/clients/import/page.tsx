@@ -9,6 +9,7 @@ interface PreviewRow {
   type: string
   rubro?: string
   notes?: string
+  instagram?: string
   valid: boolean
   error?: string
   warn?: string
@@ -55,7 +56,9 @@ export default function ImportPage() {
       type:      ['tipo', 'type', 'segmento'],
       rubro:     ['rubro', 'categoria', 'giro'],
       notes:     ['notas', 'notes', 'observaciones', 'comentarios'],
-      web:       ['instagramweb', 'instagram', 'web', 'sitio'],
+      instagram: ['instagram', 'ig', 'arroba', 'usuario'],
+      address:   ['direccion', 'domicilio', 'address', 'calle', 'ubicacion'],
+      web:       ['web', 'sitio', 'pagina', 'url'],
     }
     for (const [key, aliasList] of Object.entries(aliases)) {
       for (const alias of aliasList) {
@@ -66,29 +69,41 @@ export default function ImportPage() {
 
     return lines.slice(1).map(line => {
       const cols = splitCSVLine(line)
-      const name = colMap.name !== undefined ? cols[colMap.name] : cols[0]
       const PLACEHOLDERS = ['no disponible', 'sin datos', 'n/a', 'nd', '-', '—', 'none', 'null']
       const clean = (v?: string) => {
         const t = v?.trim()
         return (!t || PLACEHOLDERS.includes(t.toLowerCase())) ? undefined : t
       }
+      const rawName = clean(colMap.name !== undefined ? cols[colMap.name] : cols[0])
       const phone = clean(colMap.phone !== undefined ? cols[colMap.phone] : undefined)
                || clean(colMap.whatsapp !== undefined ? cols[colMap.whatsapp] : undefined)
       const email = clean(colMap.email !== undefined ? cols[colMap.email] : undefined)
-      const city = colMap.city !== undefined ? cols[colMap.city] : undefined
+      const city = clean(colMap.city !== undefined ? cols[colMap.city] : undefined)
       const typeRaw = colMap.type !== undefined ? cols[colMap.type]?.toLowerCase() : ''
       const type = typeRaw?.includes('b2b') || typeRaw?.includes('negocio') || typeRaw?.includes('empresa') ? 'b2b' : 'b2c'
-      const rubro = colMap.rubro !== undefined ? cols[colMap.rubro] : undefined
-      const webVal = colMap.web !== undefined ? cols[colMap.web] : undefined
-      const notesBase = colMap.notes !== undefined ? cols[colMap.notes] : undefined
-      const notes = [notesBase, webVal && webVal !== 'No disponible' ? `Web: ${webVal}` : ''].filter(Boolean).join(' | ') || undefined
+      const rubro = clean(colMap.rubro !== undefined ? cols[colMap.rubro] : undefined)
+      const instagram = clean(colMap.instagram !== undefined ? cols[colMap.instagram] : undefined)
+      const webVal = clean(colMap.web !== undefined ? cols[colMap.web] : undefined)
+      const addressVal = clean(colMap.address !== undefined ? cols[colMap.address] : undefined)
+      const notesBase = clean(colMap.notes !== undefined ? cols[colMap.notes] : undefined)
+      const notes = [notesBase, addressVal ? `Dir: ${addressVal}` : '', webVal ? `Web: ${webVal}` : '']
+        .filter(Boolean).join(' | ') || undefined
 
-      const valid = !!name?.trim()
-      const error = !valid ? 'Falta nombre' : undefined
-      const warn = valid && !phone && !email ? 'Sin teléfono ni email' : undefined
+      // Importar con CUALQUIER dato: si no hay nombre, se deriva. Solo se descarta
+      // la fila completamente vacía (sin nombre, tel, email ni instagram).
+      const tieneAlgo = !!(rawName || phone || email || instagram)
+      const name = rawName || instagram || phone || email || ''
+      const warn = tieneAlgo && !phone && !email && !instagram ? 'Solo nombre (sin forma de contacto)' : undefined
 
-      return { name: name?.trim() || '', phone: phone || undefined, email: email || undefined, city: city?.trim(), type, rubro: rubro?.trim(), notes: notes?.trim(), valid: !!name?.trim(), error, warn }
-    }).filter(r => r.name)
+      return {
+        name: name.trim(),
+        phone, email, city, type, rubro, instagram,
+        notes: notes?.trim(),
+        valid: tieneAlgo,
+        error: tieneAlgo ? undefined : 'Fila vacía',
+        warn,
+      }
+    }).filter(r => r.valid)
   }
 
   function handleFile(file: File) {
@@ -159,10 +174,13 @@ export default function ImportPage() {
               <span>• <strong>nombre</strong> / name / empresa / cliente</span>
               <span>• <strong>telefono</strong> / phone / cel / whatsapp</span>
               <span>• <strong>email</strong> / mail / correo</span>
+              <span>• <strong>instagram</strong> / ig / usuario</span>
               <span>• <strong>ciudad</strong> / zona / barrio / localidad</span>
+              <span>• <strong>direccion</strong> / domicilio → a notas</span>
               <span>• <strong>tipo</strong> → b2b o b2c</span>
               <span>• <strong>rubro</strong> / categoria</span>
             </div>
+            <div style={{ marginTop: 8, color: 'var(--text)' }}>Se importa cualquier fila con <strong>al menos un dato</strong> (nombre, teléfono, email o Instagram). Si no hay nombre, se usa el @ o el teléfono.</div>
           </div>
         </>
       )}
@@ -176,7 +194,7 @@ export default function ImportPage() {
             </div>
             {warnCount > 0 && (
               <div style={{ background: '#f59e0b20', color: '#f59e0b', borderRadius: 8, padding: '6px 14px', fontSize: '0.82rem', fontWeight: 600 }}>
-                ⚠️ {warnCount} sin teléfono ni email
+                ⚠️ {warnCount} sin forma de contacto
               </div>
             )}
             <button onClick={() => { setRows([]); setDone(null) }} className="btn btn-ghost" style={{ marginLeft: 'auto', fontSize: '0.78rem' }}>
@@ -188,7 +206,7 @@ export default function ImportPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  {['Nombre', 'Teléfono', 'Email', 'Ciudad', 'Tipo', 'Rubro', ''].map(h => (
+                  {['Nombre', 'Teléfono', 'Email', 'Instagram', 'Ciudad', 'Tipo', 'Rubro', ''].map(h => (
                     <th key={h} style={{ padding: '6px 8px', textAlign: 'left', color: 'var(--muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -199,6 +217,7 @@ export default function ImportPage() {
                     <td style={{ padding: '6px 8px', fontWeight: 500 }}>{r.name}</td>
                     <td style={{ padding: '6px 8px', color: 'var(--muted)' }}>{r.phone || '—'}</td>
                     <td style={{ padding: '6px 8px', color: 'var(--muted)' }}>{r.email || '—'}</td>
+                    <td style={{ padding: '6px 8px', color: '#DD2A7B' }}>{r.instagram || '—'}</td>
                     <td style={{ padding: '6px 8px', color: 'var(--muted)' }}>{r.city || '—'}</td>
                     <td style={{ padding: '6px 8px' }}><span className={`badge badge-${r.type}`}>{r.type}</span></td>
                     <td style={{ padding: '6px 8px', color: 'var(--muted)' }}>{r.rubro || '—'}</td>
