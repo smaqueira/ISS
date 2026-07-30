@@ -29,9 +29,10 @@ export async function POST(req: NextRequest) {
     return { ...place, type: ai.type, score: ai.score, channel: ai.channel, reason: ai.reason, existing }
   }))
 
-  // Si auto_import → insertar los de score >= 60 que no existan ya
+  // Si auto_import → insertar TODOS los que no existan ya (con cualquier dato).
+  // El score queda guardado para priorizar, pero no descarta leads.
   if (auto_import) {
-    const toImport = results.filter(r => r.score >= 60 && (r.phone || r.website) && !r.existing)
+    const toImport = results.filter(r => !r.existing)
     for (const r of toImport) {
       const { error } = await db.from('clients').insert({
         name: r.name, type: r.type, rubro: query,

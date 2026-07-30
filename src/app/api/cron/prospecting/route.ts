@@ -43,21 +43,7 @@ export async function GET() {
     const { names: existingNames, phones: existingPhones } = await cargarExistentes(db)
 
     for (const place of places) {
-      // Solo importar si tiene teléfono o sitio web (para poder contactar)
-      if (!place.phone && !place.website) {
-        skipped++
-        continue
-      }
-
-      // Filtrar por zona configurada
-      const addr = (place.address || '').toLowerCase()
-      const zonaTokens = biz.zona.toLowerCase().split(/\s+/).filter(t => t.length > 3)
-      const esDeLaZona = zonaTokens.some(t => addr.includes(t))
-      if (!esDeLaZona) {
-        skipped++
-        continue
-      }
-
+      // La búsqueda ya se hace por zona; no filtramos de más para no perder leads.
       // No duplicar
       const yaExiste =
         existingNames.has(place.name?.toLowerCase().trim()) ||
@@ -69,12 +55,8 @@ export async function GET() {
       }
 
       try {
+        // El score se guarda para priorizar, pero no descarta leads: entra cualquiera.
         const ai = await classifyLead({ name: place.name, rubro, description: place.address })
-
-        if (ai.score < 50) {
-          skipped++
-          continue
-        }
 
         const { error } = await db.from('clients').insert({
           name: place.name,
@@ -115,7 +97,7 @@ export async function GET() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: chatId,
-            text: `🎯 *Prospección automática* — ${biz.name}\n\n+${imported} nuevos leads B2B agregados hoy\nRubro: _${rubro}_\nZona: ${biz.zona}\n\nEntran con teléfono o web listos para contactar. Revisalos en /admin/clients`,
+            text: `🎯 *Prospección automática* — ${biz.name}\n\n+${imported} nuevos leads B2B agregados hoy\nRubro: _${rubro}_\nZona: ${biz.zona}\n\nEntran con lo que haya (nombre, dirección, teléfono o web). Revisalos en /admin/clients`,
             parse_mode: 'Markdown',
           }),
         })
