@@ -35,7 +35,7 @@ export default function WhatsAppModal({ clientId, onClose, onSent }: Props) {
   useEffect(() => {
     Promise.all([
       fetch(`/api/clients/${clientId}/whatsapp`).then(r => r.json()),
-      fetch('/api/settings').then(r => r.json()),
+      fetch('/api/settings/public').then(r => r.json()),
     ]).then(([data, settingsArr]) => {
       if (data.url) {
         const url = new URL(data.url)
@@ -45,7 +45,7 @@ export default function WhatsAppModal({ clientId, onClose, onSent }: Props) {
       setPrimerMensaje(data.message || '')
       setRespuestas(data.respuestas || [])
       setInstagram(data.instagram || '')
-      const sm = Object.fromEntries((settingsArr || []).map((r: { key: string; value: string }) => [r.key, r.value]))
+      const sm = Object.fromEntries((Array.isArray(settingsArr) ? settingsArr : []).map((r: { key: string; value: string }) => [r.key, r.value]))
       setCompraMinima(sm.COMPRA_MINIMA || '')
       setLoading(false)
     })

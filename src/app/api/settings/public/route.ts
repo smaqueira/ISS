@@ -9,6 +9,7 @@ const PUBLIC_KEYS = [
   'COMPANY_INSTAGRAM',
   'COMPANY_SLOGAN',
   'COMPANY_DESCRIPTION',
+  'COMPRA_MINIMA',
 ]
 
 export async function GET() {
