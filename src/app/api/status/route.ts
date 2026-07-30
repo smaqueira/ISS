@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 export const maxDuration = 20
@@ -22,10 +22,7 @@ async function check(name: string, fn: () => Promise<string | void>): Promise<Se
 }
 
 export async function GET() {
-  const db = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  )
+  const db = await createClient()
 
   // Leer settings una vez
   const { data: settings } = await db.from('settings').select('key, value')
