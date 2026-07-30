@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import type { Client, ClientMarcas } from '@/lib/types'
 import WhatsAppModal from '@/components/clients/WhatsAppModal'
 import { STATUS_LABELS, STATUS_COLORS, STATUS_OPTIONS, PRIORIDAD_OPTIONS, TEMPERATURA_OPTIONS } from '@/lib/crm'
@@ -40,6 +40,7 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
   const [instagram, setInstagram] = useState<string>(client.instagram || '')
   const [igInput, setIgInput] = useState('')
   const [buscandoIg, setBuscandoIg] = useState(false)
+  const igTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Marcas de acciones ya hechas (con fecha). Solo sumamos fechas al marcar en
   // vivo; el resto viene del historial (server) y prevalece al refrescar.
   const [marcasExtra, setMarcasExtra] = useState<ClientMarcas>({})
@@ -59,7 +60,17 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
     finally { setBuscandoIg(false) }
   }
 
+  // Auto-guardar el @ sin necesidad de Enter: si tipea, espera a que frene
+  // (debounce); si pega, guarda enseguida.
+  function onIgChange(v: string, pegado = false) {
+    setIgInput(v)
+    if (igTimer.current) clearTimeout(igTimer.current)
+    if (!v.trim()) return
+    igTimer.current = setTimeout(() => guardarInstagram(v), pegado ? 100 : 900)
+  }
+
   async function guardarInstagram(v: string) {
+    if (igTimer.current) { clearTimeout(igTimer.current); igTimer.current = null }
     const val = v.trim()
     if (!val || val === instagram) return
     setInstagram(val)
@@ -286,9 +297,10 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             <input
               value={igInput}
-              onChange={e => setIgInput(e.target.value)}
+              onChange={e => onIgChange(e.target.value)}
+              onPaste={e => { const t = (e.clipboardData.getData('text') || '').trim(); if (t) onIgChange(t, true) }}
               placeholder="@ IG"
-              title="Pegá el @ o buscalo con 🔎, y Enter para guardar"
+              title="Pegá el @ o buscalo con 🔎 — se guarda solo"
               onKeyDown={e => { if (e.key === 'Enter') guardarInstagram(igInput) }}
               onBlur={() => { if (igInput.trim()) guardarInstagram(igInput) }}
               style={{ width: 84, background: 'var(--bg)', border: '1px solid #DD2A7B55', borderRadius: 6, padding: '5px 8px', color: 'var(--text)', fontSize: '0.75rem' }}
