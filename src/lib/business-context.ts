@@ -18,7 +18,7 @@ const DEFAULTS: BusinessConfig = {
 export async function getBusinessConfig(db?: any): Promise<BusinessConfig> {
   const client = db ?? createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
   )
 
   const { data } = await client

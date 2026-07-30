@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 export async function GET() {
   const db = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!),
   )
   const { data } = await db.from('settings').select('value').eq('key', 'TELEGRAM_CUSTOMER_BOT_TOKEN').single()
   const token = data?.value
