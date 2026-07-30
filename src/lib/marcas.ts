@@ -10,6 +10,7 @@ const ACCION_FIELD: Record<string, keyof ClientMarcas> = {
   'Instagram like':     'like',
   'Instagram te sigue': 'sigue',
   'Pedido registrado':  'pedido',
+  'Respondió':          'respondio',
   'Estado cambiado':    'estado',
 }
 
@@ -23,6 +24,7 @@ const ACCION_LABEL: Record<string, string> = {
   'Instagram te sigue':            'Te sigue',
   'Instagram salteado':            'Salteado IG',
   'Pedido registrado':             'Pedido',
+  'Respondió':                     'Respondió',
   'Estado cambiado':               'Cambio de estado',
   'Próximo seguimiento actualizado': 'Seguimiento agendado',
   'Prioridad cambiada':            'Prioridad',

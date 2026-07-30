@@ -91,6 +91,20 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
     router.refresh()
   }
 
+  // Marcar que el cliente respondió (respuesta entrante). Avanza el estado a
+  // "respondió" si venía en frío y deja el registro con fecha.
+  async function marcarRespondio() {
+    if (!confirm(`¿Marcar que ${client.name} respondió? Queda registrado con la fecha de hoy.`)) return
+    const now = new Date().toISOString()
+    setMarcasExtra(m => ({ ...m, respondio: now, ultimoFecha: now, ultimoAccion: 'Respondió' }))
+    if (['prospecto', 'contactado', 'nuevo', 'sin_respuesta'].includes(status)) setStatus('respondio')
+    await fetch(`/api/clients/${client.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _accion: 'respondio' }),
+    })
+    router.refresh()
+  }
+
   async function registrarPedido() {
     const val = prompt(`💵 Pedido de ${client.name} — monto en $:`)
     if (val == null) return
@@ -217,6 +231,7 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
             {marcas.seguido && <span title="Lo seguís en Instagram" style={{ color: '#DD2A7B' }}>👣 {fechaCorta(marcas.seguido)}</span>}
             {marcas.like && <span title="Le diste like en Instagram" style={{ color: '#DD2A7B' }}>❤️ {fechaCorta(marcas.like)}</span>}
             {marcas.sigue && <span title="Te sigue en Instagram" style={{ color: '#22c55e' }}>💚 {fechaCorta(marcas.sigue)}</span>}
+            {marcas.respondio && <span title="El cliente respondió" style={{ color: '#3b82f6', fontWeight: 700 }}>↩️ {fechaCorta(marcas.respondio)}</span>}
             {marcas.pedido && <span title="Último pedido registrado" style={{ color: '#22c55e', fontWeight: 700 }}>💵 {fechaCorta(marcas.pedido)}</span>}
           </div>
         )}
@@ -298,6 +313,9 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
           }} />}
         <button onClick={marcarMdManual} className="btn btn-ghost" style={{ padding: '6px 10px' }} title="Marcar MD enviado (lo escribí por fuera del sistema)">
           📤
+        </button>
+        <button onClick={marcarRespondio} className="btn btn-ghost" style={{ padding: '6px 10px', color: '#3b82f6' }} title="Marcar que el cliente respondió">
+          ↩️
         </button>
         <button onClick={registrarPedido} className="btn btn-ghost" style={{ padding: '6px 10px', color: '#22c55e' }} title="Registrar pedido">
           💵

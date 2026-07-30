@@ -164,6 +164,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
   // Saltar: lo sacamos del tablero "Instagram hoy" (no reaparece)
   if (_accion === 'instagram_salteado') await logHistory(db, id, 'Instagram salteado')
 
+  // El cliente respondió: registra la respuesta entrante y avanza el estado si
+  // venía en frío (prospecto/contactado/nuevo/sin respuesta) → respondió.
+  if (_accion === 'respondio') {
+    const detalle = typeof _mensaje === 'string' && _mensaje.trim() ? _mensaje.trim().slice(0, 800) : undefined
+    await logHistory(db, id, 'Respondió', detalle)
+    if (['prospecto', 'contactado', 'nuevo', 'sin_respuesta'].includes(prev?.status || '')) {
+      await db.from('clients').update({ status: 'respondio' }).eq('id', id)
+      await logHistory(db, id, 'Estado cambiado', `${STATUS_LABELS[prev?.status || ''] || prev?.status} → Respondió`)
+    }
+  }
+
   return NextResponse.json(data)
 }
 

@@ -51,6 +51,7 @@ export interface ClientMarcas {
   like?: string     // like en Instagram
   sigue?: string    // te sigue en Instagram
   pedido?: string   // último pedido registrado
+  respondio?: string // última vez que el cliente respondió
   estado?: string   // fecha del último cambio de estado
   ultimoAccion?: string // último movimiento (cualquiera): qué se hizo
   ultimoFecha?: string  // fecha de ese último movimiento
