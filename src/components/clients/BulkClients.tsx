@@ -2,9 +2,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import ClientRow from '@/components/ui/ClientRow'
-import type { Client } from '@/lib/types'
+import type { Client, ClientMarcas } from '@/lib/types'
 
-export default function BulkClients({ clients, isAdmin }: { clients: Client[]; isAdmin: boolean }) {
+export default function BulkClients({ clients, isAdmin, marcas }: { clients: Client[]; isAdmin: boolean; marcas?: Record<string, ClientMarcas> }) {
   const router = useRouter()
   const [sel, setSel] = useState<Set<string>>(new Set())
   const [confirmando, setConfirmando] = useState(false)
@@ -75,7 +75,7 @@ export default function BulkClients({ clients, isAdmin }: { clients: Client[]; i
       )}
 
       {clients.map(c => (
-        <ClientRow key={c.id} client={c} selected={sel.has(c.id)} onToggle={isAdmin ? toggle : undefined} />
+        <ClientRow key={c.id} client={c} selected={sel.has(c.id)} onToggle={isAdmin ? toggle : undefined} marcas={marcas?.[c.id]} />
       ))}
     </div>
   )

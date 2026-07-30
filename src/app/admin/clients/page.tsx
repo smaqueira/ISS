@@ -6,6 +6,7 @@ import DeleteAllButton from '@/components/clients/DeleteAllButton'
 import TermometroEnvio from '@/components/clients/TermometroEnvio'
 import BuscarIgTanda from '@/components/clients/BuscarIgTanda'
 import type { Client } from '@/lib/types'
+import { getMarcas } from '@/lib/marcas'
 import { cookies } from 'next/headers'
 import { STATUS_LABELS, STATUS_COLORS, STATUS_OPTIONS, PRIORIDAD_OPTIONS, TEMPERATURA_OPTIONS, STATUS_GROUPS } from '@/lib/crm'
 
@@ -129,6 +130,9 @@ export default async function ClientsPage({ searchParams }: {
   const conversionRate = totalAll && totalAll > 0 ? Math.round((totalGanados / totalAll) * 100) : 0
 
   const clients = allClients || []
+
+  // Marcas (MD / seguido / like / te sigue / pedido con fecha) de los contactos mostrados
+  const marcas = await getMarcas(db, clients.map(c => c.id))
 
   const total = needsAllRows ? clients.length : dbTotal
   const totalPages = needsAllRows ? 1 : Math.ceil(dbTotal / PAGE_SIZE)
@@ -392,10 +396,10 @@ export default async function ClientsPage({ searchParams }: {
           </div>
         )}
         {filters.vista === 'zona'
-          ? <ClientsAccordion grouped={groupedZona} />
+          ? <ClientsAccordion grouped={groupedZona} marcas={marcas} />
           : filters.vista === 'rubro'
-          ? <ClientsAccordion grouped={groupedRubro} />
-          : <BulkClients clients={clients} isAdmin={isAdmin} />
+          ? <ClientsAccordion grouped={groupedRubro} marcas={marcas} />
+          : <BulkClients clients={clients} isAdmin={isAdmin} marcas={marcas} />
         }
       </div>
 

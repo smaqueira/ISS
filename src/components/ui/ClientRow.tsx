@@ -2,11 +2,11 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
-import type { Client } from '@/lib/types'
+import type { Client, ClientMarcas } from '@/lib/types'
 import WhatsAppModal from '@/components/clients/WhatsAppModal'
 import { STATUS_LABELS, STATUS_COLORS, STATUS_OPTIONS, PRIORIDAD_OPTIONS, TEMPERATURA_OPTIONS } from '@/lib/crm'
 
-interface Props { client: Client; selected?: boolean; onToggle?: (id: string) => void }
+interface Props { client: Client; selected?: boolean; onToggle?: (id: string) => void; marcas?: ClientMarcas }
 
 function isOverdue(date?: string) {
   if (!date) return false
@@ -16,16 +16,26 @@ function isToday(date?: string) {
   if (!date) return false
   return new Date(date).toDateString() === new Date().toDateString()
 }
+function fechaCorta(iso?: string) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
+}
 
 const RESERVED_TAGS = ['listo', 'sin_datos', 'me_sigue', 'ig_seguido', 'ig_like']
 
-export default function ClientRow({ client, selected, onToggle }: Props) {
+export default function ClientRow({ client, selected, onToggle, marcas: marcasProp }: Props) {
   const router = useRouter()
   const [tags, setTags] = useState<string[]>(client.tags || [])
   const [waOpen, setWaOpen] = useState(false)
   const [instagram, setInstagram] = useState<string>(client.instagram || '')
   const [igInput, setIgInput] = useState('')
   const [buscandoIg, setBuscandoIg] = useState(false)
+  // Marcas de acciones ya hechas (con fecha). Solo sumamos fechas al marcar en
+  // vivo; el resto viene del historial (server) y prevalece al refrescar.
+  const [marcasExtra, setMarcasExtra] = useState<ClientMarcas>({})
+  const marcas: ClientMarcas = { ...marcasProp, ...marcasExtra }
 
   async function buscarIg() {
     setBuscandoIg(true)
@@ -69,6 +79,7 @@ export default function ClientRow({ client, selected, onToggle }: Props) {
       body: JSON.stringify({ client_id: client.id, total, status: 'confirmado' }),
     })
     if (!r.ok) { alert('No se pudo registrar el pedido.'); return }
+    setMarcasExtra(m => ({ ...m, pedido: new Date().toISOString() }))
     router.refresh()
   }
 
@@ -89,6 +100,11 @@ export default function ClientRow({ client, selected, onToggle }: Props) {
     const activo = tags.includes(tag)
     const next = activo ? tags.filter(t => t !== tag) : [...tags, tag]
     setTags(next)
+    // Al marcar, registramos la fecha (queda en el historial para siempre).
+    if (!activo) {
+      const campo = accion === 'instagram_seguido' ? 'seguido' : accion === 'instagram_like' ? 'like' : 'sigue'
+      setMarcasExtra(m => ({ ...m, [campo]: new Date().toISOString() }))
+    }
     await fetch(`/api/clients/${client.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(activo ? { tags: next } : { _accion: accion }),
@@ -160,6 +176,15 @@ export default function ClientRow({ client, selected, onToggle }: Props) {
           {tags.includes('me_sigue') && <span style={{ color: '#22c55e', fontWeight: 600 }} title="Te sigue en Instagram"> · 💚 Te sigue</span>}
           {!client.phone && client.notes && <span style={{ fontStyle: 'italic' }}> · {client.notes}</span>}
         </div>
+        {(marcas.contacto || marcas.seguido || marcas.like || marcas.sigue || marcas.pedido) && (
+          <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginTop: 4, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            {marcas.contacto && <span title="Último mensaje enviado (WhatsApp/Instagram)">📤 MD {fechaCorta(marcas.contacto)}</span>}
+            {marcas.seguido && <span title="Lo seguís en Instagram" style={{ color: '#DD2A7B' }}>👣 {fechaCorta(marcas.seguido)}</span>}
+            {marcas.like && <span title="Le diste like en Instagram" style={{ color: '#DD2A7B' }}>❤️ {fechaCorta(marcas.like)}</span>}
+            {marcas.sigue && <span title="Te sigue en Instagram" style={{ color: '#22c55e' }}>💚 {fechaCorta(marcas.sigue)}</span>}
+            {marcas.pedido && <span title="Último pedido registrado" style={{ color: '#22c55e', fontWeight: 700 }}>💵 {fechaCorta(marcas.pedido)}</span>}
+          </div>
+        )}
       </div>
 
       <span className={`badge badge-${client.type}`}>{client.type.toUpperCase()}</span>

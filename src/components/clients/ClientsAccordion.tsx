@@ -1,13 +1,14 @@
 'use client'
 import { useState } from 'react'
 import ClientRow from '@/components/ui/ClientRow'
-import type { Client } from '@/lib/types'
+import type { Client, ClientMarcas } from '@/lib/types'
 
 interface Props {
   grouped: { zona: string; clients: Client[] }[]
+  marcas?: Record<string, ClientMarcas>
 }
 
-export default function ClientsAccordion({ grouped }: Props) {
+export default function ClientsAccordion({ grouped, marcas }: Props) {
   const [open, setOpen] = useState<Record<string, boolean>>({})
 
   function toggle(zona: string) {
@@ -51,7 +52,7 @@ export default function ClientsAccordion({ grouped }: Props) {
 
             {isOpen && (
               <div style={{ borderTop: '1px solid var(--border)', padding: '8px 0' }}>
-                {clients.map(c => <ClientRow key={c.id} client={c} />)}
+                {clients.map(c => <ClientRow key={c.id} client={c} marcas={marcas?.[c.id]} />)}
               </div>
             )}
           </div>

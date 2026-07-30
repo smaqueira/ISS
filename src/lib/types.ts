@@ -43,6 +43,16 @@ export interface Client {
   observaciones?: string
 }
 
+// Marcas visibles en la ficha del contacto: última fecha de cada acción del día
+// (MD enviado, seguido, like, te sigue, pedido). Se arma desde client_history.
+export interface ClientMarcas {
+  contacto?: string // último WhatsApp/Instagram enviado
+  seguido?: string  // seguido en Instagram
+  like?: string     // like en Instagram
+  sigue?: string    // te sigue en Instagram
+  pedido?: string   // último pedido registrado
+}
+
 export interface ClientHistory {
   id: string
   client_id: string

@@ -1,13 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
 import ClientRow from '@/components/ui/ClientRow'
 import Link from 'next/link'
-import type { Client } from '@/lib/types'
+import type { Client, ClientMarcas } from '@/lib/types'
+import { getMarcas } from '@/lib/marcas'
 
 export const dynamic = 'force-dynamic'
 
 const SELECT = 'id, name, type, status, rubro, city, phone, email, instagram, website, score, channel, notes, tags, last_contact, next_followup, created_at, prioridad, temperatura, proxima_accion, probabilidad_cierre'
 
-function Bloque({ emoji, titulo, desc, color, clientes }: { emoji: string; titulo: string; desc: string; color: string; clientes: Client[] }) {
+function Bloque({ emoji, titulo, desc, color, clientes, marcas }: { emoji: string; titulo: string; desc: string; color: string; clientes: Client[]; marcas: Record<string, ClientMarcas> }) {
   return (
     <div style={{ marginBottom: 24 }}>
       <div style={{ marginBottom: 8 }}>
@@ -16,7 +17,7 @@ function Bloque({ emoji, titulo, desc, color, clientes }: { emoji: string; titul
       </div>
       {clientes.length === 0
         ? <div style={{ fontSize: '0.82rem', color: 'var(--muted)', padding: '8px 0' }}>Nada pendiente acá. 🎉</div>
-        : clientes.map(c => <ClientRow key={c.id} client={c} />)}
+        : clientes.map(c => <ClientRow key={c.id} client={c} marcas={marcas[c.id]} />)}
     </div>
   )
 }
@@ -42,6 +43,8 @@ export default async function ContactarHoyPage() {
   const seguimientos = (seguimientosRes.data || []) as Client[]
   const reactivar = (reactivarRes.data || []) as Client[]
 
+  const marcas = await getMarcas(db, [...nuevos, ...seguimientos, ...reactivar].map(c => c.id))
+
   const total = nuevos.length + seguimientos.length + reactivar.length
 
   return (
@@ -54,13 +57,13 @@ export default async function ContactarHoyPage() {
       </div>
 
       <Bloque emoji="🆕" titulo="Nuevos para primer contacto" color="#DD2A7B"
-        desc="Prospectos sin contactar, mejores por score. Seguí el ritmo del termómetro." clientes={nuevos} />
+        desc="Prospectos sin contactar, mejores por score. Seguí el ritmo del termómetro." clientes={nuevos} marcas={marcas} />
 
       <Bloque emoji="🔁" titulo="Seguimientos pendientes" color="#f59e0b"
-        desc="Ya los contactaste y tienen fecha de seguimiento para hoy o vencida. Acá se cierra la venta." clientes={seguimientos} />
+        desc="Ya los contactaste y tienen fecha de seguimiento para hoy o vencida. Acá se cierra la venta." clientes={seguimientos} marcas={marcas} />
 
       <Bloque emoji="💰" titulo="Reactivar (recompra)" color="#22c55e"
-        desc="Clientes que compraron y no tocás hace 20+ días. Retener factura más que conseguir." clientes={reactivar} />
+        desc="Clientes que compraron y no tocás hace 20+ días. Retener factura más que conseguir." clientes={reactivar} marcas={marcas} />
 
       {total === 0 && (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)', fontSize: '0.85rem' }}>
