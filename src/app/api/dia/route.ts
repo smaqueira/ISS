@@ -27,6 +27,16 @@ function parseChecks(value?: string | null): Record<string, string> {
   } catch { return {} }
 }
 
+// Clasifica el rubro de un contacto en uno de los 4 que trabajamos (para el
+// desglose de MD del día). Todo lo que no es sushi/parrilla/cervecería cae en resto.
+function bucketRubro(rubro?: string | null): 'sushi' | 'parrilla' | 'cerveceria' | 'resto' {
+  const n = (rubro || '').toLowerCase().normalize('NFD').split('').filter(c => { const x = c.charCodeAt(0); return x < 0x300 || x > 0x36f }).join('')
+  if (n.includes('sushi')) return 'sushi'
+  if (n.includes('parrilla')) return 'parrilla'
+  if (n.includes('cervec')) return 'cerveceria'
+  return 'resto'
+}
+
 // Tareas manuales (se tildan a mano; también se resetean cada día)
 const MANUAL = [
   { id: 'reel', label: 'Reel del día publicado', modulo: 'Instagram', peso: 1 },
@@ -44,16 +54,19 @@ export async function GET() {
   const fecha = fechaAR()
 
   const [histRes, nuevosRes, ordersRes, setRes, metaRes] = await Promise.all([
-    db.from('client_history').select('accion').gte('fecha', desde).in('accion', ['WhatsApp enviado', 'Instagram enviado', 'Instagram seguido']),
+    db.from('client_history').select('accion, clients(rubro)').gte('fecha', desde).in('accion', ['WhatsApp enviado', 'Instagram enviado', 'Instagram seguido']),
     db.from('clients').select('*', { count: 'exact', head: true }).gte('created_at', desde),
     db.from('orders').select('id, total').gte('created_at', desde),
     db.from('settings').select('value').eq('key', `DIA_${fecha}`).single(),
     db.from('settings').select('value').eq('key', 'META_FACTURACION_MES').single(),
   ])
 
-  const rows = histRes.data || []
-  const md = rows.filter(r => r.accion === 'WhatsApp enviado' || r.accion === 'Instagram enviado').length
+  const rows = (histRes.data || []) as unknown as { accion: string; clients: { rubro: string | null } | null }[]
+  const mdRows = rows.filter(r => r.accion === 'WhatsApp enviado' || r.accion === 'Instagram enviado')
   const follows = rows.filter(r => r.accion === 'Instagram seguido').length
+  // Desglose de MD por rubro (los 4 que trabajamos): 5 de cada uno = 20
+  const mdRubro = { sushi: 0, parrilla: 0, cerveceria: 0, resto: 0 }
+  for (const r of mdRows) mdRubro[bucketRubro(r.clients?.rubro)]++
   const nuevos = nuevosRes.count || 0
   const ordenes = ordersRes.data || []
   const pedidos = ordenes.length
@@ -63,7 +76,10 @@ export async function GET() {
   const checks = parseChecks(setRes.data?.value)
 
   const auto = [
-    { id: 'md', label: '20 MD enviados', modulo: 'Ventas', target: 20, actual: md, peso: 3 },
+    { id: 'md_sushi', label: '5 MD a casas de sushi', modulo: 'Ventas', target: 5, actual: mdRubro.sushi, peso: 1 },
+    { id: 'md_parrilla', label: '5 MD a parrillas', modulo: 'Ventas', target: 5, actual: mdRubro.parrilla, peso: 1 },
+    { id: 'md_cerveceria', label: '5 MD a cervecerías', modulo: 'Ventas', target: 5, actual: mdRubro.cerveceria, peso: 1 },
+    { id: 'md_resto', label: '5 MD a restaurantes', modulo: 'Ventas', target: 5, actual: mdRubro.resto, peso: 1 },
     { id: 'nuevos', label: '10 negocios nuevos agregados', modulo: 'Ventas', target: 10, actual: nuevos, peso: 2 },
     { id: 'pedidos', label: '2 pedidos', modulo: 'Facturación', target: 2, actual: pedidos, peso: 3 },
     ...(metaDia > 0 ? [{ id: 'facturacion', label: `Facturar $${metaDia.toLocaleString('es-AR')} hoy`, modulo: 'Facturación', target: metaDia, actual: Math.round(facturadoHoy), peso: 4 }] : []),
