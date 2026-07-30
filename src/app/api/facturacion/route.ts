@@ -42,10 +42,20 @@ export async function GET() {
   }
   const topClientes = Object.values(porCliente).sort((a, b) => b.total - a.total).slice(0, 8)
 
+  // Meta mensual (editable en settings) → % de avance del mes y del día
+  const { data: metaRow } = await db.from('settings').select('value').eq('key', 'META_FACTURACION_MES').single()
+  const metaMes = Math.max(0, Number(metaRow?.value) || 0)
+  const metaDia = metaMes ? Math.round(metaMes / 26) : 0 // ~26 días hábiles
+  const mes = suma(mes0)
+  const hoy = suma(dia0)
+  const pctMes = metaMes ? Math.min(100, Math.round((mes.total / metaMes) * 100)) : null
+  const pctHoy = metaDia ? Math.min(100, Math.round((hoy.total / metaDia) * 100)) : null
+
   return NextResponse.json({
-    hoy: suma(dia0),
+    hoy,
     semana: suma(semana0),
-    mes: suma(mes0),
+    mes,
     topClientes,
+    metaMes, metaDia, pctMes, pctHoy,
   })
 }

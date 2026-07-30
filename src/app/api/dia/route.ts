@@ -29,18 +29,23 @@ export async function GET() {
   const desde = inicioDiaARiso()
   const fecha = fechaAR()
 
-  const [histRes, nuevosRes, ordersRes, setRes] = await Promise.all([
+  const [histRes, nuevosRes, ordersRes, setRes, metaRes] = await Promise.all([
     db.from('client_history').select('accion').gte('fecha', desde).in('accion', ['WhatsApp enviado', 'Instagram enviado', 'Instagram seguido']),
     db.from('clients').select('*', { count: 'exact', head: true }).gte('created_at', desde),
-    db.from('orders').select('id').gte('created_at', desde),
+    db.from('orders').select('id, total').gte('created_at', desde),
     db.from('settings').select('value').eq('key', `DIA_${fecha}`).single(),
+    db.from('settings').select('value').eq('key', 'META_FACTURACION_MES').single(),
   ])
 
   const rows = histRes.data || []
   const md = rows.filter(r => r.accion === 'WhatsApp enviado' || r.accion === 'Instagram enviado').length
   const follows = rows.filter(r => r.accion === 'Instagram seguido').length
   const nuevos = nuevosRes.count || 0
-  const pedidos = (ordersRes.data || []).length
+  const ordenes = ordersRes.data || []
+  const pedidos = ordenes.length
+  const facturadoHoy = ordenes.reduce((s, o) => s + (Number(o.total) || 0), 0)
+  const metaMes = Math.max(0, Number(metaRes.data?.value) || 0)
+  const metaDia = metaMes ? Math.round(metaMes / 26) : 0
   let checks: string[] = []
   try { checks = JSON.parse(setRes.data?.value || '[]') } catch { checks = [] }
 
@@ -48,6 +53,7 @@ export async function GET() {
     { id: 'md', label: '20 MD enviados', modulo: 'Ventas', target: 20, actual: md, peso: 3 },
     { id: 'nuevos', label: '10 negocios nuevos agregados', modulo: 'Ventas', target: 10, actual: nuevos, peso: 2 },
     { id: 'pedidos', label: '2 pedidos', modulo: 'Facturación', target: 2, actual: pedidos, peso: 3 },
+    ...(metaDia > 0 ? [{ id: 'facturacion', label: `Facturar $${metaDia.toLocaleString('es-AR')} hoy`, modulo: 'Facturación', target: metaDia, actual: Math.round(facturadoHoy), peso: 4 }] : []),
     { id: 'seguir', label: 'Seguir 30 cuentas', modulo: 'Captación', target: 30, actual: follows, peso: 1 },
   ].map(o => ({ ...o, tipo: 'auto' as const, done: o.actual >= o.target, frac: Math.min(o.actual / o.target, 1) }))
 
