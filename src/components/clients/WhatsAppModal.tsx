@@ -8,6 +8,8 @@ interface Props {
   onSent?: (canal: 'whatsapp' | 'instagram') => void
 }
 
+interface RespuestaRapida { id: string; emoji: string; label: string; texto: string }
+
 export default function WhatsAppModal({ clientId, onClose, onSent }: Props) {
   const [message, setMessage] = useState('')
   const [phone, setPhone] = useState('')
@@ -16,6 +18,9 @@ export default function WhatsAppModal({ clientId, onClose, onSent }: Props) {
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
   const [copiedCat, setCopiedCat] = useState<'flyer'|'lista'|null>(null)
+  const [respuestas, setRespuestas] = useState<RespuestaRapida[]>([])
+  const [primerMensaje, setPrimerMensaje] = useState('')
+  const [activo, setActivo] = useState<string>('primer')
 
   const CATALOGO_PNG = 'https://app.vittomare.com/catalogo/flyer'
   const LISTA_PRECIOS = 'https://app.vittomare.com/lista-precios'
@@ -35,8 +40,10 @@ export default function WhatsAppModal({ clientId, onClose, onSent }: Props) {
       if (data.url) {
         const url = new URL(data.url)
         setPhone(url.pathname.replace('/', ''))
-        setMessage(data.message || '')
       }
+      setMessage(data.message || '')
+      setPrimerMensaje(data.message || '')
+      setRespuestas(data.respuestas || [])
       setInstagram(data.instagram || '')
       const sm = Object.fromEntries((settingsArr || []).map((r: { key: string; value: string }) => [r.key, r.value]))
       setCompraMinima(sm.COMPRA_MINIMA || '')
@@ -51,6 +58,7 @@ export default function WhatsAppModal({ clientId, onClose, onSent }: Props) {
   }
 
   function openWhatsApp() {
+    if (!phone) return
     navigator.clipboard.writeText(message)
     window.open(`https://wa.me/${phone}`, '_blank')
     // Log en historial — guarda el texto exacto enviado
@@ -88,7 +96,7 @@ export default function WhatsAppModal({ clientId, onClose, onSent }: Props) {
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>💬 Mensaje de primer contacto</div>
+          <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>💬 Mensajes — contacto y respuestas</div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: '1.2rem' }}>✕</button>
         </div>
 
@@ -96,6 +104,31 @@ export default function WhatsAppModal({ clientId, onClose, onSent }: Props) {
           ? <div style={{ textAlign: 'center', padding: 20, color: 'var(--muted)' }}>✍️ Generando mensaje...</div>
           : <>
               <TermometroEnvio />
+              {/* Selector: primer contacto vs respuestas rápidas (2º mensaje) */}
+              <div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--muted)', fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 }}>
+                  Elegí el mensaje
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {(() => {
+                    const chip = (id: string, txt: string, label: string) => (
+                      <button key={id} onClick={() => { setMessage(txt); setActivo(id) }}
+                        style={{
+                          padding: '5px 10px', borderRadius: 16, fontSize: '0.75rem', cursor: 'pointer',
+                          border: `1px solid ${activo === id ? 'var(--accent)' : 'var(--border)'}`,
+                          background: activo === id ? 'var(--accent)' : 'transparent',
+                          color: activo === id ? '#fff' : 'var(--muted)', fontWeight: activo === id ? 700 : 500,
+                        }}>
+                        {label}
+                      </button>
+                    )
+                    return [
+                      chip('primer', primerMensaje, '👋 Primer contacto'),
+                      ...respuestas.map(r => chip(r.id, r.texto, `${r.emoji} ${r.label}`)),
+                    ]
+                  })()}
+                </div>
+              </div>
               {compraMinima && (
                 <div style={{ background: '#22c55e12', border: '1px solid #22c55e44', borderRadius: 8, padding: '7px 12px', fontSize: '0.78rem', color: '#22c55e', fontWeight: 600 }}>
                   🛒 Compra mínima: {compraMinima}
