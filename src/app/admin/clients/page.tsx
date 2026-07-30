@@ -2,7 +2,6 @@ import { createClient } from '@/lib/supabase/server'
 import BulkClients from '@/components/clients/BulkClients'
 import ClientsAccordion from '@/components/clients/ClientsAccordion'
 import Link from 'next/link'
-import DeleteAllButton from '@/components/clients/DeleteAllButton'
 import TermometroEnvio from '@/components/clients/TermometroEnvio'
 import BuscarIgTanda from '@/components/clients/BuscarIgTanda'
 import type { Client } from '@/lib/types'
@@ -231,7 +230,6 @@ export default async function ClientsPage({ searchParams }: {
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <TermometroEnvio compact />
-          {isAdmin && <DeleteAllButton total={totalAll || 0} />}
           {isAdmin && <Link href="/admin/clients/import" className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>📥 CSV</Link>}
           {isAdmin && <Link href="/admin/clients/new" className="btn btn-primary">+ Agregar</Link>}
         </div>
