@@ -23,6 +23,13 @@ export default async function AdminPage() {
   const od = orders || []
   const daily = tasks?.length ? tasks : generateDailyTasks(cl)
 
+  // Seguimientos vencidos / de hoy (count real, sin el tope de 1000 filas)
+  const hoyStr = now.toISOString().split('T')[0]
+  const [{ count: vencidos }, { count: hoyFU }] = await Promise.all([
+    db.from('clients').select('id', { count: 'exact', head: true }).not('next_followup', 'is', null).lt('next_followup', hoyStr),
+    db.from('clients').select('id', { count: 'exact', head: true }).eq('next_followup', hoyStr),
+  ])
+
   const revenue = od.filter(o => o.status === 'entregado').reduce((s, o) => s + (o.total || 0), 0)
   const prevOrders = (allOrders || []).filter(o => o.created_at < startOfMonth.toISOString())
   const prevRevenue = prevOrders.filter(o => o.status === 'entregado').reduce((s, o) => s + (o.total || 0), 0)
@@ -48,6 +55,30 @@ export default async function AdminPage() {
       <p style={{ color: 'var(--muted)', fontSize: '0.85rem', marginBottom: 24 }}>
         {now.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
       </p>
+
+      {/* Alerta de seguimientos: cada uno sin hacer es plata que se enfría */}
+      {((vencidos || 0) > 0 || (hoyFU || 0) > 0) && (
+        <a href="/admin/contactar-hoy" style={{ textDecoration: 'none' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, marginBottom: 24,
+            background: (vencidos || 0) > 0 ? '#ef444414' : '#f59e0b14',
+            border: `1px solid ${(vencidos || 0) > 0 ? '#ef4444' : '#f59e0b'}`,
+          }}>
+            <span style={{ fontSize: '1.4rem' }}>{(vencidos || 0) > 0 ? '🔴' : '🟡'}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: (vencidos || 0) > 0 ? '#ef4444' : '#f59e0b' }}>
+                {(vencidos || 0) > 0
+                  ? `Tenés ${vencidos} seguimiento${vencidos === 1 ? '' : 's'} VENCIDO${vencidos === 1 ? '' : 'S'}${(hoyFU || 0) > 0 ? ` y ${hoyFU} para hoy` : ''}`
+                  : `Tenés ${hoyFU} seguimiento${hoyFU === 1 ? '' : 's'} para hoy`}
+              </div>
+              <div style={{ fontSize: '0.76rem', color: 'var(--muted)' }}>
+                Cada seguimiento sin hacer es plata que se enfría. Tocá para trabajarlos ahora →
+              </div>
+            </div>
+            <span className="btn btn-primary" style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>Contactar hoy</span>
+          </div>
+        </a>
+      )}
 
       {/* Métricas principales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, marginBottom: 28 }}>
