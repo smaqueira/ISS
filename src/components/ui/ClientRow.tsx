@@ -22,6 +22,14 @@ function fechaCorta(iso?: string) {
   if (isNaN(d.getTime())) return ''
   return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
 }
+// Color según hace cuánto fue el último trato: verde ≤2 días, ámbar ≤7, rojo +7.
+function colorRecencia(iso?: string) {
+  if (!iso) return '#6b7280'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return '#6b7280'
+  const dias = (Date.now() - d.getTime()) / 86400000
+  return dias <= 2 ? '#22c55e' : dias <= 7 ? '#f59e0b' : '#ef4444'
+}
 
 const RESERVED_TAGS = ['listo', 'sin_datos', 'me_sigue', 'ig_seguido', 'ig_like']
 
@@ -79,7 +87,8 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
       body: JSON.stringify({ client_id: client.id, total, status: 'confirmado' }),
     })
     if (!r.ok) { alert('No se pudo registrar el pedido.'); return }
-    setMarcasExtra(m => ({ ...m, pedido: new Date().toISOString() }))
+    const now = new Date().toISOString()
+    setMarcasExtra(m => ({ ...m, pedido: now, ultimoFecha: now, ultimoAccion: 'Pedido' }))
     router.refresh()
   }
 
@@ -102,8 +111,10 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
     setTags(next)
     // Al marcar, registramos la fecha (queda en el historial para siempre).
     if (!activo) {
+      const now = new Date().toISOString()
       const campo = accion === 'instagram_seguido' ? 'seguido' : accion === 'instagram_like' ? 'like' : 'sigue'
-      setMarcasExtra(m => ({ ...m, [campo]: new Date().toISOString() }))
+      const label = accion === 'instagram_seguido' ? 'Seguido IG' : accion === 'instagram_like' ? 'Like IG' : 'Te sigue'
+      setMarcasExtra(m => ({ ...m, [campo]: now, ultimoFecha: now, ultimoAccion: label }))
     }
     await fetch(`/api/clients/${client.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -121,11 +132,15 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
   const alertColor = overdue ? '#ef4444' : todayFU ? '#f59e0b' : null
 
   async function changeStatus(newStatus: string) {
+    if (newStatus === status) return
     setStatus(newStatus as typeof client.status)
+    const now = new Date().toISOString()
+    setMarcasExtra(m => ({ ...m, estado: now, ultimoFecha: now, ultimoAccion: 'Cambio de estado' }))
     await fetch(`/api/clients/${client.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus }),
     })
+    router.refresh()
   }
 
   const statusLabel = STATUS_LABELS[status] || status
@@ -166,6 +181,12 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
               {t}
             </span>
           ))}
+          {marcas.ultimoFecha && (
+            <span title={`Último trato: ${marcas.ultimoAccion || 'movimiento'} el ${fechaCorta(marcas.ultimoFecha)}`}
+              style={{ fontSize: '0.64rem', fontWeight: 700, background: colorRecencia(marcas.ultimoFecha) + '22', color: colorRecencia(marcas.ultimoFecha), border: `1px solid ${colorRecencia(marcas.ultimoFecha)}55`, borderRadius: 4, padding: '1px 6px' }}>
+              🕒 {marcas.ultimoAccion || 'Movimiento'} · {fechaCorta(marcas.ultimoFecha)}
+            </span>
+          )}
         </div>
         <div style={{ fontSize: '0.77rem', color: 'var(--muted)' }}>
           {client.rubro || '—'} · {client.city || '—'}
@@ -188,13 +209,18 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
       </div>
 
       <span className={`badge badge-${client.type}`}>{client.type.toUpperCase()}</span>
-      <select
-        value={status}
-        onChange={e => changeStatus(e.target.value)}
-        style={{ padding: '2px 6px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 600, background: statusColor + '22', color: statusColor, border: `1px solid ${statusColor}44`, cursor: 'pointer', outline: 'none' }}
-      >
-        {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+        <select
+          value={status}
+          onChange={e => changeStatus(e.target.value)}
+          style={{ padding: '2px 6px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 600, background: statusColor + '22', color: statusColor, border: `1px solid ${statusColor}44`, cursor: 'pointer', outline: 'none' }}
+        >
+          {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+        {marcas.estado && (
+          <span style={{ fontSize: '0.58rem', color: 'var(--muted)' }} title="Fecha del último cambio de estado">desde {fechaCorta(marcas.estado)}</span>
+        )}
+      </div>
 
       <div style={{ textAlign: 'right', minWidth: 50 }}>
         <div style={{ fontWeight: 700, color: client.score >= 75 ? '#22c55e' : client.score >= 50 ? '#eab308' : '#ef4444' }}>

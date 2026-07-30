@@ -108,6 +108,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Params }) {
     await logHistory(db, id, 'Prioridad cambiada', dbBody.prioridad)
   }
 
+  // Log de cambio de etiquetas (listo / sin datos / quitar follow, etc.)
+  if (dbBody.tags && !dbBody.status && !_accion) {
+    await logHistory(db, id, 'Etiquetas actualizadas')
+  }
+
   // Log generic update if no specific change logged
   if (!dbBody.status && !dbBody.next_followup && !dbBody.prioridad && !dbBody.tags && !_accion) {
     await logHistory(db, id, 'Datos actualizados')
