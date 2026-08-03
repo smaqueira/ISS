@@ -2,17 +2,19 @@
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-interface Prop { rubro?: string; city?: string }
+interface Prop { rubro?: string; city?: string; tag?: string }
 interface Item { id: string; name: string; city: string | null; handle: string; elegido: boolean }
 
-export default function BuscarIgTanda({ rubro, city }: Prop) {
+const TAG_LABEL: Record<string, string> = { listo: '✅ listos', sin_datos: '⚠️ sin datos', me_sigue: '💚 me siguen' }
+
+export default function BuscarIgTanda({ rubro, city, tag }: Prop) {
   const router = useRouter()
   const [estado, setEstado] = useState<'idle' | 'buscando' | 'revisar' | 'guardando'>('idle')
   const [progreso, setProgreso] = useState('')
   const [items, setItems] = useState<Item[]>([])
 
-  const filtro = [rubro, city].filter(Boolean).join(' · ')
-  if (!rubro && !city) return null // solo con un filtro activo, para no barrer toda la base
+  const filtro = [rubro, city, tag ? (TAG_LABEL[tag] || tag) : ''].filter(Boolean).join(' · ')
+  if (!rubro && !city && !tag) return null // solo con un filtro activo, para no barrer toda la base
 
   async function buscar() {
     setEstado('buscando')
@@ -21,7 +23,7 @@ export default function BuscarIgTanda({ rubro, city }: Prop) {
     try {
       const lr = await fetch('/api/clients/sin-ig', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rubro, city, limite: 30 }),
+        body: JSON.stringify({ rubro, city, tag, limite: 30 }),
       })
       const ld = await lr.json()
       const contactos: { id: string; name: string; city: string | null }[] = ld.contactos || []

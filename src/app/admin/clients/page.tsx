@@ -330,7 +330,7 @@ export default async function ClientsPage({ searchParams }: {
       )}
 
       {/* Buscar Instagram en tanda para el filtro actual (rubro/zona) */}
-      <BuscarIgTanda rubro={filters.rubro} city={filters.city} />
+      <BuscarIgTanda rubro={filters.rubro} city={filters.city} tag={filters.tag} />
       <BuscarEmailTanda rubro={filters.rubro} city={filters.city} />
 
       {/* Prioridad + Temperatura */}
