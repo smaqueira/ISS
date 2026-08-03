@@ -16,6 +16,11 @@ export default function ListaPreciosAdminPage() {
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  // Por producto: % de descuento (pctProd) o precio mayorista fijo (precioProd)
+  const [prods, setProds] = useState<{ id: string; name: string; price: number; category: string }[]>([])
+  const [pctProd, setPctProd] = useState<Record<string, string>>({})
+  const [precioProd, setPrecioProd] = useState<Record<string, string>>({})
+
   useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then((arr) => {
       if (!Array.isArray(arr)) return
@@ -23,23 +28,65 @@ export default function ListaPreciosAdminPage() {
       setDescuento(s.DESCUENTO_MAYORISTA || '')
       setMinMayor(s.COMPRA_MINIMA || '')
       setMinMinor(s.COMPRA_MINIMA_MINORISTA || '')
+      try {
+        const m = JSON.parse(s.DESCUENTOS_MAYORISTA_POR_PRODUCTO || '{}')
+        if (m && typeof m === 'object') {
+          const pp: Record<string, string> = {}, pr: Record<string, string> = {}
+          for (const [k, v] of Object.entries(m as Record<string, { pct?: number; precio?: number }>)) {
+            if (v && typeof v.pct === 'number') pp[k] = String(v.pct)
+            if (v && typeof v.precio === 'number') pr[k] = String(v.precio)
+          }
+          setPctProd(pp); setPrecioProd(pr)
+        }
+      } catch { /* ignore */ }
+    }).catch(() => {})
+
+    fetch('/api/catalog').then(r => r.json()).then((arr) => {
+      if (Array.isArray(arr)) setProds(arr.map((p: { id: string; name: string; price: number; category?: string }) => ({
+        id: String(p.id), name: p.name, price: Number(p.price) || 0, category: p.category || 'General',
+      })))
     }).catch(() => {})
   }, [])
 
+  const num = (v: string, max = 1e12) => Math.min(max, Math.max(0, Number((v || '').replace(/[^0-9.]/g, '')) || 0))
+  const descGeneralNum = Math.min(90, num(descuento))
+
+  // Precio mayorista resultante de un producto (precio fijo > % propio > general)
+  function precioMayDe(p: { id: string; price: number }): number {
+    const pr = precioProd[p.id]?.trim()
+    if (pr) return Math.round(num(pr))
+    const pc = pctProd[p.id]?.trim()
+    const pct = pc ? Math.min(90, num(pc)) : descGeneralNum
+    return Math.round(p.price * (1 - pct / 100))
+  }
+
   async function guardar() {
     setSaving(true)
+    const mapa: Record<string, { pct?: number; precio?: number }> = {}
+    for (const p of prods) {
+      const o: { pct?: number; precio?: number } = {}
+      const pr = precioProd[p.id]?.trim()
+      const pc = pctProd[p.id]?.trim()
+      if (pr) o.precio = Math.round(num(pr))
+      else if (pc) o.pct = Math.min(90, num(pc))
+      if (o.pct !== undefined || o.precio !== undefined) mapa[p.id] = o
+    }
     await fetch('/api/settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify([
-        { key: 'DESCUENTO_MAYORISTA', value: String(Math.min(90, Math.max(0, Number(descuento.replace(/[^0-9.]/g, '')) || 0))) },
+        { key: 'DESCUENTO_MAYORISTA', value: String(descGeneralNum) },
         { key: 'COMPRA_MINIMA', value: minMayor.trim() },
         { key: 'COMPRA_MINIMA_MINORISTA', value: minMinor.trim() },
+        { key: 'DESCUENTOS_MAYORISTA_POR_PRODUCTO', value: JSON.stringify(mapa) },
       ]),
     })
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
+
+  const fmt = (n: number) => '$' + Math.round(n).toLocaleString('es-AR')
+  const categorias = [...new Set(prods.map(p => p.category))].sort()
 
   function copyLink() {
     navigator.clipboard.writeText(urlDe(vista))
@@ -131,6 +178,45 @@ export default function ListaPreciosAdminPage() {
           {saving ? 'Guardando…' : saved ? '✅ Guardado' : 'Guardar configuración'}
         </button>
       </div>
+
+      {/* Descuento / precio por producto (para la lista mayorista) */}
+      {prods.length > 0 && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>🏷️ Precio mayorista por producto</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 12 }}>
+            Por cada producto podés poner un <strong>% de descuento</strong> o directamente el <strong>precio mayorista fijo</strong>. Si cargás precio, manda el precio. Si dejás ambos vacíos, usa el descuento general ({descGeneralNum}%).
+          </div>
+          <div style={{ maxHeight: 420, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {categorias.map(cat => (
+              <div key={cat}>
+                <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#C9A96E', textTransform: 'uppercase', letterSpacing: 0.5, margin: '10px 0 4px' }}>{cat}</div>
+                {prods.filter(p => p.category === cat).map(p => {
+                  const usaPrecio = !!precioProd[p.id]?.trim()
+                  return (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: 140 }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{p.name}</div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>público {fmt(p.price)}</div>
+                      </div>
+                      <input value={pctProd[p.id] || ''} onChange={e => setPctProd(m => ({ ...m, [p.id]: e.target.value }))}
+                        placeholder={`${descGeneralNum}%`} title="% de descuento"
+                        style={{ ...inp, width: 66, opacity: usaPrecio ? 0.4 : 1, padding: '6px 8px' }} disabled={usaPrecio} />
+                      <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>o</span>
+                      <input value={precioProd[p.id] || ''} onChange={e => setPrecioProd(m => ({ ...m, [p.id]: e.target.value }))}
+                        placeholder="$ fijo" title="Precio mayorista fijo"
+                        style={{ ...inp, width: 92, padding: '6px 8px' }} />
+                      <div style={{ width: 96, textAlign: 'right', fontWeight: 700, fontSize: '0.85rem', color: '#22c55e' }}>{fmt(precioMayDe(p))}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
+          </div>
+          <button onClick={guardar} disabled={saving} className="btn btn-primary" style={{ marginTop: 12, fontSize: '0.82rem' }}>
+            {saving ? 'Guardando…' : saved ? '✅ Guardado' : 'Guardar todo'}
+          </button>
+        </div>
+      )}
 
       {/* Selector de lista */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>

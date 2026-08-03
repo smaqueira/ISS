@@ -33,7 +33,7 @@ export default async function ListaPreciosPage({ searchParams }: {
   const db = await createClient()
   const { data: settings } = await db.from('settings').select('key, value').in('key', [
     'COMPANY_NAME', 'COMPANY_WHATSAPP', 'COMPANY_LOGO_URL',
-    'COMPRA_MINIMA', 'COMPRA_MINIMA_MINORISTA', 'DESCUENTO_MAYORISTA',
+    'COMPRA_MINIMA', 'COMPRA_MINIMA_MINORISTA', 'DESCUENTO_MAYORISTA', 'DESCUENTOS_MAYORISTA_POR_PRODUCTO',
   ])
   const s = Object.fromEntries((settings || []).map((r: { key: string; value: string }) => [r.key, r.value]))
 
@@ -42,10 +42,22 @@ export default async function ListaPreciosPage({ searchParams }: {
   const logo = s.COMPANY_LOGO_URL || ''
 
   // Minorista (pública) = precio de BlueMarket tal cual.
-  // Mayorista (privada) = precio de BlueMarket MENOS un descuento %.
-  const descuento = Math.min(90, Math.max(0, Number(s.DESCUENTO_MAYORISTA) || 0))
+  // Mayorista (privada) = precio de BlueMarket MENOS el descuento de CADA producto
+  // (mapa {id: %}); si un producto no tiene descuento propio, usa el general.
+  // Por producto se puede fijar el precio mayorista directo (precio) o un % de
+  // descuento (pct). Si no hay nada del producto, se usa el descuento general.
+  const clamp = (n: number) => Math.min(90, Math.max(0, n))
+  const descuentoGeneral = clamp(Number(s.DESCUENTO_MAYORISTA) || 0)
+  let mapa: Record<string, { pct?: number; precio?: number }> = {}
+  try { const m = JSON.parse(s.DESCUENTOS_MAYORISTA_POR_PRODUCTO || '{}'); if (m && typeof m === 'object') mapa = m } catch { /* ignore */ }
+  const precioMayorista = (p: { id: string | number; price: number }) => {
+    const o = mapa[String(p.id)]
+    if (o && typeof o.precio === 'number' && o.precio > 0) return Math.round(o.precio)
+    const pct = (o && typeof o.pct === 'number' && !isNaN(o.pct)) ? o.pct : descuentoGeneral
+    return Math.round(p.price * (1 - clamp(pct) / 100))
+  }
   const compraMinima = esMayorista ? (s.COMPRA_MINIMA || '') : (s.COMPRA_MINIMA_MINORISTA || '')
-  const precioDe = (base: number) => esMayorista ? Math.round(base * (1 - descuento / 100)) : base
+  const precioDe = (p: { id: string | number; price: number }) => esMayorista ? precioMayorista(p) : p.price
 
   const etiqueta = esMayorista ? 'MAYORISTA' : 'MINORISTA'
   const publico = esMayorista ? 'Precios para negocios' : 'Precios para particulares'
@@ -90,7 +102,7 @@ export default async function ListaPreciosPage({ searchParams }: {
                   {p.featured && <span style={{ marginLeft: 8, fontSize: '0.65rem', background: '#f97316', color: 'white', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>DESTACADO</span>}
                 </div>
                 <div style={{ fontWeight: 700, color: p.price ? '#0D1326' : '#64748b', fontSize: '0.9rem', whiteSpace: 'nowrap', marginLeft: 16 }}>
-                  {p.price ? formatPrice(precioDe(p.price)) : 'Consultar'}
+                  {p.price ? formatPrice(precioDe(p)) : 'Consultar'}
                 </div>
               </div>
             ))}
