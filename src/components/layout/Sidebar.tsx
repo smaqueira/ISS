@@ -44,6 +44,7 @@ const GROUPS = [
       { href: '/admin/catalogo',    label: 'Catálogo WA', icon: '📲' },
       { href: '/admin/rubros',      label: 'Rubros',      icon: '🏷️' },
       { href: '/admin/duplicados',  label: 'Duplicados',  icon: '🔁' },
+      { href: '/admin/clients/exterior', label: 'Del exterior', icon: '🌎' },
       { href: '/admin/prospecting', label: 'Prospección', icon: '🔍' },
       { href: '/admin/grupos',      label: 'Grupos B2C',  icon: '👥' },
       { href: '/admin/comunidades', label: 'Comunidades', icon: '🌐' },
