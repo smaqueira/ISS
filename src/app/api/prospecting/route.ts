@@ -52,7 +52,8 @@ export async function POST(req: NextRequest) {
         city, instagram: ig ? `@${ig}` : null,
         website: ig ? null : (r.website || null),
         notes: r.address || null,
-        status: 'nuevo', score: r.score, channel: r.channel, tags: [],
+        status: 'nuevo', score: r.score, channel: r.channel,
+        tags: (!r.phone && !ig) ? ['sin_datos'] : [],
       })
       if (error) { console.error('Import error:', r.name, error.message); continue }
       imported++

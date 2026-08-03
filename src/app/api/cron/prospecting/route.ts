@@ -96,7 +96,8 @@ export async function GET() {
           status: 'nuevo',
           score: scoreLead(place),
           channel: place.phone ? 'whatsapp' : (ig ? 'instagram' : 'web'),
-          tags: ['prospectado-auto'],
+          // Sin teléfono ni Instagram → "sin datos" (no está listo para contactar)
+          tags: (!place.phone && !ig) ? ['prospectado-auto', 'sin_datos'] : ['prospectado-auto'],
         })
 
         if (error) {
