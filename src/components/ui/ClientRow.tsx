@@ -41,6 +41,8 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
   const [igInput, setIgInput] = useState('')
   const [buscandoIg, setBuscandoIg] = useState(false)
   const igTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [email, setEmail] = useState<string>(client.email || '')
+  const [buscandoEmail, setBuscandoEmail] = useState(false)
   // Marcas de acciones ya hechas (con fecha). Solo sumamos fechas al marcar en
   // vivo; el resto viene del historial (server) y prevalece al refrescar.
   const [marcasExtra, setMarcasExtra] = useState<ClientMarcas>({})
@@ -67,6 +69,29 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
     if (igTimer.current) clearTimeout(igTimer.current)
     if (!v.trim()) return
     igTimer.current = setTimeout(() => guardarInstagram(v), pegado ? 100 : 900)
+  }
+
+  async function buscarEmail() {
+    setBuscandoEmail(true)
+    try {
+      const r = await fetch('/api/clients/buscar-email', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: client.name, city: client.city, website: client.website }),
+      })
+      const d = await r.json()
+      if (d.email) {
+        if (!confirm(`Email encontrado para "${client.name}":\n\n${d.email}\n\n¿Guardarlo en la ficha?`)) return
+        setEmail(d.email)
+        await fetch(`/api/clients/${client.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: d.email }),
+        })
+        router.refresh()
+      } else {
+        alert(`No se encontró email para "${client.name}".${client.website ? '' : ' No tiene web cargada — cargá el sitio y volvé a probar.'}`)
+      }
+    } catch { alert('No se pudo buscar el email.') }
+    finally { setBuscandoEmail(false) }
   }
 
   async function guardarInstagram(v: string) {
@@ -234,6 +259,9 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
           {instagram && igUser && (
             <span> · <a href={`https://instagram.com/${igUser}`} target="_blank" rel="noreferrer" style={{ color: '#DD2A7B', fontWeight: 600, textDecoration: 'none' }} title="Abrir Instagram">📸 @{igUser}</a></span>
           )}
+          {email && (
+            <span> · <a href={`mailto:${email}`} style={{ color: '#7EC8C8', fontWeight: 600, textDecoration: 'none' }} title="Enviar email">✉️ {email}</a></span>
+          )}
           {tags.includes('me_sigue') && <span style={{ color: '#22c55e', fontWeight: 600 }} title="Te sigue en Instagram"> · 💚 Te sigue</span>}
           {!client.phone && client.notes && <span style={{ fontStyle: 'italic' }}> · {client.notes}</span>}
         </div>
@@ -324,6 +352,11 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
             setMarcasExtra(m => ({ ...m, contacto: now, ultimoFecha: now, ultimoAccion: label }))
             router.refresh()
           }} />}
+        {!email && (
+          <button onClick={buscarEmail} disabled={buscandoEmail} className="btn btn-ghost" style={{ padding: '6px 10px' }} title="Buscar email (en la web del negocio y Google)">
+            {buscandoEmail ? '⏳' : '✉️'}
+          </button>
+        )}
         <button onClick={marcarMdManual} className="btn btn-ghost" style={{ padding: '6px 10px' }} title="Marcar MD enviado (lo escribí por fuera del sistema)">
           📤
         </button>
