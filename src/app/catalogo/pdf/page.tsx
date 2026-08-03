@@ -1,14 +1,53 @@
 import { getBlueMarketCatalog } from '@/lib/bluemarket'
+import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 import PrintButton from './PrintButton'
 
 export const dynamic = 'force-dynamic'
 
-export default async function CatalogoPDFPage() {
+export default async function CatalogoPDFPage({ searchParams }: {
+  searchParams: Promise<{ tipo?: string }>
+}) {
+  const { tipo } = await searchParams
+  const esMayorista = tipo === 'mayorista' // por defecto = MINORISTA (pública)
+
+  // El catálogo mayorista es privado: solo admin logueado.
+  if (esMayorista) {
+    const store = await cookies()
+    if (store.get('iss_session')?.value !== 'admin') {
+      return (
+        <div style={{ minHeight: '100vh', background: '#0D1326', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif', gap: 8 }}>
+          <div style={{ fontSize: '2.5rem' }}>🔒</div>
+          <div style={{ fontWeight: 700 }}>Catálogo no disponible</div>
+          <div style={{ color: '#ffffff66', fontSize: '0.85rem' }}>Este catálogo es privado.</div>
+        </div>
+      )
+    }
+  }
+
   const products = await getBlueMarketCatalog()
   const items = (products || []) as {
     id: string; name: string; category: string | null
     price: number | null; unit: string | null; image_url: string | null
   }[]
+
+  // Precios mayoristas: precio fijo por producto > % por producto > % general.
+  const db = await createClient()
+  const { data: settings } = await db.from('settings').select('key, value')
+    .in('key', ['DESCUENTO_MAYORISTA', 'DESCUENTOS_MAYORISTA_POR_PRODUCTO'])
+  const sm = Object.fromEntries((settings || []).map((r: { key: string; value: string }) => [r.key, r.value]))
+  const clamp = (n: number) => Math.min(90, Math.max(0, n))
+  const descuentoGeneral = clamp(Number(sm.DESCUENTO_MAYORISTA) || 0)
+  let mapa: Record<string, { pct?: number; precio?: number }> = {}
+  try { const m = JSON.parse(sm.DESCUENTOS_MAYORISTA_POR_PRODUCTO || '{}'); if (m && typeof m === 'object') mapa = m } catch { /* ignore */ }
+  const precioDe = (p: { id: string; price: number | null }): number | null => {
+    if (!p.price) return p.price
+    if (!esMayorista) return p.price
+    const o = mapa[String(p.id)]
+    if (o && typeof o.precio === 'number' && o.precio > 0) return Math.round(o.precio)
+    const pct = (o && typeof o.pct === 'number' && !isNaN(o.pct)) ? o.pct : descuentoGeneral
+    return Math.round(p.price * (1 - clamp(pct) / 100))
+  }
 
   const byCategory: Record<string, typeof items> = {}
   for (const p of items) {
@@ -17,9 +56,8 @@ export default async function CatalogoPDFPage() {
     byCategory[cat].push(p)
   }
 
-  const today = new Date().toLocaleDateString('es-AR', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  })
+  const today = new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
+  const badge = esMayorista ? 'LISTA MAYORISTA · NEGOCIOS' : 'CATÁLOGO DE PRECIOS'
 
   return (
     <>
@@ -82,7 +120,7 @@ export default async function CatalogoPDFPage() {
             </div>
           </div>
           <div className="subtitle">SELECCIÓN DEL DÍA · {today.toUpperCase()}</div>
-          <div className="badge">CATÁLOGO DE PRECIOS</div>
+          <div className="badge">{badge}</div>
         </div>
 
         {Object.entries(byCategory).map(([cat, prods]) => (
@@ -94,8 +132,9 @@ export default async function CatalogoPDFPage() {
             </div>
             <div className="grid">
               {prods.map(p => {
-                const price = p.price
-                  ? `$${Number(p.price).toLocaleString('es-AR')} / ${p.unit || 'kg'}`
+                const precio = precioDe(p)
+                const price = precio
+                  ? `$${Number(precio).toLocaleString('es-AR')} / ${p.unit || 'kg'}`
                   : 'Consultar precio'
                 return (
                   <div key={p.id} className="card">
@@ -105,7 +144,7 @@ export default async function CatalogoPDFPage() {
                     }
                     <div className="card-body">
                       <div className="card-name">{p.name}</div>
-                      <div className={`card-price${!p.price ? ' consultar' : ''}`}>{price}</div>
+                      <div className={`card-price${!precio ? ' consultar' : ''}`}>{price}</div>
                     </div>
                   </div>
                 )

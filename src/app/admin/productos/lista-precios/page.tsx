@@ -155,6 +155,22 @@ export default function ListaPreciosAdminPage() {
         </p>
       </div>
 
+      {/* Catálogo con fotos (formato PDF presentable) */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>🖼️ Catálogo con fotos (formato presentable)</div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 12 }}>
+          El catálogo lindo con fotos por producto, en sus dos versiones. Abrí y usá “Descargar imagen / PDF” para enviarlo.
+        </div>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <a href="https://app.vittomare.com/catalogo/pdf?tipo=minorista" target="_blank" rel="noreferrer" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            🛒 Catálogo minorista <span style={{ fontSize: '0.68rem', opacity: 0.8 }}>(público)</span>
+          </a>
+          <a href="https://app.vittomare.com/catalogo/pdf?tipo=mayorista" target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            🏢 Catálogo mayorista <span style={{ fontSize: '0.68rem', color: '#ef4444' }}>(privado)</span>
+          </a>
+        </div>
+      </div>
+
       {/* Config de precios */}
       <div className="card" style={{ marginBottom: 20 }}>
         <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>⚙️ Configuración</div>
