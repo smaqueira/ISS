@@ -6,7 +6,7 @@ export const runtime = 'nodejs'
 
 const KEY = 'IG_CUENTA_HISTORIAL'
 
-interface Snap { fecha: string; posts: number; followers: number; following: number }
+interface Snap { fecha: string; posts: number; followers: number; following: number; visualizaciones: number }
 
 async function leer(db: Awaited<ReturnType<typeof createClient>>): Promise<Snap[]> {
   const { data } = await db.from('settings').select('value').eq('key', KEY).single()
@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     posts: Math.max(0, Math.round(Number(body.posts) || 0)),
     followers: Math.max(0, Math.round(Number(body.followers) || 0)),
     following: Math.max(0, Math.round(Number(body.following) || 0)),
+    visualizaciones: Math.max(0, Math.round(Number(body.visualizaciones) || 0)),
   }
   snaps.push(snap)
   const recortado = snaps.length > 90 ? snaps.slice(-90) : snaps

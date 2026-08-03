@@ -1,12 +1,14 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-interface Snap { fecha: string; posts: number; followers: number; following: number }
+interface Snap { fecha: string; posts: number; followers: number; following: number; visualizaciones?: number }
 
-const METRICAS: Record<'followers' | 'following' | 'posts', { label: string; color: string }> = {
+type MetricaKey = 'followers' | 'following' | 'posts' | 'visualizaciones'
+const METRICAS: Record<MetricaKey, { label: string; color: string }> = {
   followers: { label: 'Seguidores', color: '#22c55e' },
   following: { label: 'Seguidos', color: '#DD2A7B' },
   posts: { label: 'Publicaciones', color: '#7EC8C8' },
+  visualizaciones: { label: 'Vistas (30d)', color: '#a855f7' },
 }
 
 function delta(actual: number, prev: number | undefined) {
@@ -51,17 +53,18 @@ export default function MiCuentaInstagram() {
   const [posts, setPosts] = useState('')
   const [followers, setFollowers] = useState('')
   const [following, setFollowing] = useState('')
+  const [visualizaciones, setVisualizaciones] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [abierto, setAbierto] = useState(false)
-  const [metrica, setMetrica] = useState<'followers' | 'following' | 'posts'>('followers')
+  const [metrica, setMetrica] = useState<MetricaKey>('followers')
 
   useEffect(() => {
     fetch('/api/instagram/cuenta').then(r => r.json()).then(d => {
       const s: Snap[] = d?.snapshots || []
       setSnaps(s)
       const last = s[s.length - 1]
-      if (last) { setPosts(String(last.posts)); setFollowers(String(last.followers)); setFollowing(String(last.following)) }
+      if (last) { setPosts(String(last.posts)); setFollowers(String(last.followers)); setFollowing(String(last.following)); setVisualizaciones(String(last.visualizaciones ?? '')) }
     }).catch(() => setSnaps([]))
   }, [])
 
@@ -70,7 +73,7 @@ export default function MiCuentaInstagram() {
     try {
       const r = await fetch('/api/instagram/cuenta', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ posts: Number(posts), followers: Number(followers), following: Number(following) }),
+        body: JSON.stringify({ posts: Number(posts), followers: Number(followers), following: Number(following), visualizaciones: Number(visualizaciones) }),
       })
       const d = await r.json()
       setSnaps(d?.snapshots || [])
@@ -96,10 +99,11 @@ export default function MiCuentaInstagram() {
       </div>
 
       {last ? (
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Metrica label="Publicaciones" valor={last.posts} d={delta(last.posts, prev?.posts)} />
           <Metrica label="Seguidores" valor={last.followers} d={delta(last.followers, prev?.followers)} />
           <Metrica label="Seguidos" valor={last.following} d={delta(last.following, prev?.following)} />
+          <Metrica label="Vistas (30d)" valor={last.visualizaciones ?? 0} d={delta(last.visualizaciones ?? 0, prev?.visualizaciones)} />
         </div>
       ) : (
         <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
@@ -122,8 +126,8 @@ export default function MiCuentaInstagram() {
 
       {snaps.length >= 2 && (
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            {(['followers', 'following', 'posts'] as const).map(m => (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {(['followers', 'following', 'posts', 'visualizaciones'] as const).map(m => (
               <button key={m} onClick={() => setMetrica(m)} style={{
                 fontSize: '0.7rem', padding: '3px 10px', borderRadius: 12, cursor: 'pointer',
                 border: `1px solid ${metrica === m ? METRICAS[m].color : 'var(--border)'}`,
@@ -132,10 +136,10 @@ export default function MiCuentaInstagram() {
               }}>{METRICAS[m].label}</button>
             ))}
           </div>
-          <Sparkline values={snaps.map(s => s[metrica])} color={METRICAS[metrica].color} />
+          <Sparkline values={snaps.map(s => s[metrica] ?? 0)} color={METRICAS[metrica].color} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--muted)' }}>
-            <span>{new Date(snaps[0].fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}: {snaps[0][metrica].toLocaleString('es-AR')}</span>
-            <span>ahora: {snaps[snaps.length - 1][metrica].toLocaleString('es-AR')}</span>
+            <span>{new Date(snaps[0].fecha).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })}: {(snaps[0][metrica] ?? 0).toLocaleString('es-AR')}</span>
+            <span>ahora: {(snaps[snaps.length - 1][metrica] ?? 0).toLocaleString('es-AR')}</span>
           </div>
         </div>
       )}
@@ -152,11 +156,16 @@ export default function MiCuentaInstagram() {
                 style={{ flex: 1, minWidth: 0, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', color: 'var(--text)', fontSize: '0.85rem' }} />
             ))}
           </div>
+          <label style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
+            👁️ Visualizaciones (últimos 30 días)
+            <input type="number" inputMode="numeric" value={visualizaciones} onChange={e => setVisualizaciones(e.target.value)} placeholder="ej: 12500"
+              style={{ width: '100%', marginTop: 4, background: 'var(--bg)', border: '1px solid #a855f755', borderRadius: 8, padding: '8px 10px', color: 'var(--text)', fontSize: '0.85rem', boxSizing: 'border-box' }} />
+          </label>
           <button onClick={guardar} disabled={saving} className="btn btn-primary" style={{ padding: '8px', fontSize: '0.85rem' }}>
             {saving ? 'Guardando...' : saved ? '✓ Guardado' : 'Guardar de hoy'}
           </button>
           <div style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>
-            Copiá los 3 números tal cual figuran en tu perfil de Instagram.
+            Copiá los números tal cual figuran en tu perfil. Las <strong>visualizaciones de 30 días</strong> están en tu perfil profesional → “Ver panel profesional”.
           </div>
         </div>
       )}
