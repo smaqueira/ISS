@@ -5,6 +5,7 @@ import Link from 'next/link'
 import TermometroEnvio from '@/components/clients/TermometroEnvio'
 import BuscarIgTanda from '@/components/clients/BuscarIgTanda'
 import BuscarEmailTanda from '@/components/clients/BuscarEmailTanda'
+import RepararListos from '@/components/clients/RepararListos'
 import type { Client } from '@/lib/types'
 import { getMarcas } from '@/lib/marcas'
 import { cookies } from 'next/headers'
@@ -330,6 +331,7 @@ export default async function ClientsPage({ searchParams }: {
       )}
 
       {/* Buscar Instagram en tanda para el filtro actual (rubro/zona) */}
+      {filters.tag === 'listo' && <RepararListos />}
       <BuscarIgTanda rubro={filters.rubro} city={filters.city} tag={filters.tag} />
       <BuscarEmailTanda rubro={filters.rubro} city={filters.city} />
 

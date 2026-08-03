@@ -157,6 +157,11 @@ export default function ClientRow({ client, selected, onToggle, marcas: marcasPr
   }
 
   async function toggleTag(tag: string) {
+    // No se puede marcar "listo" sin ningún canal para contactar
+    if (tag === 'listo' && !tags.includes('listo') && !client.phone && !instagram && !email) {
+      alert(`"${client.name}" no tiene teléfono, Instagram ni email. Cargá un dato o marcalo como ⚠️ sin datos.`)
+      return
+    }
     const next = tags.includes(tag)
       ? tags.filter(t => t !== tag)
       : [...tags.filter(t => t !== tag && t !== (tag === 'listo' ? 'sin_datos' : 'listo')), tag]
