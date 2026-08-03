@@ -1,5 +1,6 @@
 import { getBlueMarketCatalog as getBlueMarketProducts } from '@/lib/bluemarket'
 import { createClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,28 +8,63 @@ function formatPrice(price: number) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(price)
 }
 
-export default async function ListaPreciosPage() {
+export default async function ListaPreciosPage({ searchParams }: {
+  searchParams: Promise<{ tipo?: string; print?: string }>
+}) {
+  const { tipo } = await searchParams
+  const esMayorista = tipo === 'mayorista' // por defecto = MINORISTA (la pública)
+
+  // La lista MAYORISTA es privada: solo el admin logueado puede verla (se comparte
+  // como imagen/PDF, nunca como link público).
+  if (esMayorista) {
+    const store = await cookies()
+    if (store.get('iss_session')?.value !== 'admin') {
+      return (
+        <div style={{ maxWidth: 480, margin: '80px auto', padding: 32, textAlign: 'center', fontFamily: 'system-ui, sans-serif' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>🔒</div>
+          <div style={{ fontWeight: 700, color: '#0D1326' }}>Lista no disponible</div>
+          <div style={{ color: '#64748b', fontSize: '0.85rem', marginTop: 6 }}>Esta lista es privada.</div>
+        </div>
+      )
+    }
+  }
+
   const products = await getBlueMarketProducts()
   const db = await createClient()
-  const { data: settings } = await db.from('settings').select('key, value').in('key', ['COMPANY_NAME', 'COMPANY_WHATSAPP', 'COMPANY_LOGO_URL', 'COMPRA_MINIMA'])
+  const { data: settings } = await db.from('settings').select('key, value').in('key', [
+    'COMPANY_NAME', 'COMPANY_WHATSAPP', 'COMPANY_LOGO_URL',
+    'COMPRA_MINIMA', 'COMPRA_MINIMA_MINORISTA', 'DESCUENTO_MAYORISTA',
+  ])
   const s = Object.fromEntries((settings || []).map((r: { key: string; value: string }) => [r.key, r.value]))
 
   const nombre = s.COMPANY_NAME || 'Lista de Precios'
   const whatsapp = s.COMPANY_WHATSAPP || ''
   const logo = s.COMPANY_LOGO_URL || ''
-  const compraMinima = s.COMPRA_MINIMA || ''
-  const fecha = new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
 
+  // Minorista (pública) = precio de BlueMarket tal cual.
+  // Mayorista (privada) = precio de BlueMarket MENOS un descuento %.
+  const descuento = Math.min(90, Math.max(0, Number(s.DESCUENTO_MAYORISTA) || 0))
+  const compraMinima = esMayorista ? (s.COMPRA_MINIMA || '') : (s.COMPRA_MINIMA_MINORISTA || '')
+  const precioDe = (base: number) => esMayorista ? Math.round(base * (1 - descuento / 100)) : base
+
+  const etiqueta = esMayorista ? 'MAYORISTA' : 'MINORISTA'
+  const publico = esMayorista ? 'Precios para negocios' : 'Precios para particulares'
+  const acento = esMayorista ? '#0D1326' : '#C9A96E'
+
+  const fecha = new Date().toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
   const categorias = [...new Set((products || []).map(p => p.category || 'General'))].sort()
 
   return (
     <div id="lista-precios" style={{ maxWidth: 680, margin: '0 auto', padding: '32px 20px', fontFamily: 'system-ui, sans-serif', background: '#fff', minHeight: '100vh' }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, paddingBottom: 20, borderBottom: '2px solid #0D1326' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, paddingBottom: 20, borderBottom: `2px solid ${acento}` }}>
         <div>
           {logo && <img src={logo} alt={nombre} style={{ height: 56, objectFit: 'contain', marginBottom: 6, display: 'block' }} />}
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0D1326' }}>{nombre}</div>
-          <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>Lista de precios · {fecha}</div>
+          <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>
+            <span style={{ background: acento, color: '#fff', borderRadius: 4, padding: '1px 8px', fontWeight: 700, letterSpacing: '0.08em', fontSize: '0.7rem' }}>{etiqueta}</span>
+            <span style={{ marginLeft: 8 }}>{publico} · {fecha}</span>
+          </div>
         </div>
         <div style={{ textAlign: 'right', fontSize: '0.78rem', color: '#64748b' }}>
           <div style={{ fontWeight: 600, color: '#0D1326', marginBottom: 2 }}>Precios sujetos a cambio</div>
@@ -54,7 +90,7 @@ export default async function ListaPreciosPage() {
                   {p.featured && <span style={{ marginLeft: 8, fontSize: '0.65rem', background: '#f97316', color: 'white', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>DESTACADO</span>}
                 </div>
                 <div style={{ fontWeight: 700, color: p.price ? '#0D1326' : '#64748b', fontSize: '0.9rem', whiteSpace: 'nowrap', marginLeft: 16 }}>
-                  {p.price ? formatPrice(p.price) : 'Consultar'}
+                  {p.price ? formatPrice(precioDe(p.price)) : 'Consultar'}
                 </div>
               </div>
             ))}
@@ -75,7 +111,7 @@ export default async function ListaPreciosPage() {
 
       {/* Footer */}
       <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: '0.72rem', color: '#94a3b8' }}>
-        Lista generada automáticamente · Precios sujetos a cambio sin previo aviso
+        Lista {etiqueta.toLowerCase()} generada automáticamente · Precios sujetos a cambio sin previo aviso
         {whatsapp && <span> · Pedidos por WhatsApp +{whatsapp}</span>}
       </div>
     </div>
