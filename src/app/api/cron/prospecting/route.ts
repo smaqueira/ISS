@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getBusinessConfig } from '@/lib/business-context'
 import { rubroExcluido } from '@/lib/prospecting/excluidos'
 import { cargarExistentes, normName, normPhone, igFromAny } from '@/lib/prospecting/existentes'
+import { esDeArgentina } from '@/lib/prospecting/geo'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -68,6 +69,8 @@ export async function GET() {
       }
 
       for (const place of places) {
+        // Solo Argentina (Google a veces trae homónimos del exterior)
+        if (!esDeArgentina(place.address)) { skipped++; continue }
         // El "sitio web" de Google suele ser el Instagram del negocio.
         const ig = igFromAny(place.website)
         const nom = normName(place.name)

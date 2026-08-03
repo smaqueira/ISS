@@ -4,6 +4,7 @@ import { searchPlaces } from '@/lib/prospecting/serper'
 import { classifyLead } from '@/lib/ai/classify'
 import { rubroExcluido } from '@/lib/prospecting/excluidos'
 import { cargarExistentes, normName, normPhone, igFromAny } from '@/lib/prospecting/existentes'
+import { esDeArgentina } from '@/lib/prospecting/geo'
 
 export async function POST(req: NextRequest) {
   const { query, city, auto_import } = await req.json()
@@ -12,7 +13,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ results: [], imported: 0, excluido: true, message: `El rubro "${query}" está excluido de la prospección.` })
   }
 
-  const places = await searchPlaces(query, city)
+  const encontrados = await searchPlaces(query, city)
+  // Solo Argentina (Google a veces trae homónimos del exterior)
+  const places = encontrados.filter(p => esDeArgentina(p.address))
   if (!places.length) return NextResponse.json({ results: [] })
 
   const db = await createClient()
