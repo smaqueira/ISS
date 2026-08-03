@@ -4,6 +4,7 @@ import ClientsAccordion from '@/components/clients/ClientsAccordion'
 import Link from 'next/link'
 import TermometroEnvio from '@/components/clients/TermometroEnvio'
 import BuscarIgTanda from '@/components/clients/BuscarIgTanda'
+import BuscarEmailTanda from '@/components/clients/BuscarEmailTanda'
 import type { Client } from '@/lib/types'
 import { getMarcas } from '@/lib/marcas'
 import { cookies } from 'next/headers'
@@ -330,6 +331,7 @@ export default async function ClientsPage({ searchParams }: {
 
       {/* Buscar Instagram en tanda para el filtro actual (rubro/zona) */}
       <BuscarIgTanda rubro={filters.rubro} city={filters.city} />
+      <BuscarEmailTanda rubro={filters.rubro} city={filters.city} />
 
       {/* Prioridad + Temperatura */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
