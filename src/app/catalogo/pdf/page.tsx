@@ -1,4 +1,4 @@
-import { getBlueMarketCatalog } from '@/lib/bluemarket'
+import { getBlueMarketCatalog, getBlueMarketAll } from '@/lib/bluemarket'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { calcMayorista, type MayCfg } from '@/lib/precios'
@@ -26,7 +26,8 @@ export default async function CatalogoPDFPage({ searchParams }: {
     }
   }
 
-  const products = await getBlueMarketCatalog()
+  // Mayorista: TODOS los productos (ignora stock). Minorista: solo disponibles.
+  const products = esMayorista ? await getBlueMarketAll() : await getBlueMarketCatalog()
   const items = (products || []) as {
     id: string; name: string; category: string | null
     price: number | null; unit: string | null; image_url: string | null
@@ -43,16 +44,21 @@ export default async function CatalogoPDFPage({ searchParams }: {
 
   // Devuelve el texto principal y un subtexto (para la caja) del precio de un producto
   function precioTexto(p: { id: string; price: number | null; unit: string | null }): { main: string; sub: string | null; hay: boolean } {
+    if (esMayorista) {
+      // El mayorista sale del $/kg cargado (independiente del minorista y del stock)
+      const may = calcMayorista(p.price || 0, mapa[String(p.id)], descuentoGeneral)
+      if (!may.boxTotal) return { main: 'Consultar precio', sub: null, hay: false }
+      if (may.porCaja) return { main: `$${may.boxTotal.toLocaleString('es-AR')}`, sub: `caja ${may.kilosCaja} kg · $${may.unitKg.toLocaleString('es-AR')}/kg`, hay: true }
+      return { main: `$${may.unitKg.toLocaleString('es-AR')} / kg`, sub: null, hay: true }
+    }
     if (!p.price) return { main: 'Consultar precio', sub: null, hay: false }
-    if (!esMayorista) return { main: `$${p.price.toLocaleString('es-AR')} / ${p.unit || 'kg'}`, sub: null, hay: true }
-    const may = calcMayorista(p.price, mapa[String(p.id)], descuentoGeneral)
-    if (may.porCaja) return { main: `$${may.boxTotal.toLocaleString('es-AR')}`, sub: `caja ${may.kilosCaja} kg · $${may.unitKg.toLocaleString('es-AR')}/kg`, hay: true }
-    return { main: `$${may.unitKg.toLocaleString('es-AR')} / kg`, sub: null, hay: true }
+    return { main: `$${p.price.toLocaleString('es-AR')} / ${p.unit || 'kg'}`, sub: null, hay: true }
   }
 
   const byCategory: Record<string, typeof items> = {}
   for (const p of items) {
     if (esMayorista && mapa[String(p.id)]?.off) continue // oculto en mayorista
+    if (!esMayorista && !p.price) continue // minorista público: solo con precio
     const cat = (p.category as string) || 'Otros'
     if (!byCategory[cat]) byCategory[cat] = []
     byCategory[cat].push(p)

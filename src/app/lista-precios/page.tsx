@@ -1,7 +1,8 @@
-import { getBlueMarketCatalog as getBlueMarketProducts } from '@/lib/bluemarket'
+import { getBlueMarketCatalog, getBlueMarketAll } from '@/lib/bluemarket'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { calcMayorista, type MayCfg } from '@/lib/precios'
+import PrintButton from './PrintButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,7 +13,7 @@ function formatPrice(price: number) {
 export default async function ListaPreciosPage({ searchParams }: {
   searchParams: Promise<{ tipo?: string; print?: string }>
 }) {
-  const { tipo } = await searchParams
+  const { tipo, print } = await searchParams
   const esMayorista = tipo === 'mayorista' // por defecto = MINORISTA (la pública)
 
   // La lista MAYORISTA es privada: solo el admin logueado puede verla (se comparte
@@ -30,7 +31,8 @@ export default async function ListaPreciosPage({ searchParams }: {
     }
   }
 
-  const products = await getBlueMarketProducts()
+  // Mayorista: TODOS los productos (ignora stock). Minorista: solo disponibles.
+  const products = esMayorista ? await getBlueMarketAll() : await getBlueMarketCatalog()
   const db = await createClient()
   const { data: settings } = await db.from('settings').select('key, value').in('key', [
     'COMPANY_NAME', 'COMPANY_WHATSAPP', 'COMPANY_LOGO_URL',
@@ -39,7 +41,7 @@ export default async function ListaPreciosPage({ searchParams }: {
   const s = Object.fromEntries((settings || []).map((r: { key: string; value: string }) => [r.key, r.value]))
 
   const nombre = s.COMPANY_NAME || 'Lista de Precios'
-  const whatsapp = s.COMPANY_WHATSAPP || ''
+  const whatsapp = (s.COMPANY_WHATSAPP || '').replace(/^\++/, '').trim() // evitar "++"
   const logo = s.COMPANY_LOGO_URL || ''
 
   // Minorista (pública) = precio de BlueMarket por kilo, tal cual.
@@ -51,16 +53,20 @@ export default async function ListaPreciosPage({ searchParams }: {
   const compraMinima = esMayorista ? (s.COMPRA_MINIMA || '') : (s.COMPRA_MINIMA_MINORISTA || '')
 
   function renderPrecio(p: { id: string | number; price: number | null }) {
+    if (esMayorista) {
+      // El mayorista sale del $/kg cargado (independiente del minorista y del stock)
+      const may = calcMayorista(p.price || 0, mapa[String(p.id)], descuentoGeneral)
+      if (!may.boxTotal) return <span style={{ color: '#64748b', fontWeight: 600, fontSize: '0.85rem' }}>Consultar</span>
+      if (may.porCaja) return (
+        <div style={{ textAlign: 'right' }}>
+          <div>{formatPrice(may.boxTotal)}</div>
+          <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 500 }}>caja {may.kilosCaja} kg · {formatPrice(may.unitKg)}/kg</div>
+        </div>
+      )
+      return <span>{formatPrice(may.unitKg)} / kg</span>
+    }
     if (!p.price) return <span style={{ color: '#64748b', fontWeight: 600, fontSize: '0.85rem' }}>Consultar</span>
-    if (!esMayorista) return <span>{formatPrice(p.price)}</span>
-    const may = calcMayorista(p.price, mapa[String(p.id)], descuentoGeneral)
-    if (may.porCaja) return (
-      <div style={{ textAlign: 'right' }}>
-        <div>{formatPrice(may.boxTotal)}</div>
-        <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 500 }}>caja {may.kilosCaja} kg · {formatPrice(may.unitKg)}/kg</div>
-      </div>
-    )
-    return <span>{formatPrice(may.unitKg)} / kg</span>
+    return <span>{formatPrice(p.price)}</span>
   }
 
   const etiqueta = esMayorista ? 'MAYORISTA' : 'MINORISTA'
@@ -71,15 +77,26 @@ export default async function ListaPreciosPage({ searchParams }: {
   const categorias = [...new Set((products || []).map(p => p.category || 'General'))].sort()
 
   return (
+    <>
+      <style>{`
+        @media print {
+          .no-print { display: none !important; }
+          html, body { background: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          #lista-precios { max-width: 100% !important; min-height: 0 !important; padding: 8px 14px !important; }
+          #lista-precios .cat-block { break-inside: avoid; }
+          @page { size: A4; margin: 12mm; }
+        }
+      `}</style>
+      <PrintButton auto={print === '1'} />
     <div id="lista-precios" style={{ maxWidth: 680, margin: '0 auto', padding: '32px 20px', fontFamily: 'system-ui, sans-serif', background: '#fff', minHeight: '100vh' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, paddingBottom: 20, borderBottom: `2px solid ${acento}` }}>
         <div>
           {logo && <img src={logo} alt={nombre} style={{ height: 56, objectFit: 'contain', marginBottom: 6, display: 'block' }} />}
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0D1326' }}>{nombre}</div>
-          <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 2 }}>
-            <span style={{ background: acento, color: '#fff', borderRadius: 4, padding: '1px 8px', fontWeight: 700, letterSpacing: '0.08em', fontSize: '0.7rem' }}>{etiqueta}</span>
-            <span style={{ marginLeft: 8 }}>{publico} · {fecha}</span>
+          <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ display: 'inline-block', background: acento, color: '#fff', borderRadius: 4, padding: '3px 10px', fontWeight: 700, letterSpacing: '0.08em', fontSize: '0.7rem', lineHeight: 1.3 }}>{etiqueta}</span>
+            <span>{publico} · {fecha}</span>
           </div>
         </div>
         <div style={{ textAlign: 'right', fontSize: '0.78rem', color: '#64748b' }}>
@@ -91,11 +108,15 @@ export default async function ListaPreciosPage({ searchParams }: {
 
       {/* Productos por categoría */}
       {categorias.map(cat => {
-        // En mayorista se ocultan los productos deshabilitados para mayor
-        const items = (products || []).filter(p => (p.category || 'General') === cat && !(esMayorista && mapa[String(p.id)]?.off))
+        // Minorista (público): solo productos CON precio (los sin precio se venden
+        // solo por mayor → no se muestran acá). Mayorista: se ocultan los "off".
+        const items = (products || []).filter(p =>
+          (p.category || 'General') === cat &&
+          (esMayorista ? !mapa[String(p.id)]?.off : !!p.price)
+        )
         if (!items.length) return null
         return (
-          <div key={cat} style={{ marginBottom: 28 }}>
+          <div key={cat} className="cat-block" style={{ marginBottom: 28 }}>
             <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#64748b', marginBottom: 8, paddingBottom: 4, borderBottom: '1px solid #e2e8f0' }}>
               {cat}
             </div>
@@ -132,5 +153,6 @@ export default async function ListaPreciosPage({ searchParams }: {
         {whatsapp && <span> · Pedidos por WhatsApp +{whatsapp}</span>}
       </div>
     </div>
+    </>
   )
 }

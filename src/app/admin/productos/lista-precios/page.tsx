@@ -97,6 +97,12 @@ export default function ListaPreciosAdminPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  // Descarga confiable: abre la página lista para imprimir → "Guardar como PDF".
+  // Sale idéntica a la página (sin html2canvas), en A4 limpio.
+  function descargarPDF() {
+    window.open(urlDe(vista) + '&print=1', '_blank')
+  }
+
   async function downloadImage() {
     setGeneratingImg(true)
     try {
@@ -276,8 +282,11 @@ export default function ListaPreciosAdminPage() {
         <a href={urlDe(vista)} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           👁️ {vista === 'mayorista' ? 'Ver (solo vos)' : 'Ver página pública'}
         </a>
-        <button onClick={downloadImage} disabled={generatingImg} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {generatingImg ? '⏳ Generando...' : '🖼️ Descargar imagen + PDF'}
+        <button onClick={descargarPDF} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          📄 PDF para enviar
+        </button>
+        <button onClick={downloadImage} disabled={generatingImg} className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {generatingImg ? '⏳ Generando...' : '🖼️ Imagen'}
         </button>
       </div>
 

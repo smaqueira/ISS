@@ -49,10 +49,14 @@ async function bmFetch<T>(path: string): Promise<T | null> {
   }
 }
 
-async function fetchProductos(tiendaId: string, soloConStock = true): Promise<ISSProduct[] | null> {
-  const filtroStock = soloConStock ? '&stock=gt.0' : ''
+async function fetchProductos(
+  tiendaId: string,
+  opts: { conStock?: boolean; soloDisponible?: boolean } = {},
+): Promise<ISSProduct[] | null> {
+  const filtroStock = opts.conStock ? '&stock=gt.0' : ''
+  const filtroDisp = opts.soloDisponible ? '&disponible=eq.true' : ''
   const productos = await bmFetch<BMProduct[]>(
-    `productos?pescaderia_id=eq.${tiendaId}&disponible=eq.true${filtroStock}` +
+    `productos?pescaderia_id=eq.${tiendaId}${filtroDisp}${filtroStock}` +
     `&select=id,nombre,descripcion,precio,unidad,categoria,foto_url,destacado` +
     `&order=destacado.desc,nombre.asc`
   )
@@ -78,16 +82,24 @@ async function getTiendaId(): Promise<string | null> {
   return tiendas?.[0]?.id ?? null
 }
 
-/** Devuelve los productos activos de BlueMarket, o null si no disponible. */
+/** Productos disponibles y CON stock — para la web/consumidor. */
 export async function getBlueMarketProducts(): Promise<ISSProduct[] | null> {
   const tiendaId = await getTiendaId()
   if (!tiendaId) return null
-  return fetchProductos(tiendaId, true)
+  return fetchProductos(tiendaId, { conStock: true, soloDisponible: true })
 }
 
-/** Devuelve TODOS los productos disponibles (sin filtro de stock) — para catálogo. */
+/** Productos disponibles (sin filtro de stock) — para catálogo minorista público. */
 export async function getBlueMarketCatalog(): Promise<ISSProduct[] | null> {
   const tiendaId = await getTiendaId()
   if (!tiendaId) return null
-  return fetchProductos(tiendaId, false)
+  return fetchProductos(tiendaId, { soloDisponible: true })
+}
+
+/** TODOS los productos, ignorando stock y disponibilidad — para el panel y la
+ *  lista MAYORISTA (que es sobre precios, no sobre el stock del momento). */
+export async function getBlueMarketAll(): Promise<ISSProduct[] | null> {
+  const tiendaId = await getTiendaId()
+  if (!tiendaId) return null
+  return fetchProductos(tiendaId, {})
 }

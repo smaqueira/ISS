@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getBlueMarketProducts, getBlueMarketCatalog } from '@/lib/bluemarket'
+import { getBlueMarketProducts, getBlueMarketAll } from '@/lib/bluemarket'
 
 // Ruta pública — sin autenticación, para la página de catálogo.
-// ?all=1 → TODOS los productos (incluye sin stock), para configurar precios en el panel.
+// ?all=1 → TODOS los productos (ignora stock y disponibilidad), para el panel de precios.
 export async function GET(req: NextRequest) {
   const all = new URL(req.url).searchParams.has('all')
-  const bm = all ? await getBlueMarketCatalog() : await getBlueMarketProducts()
+  const bm = all ? await getBlueMarketAll() : await getBlueMarketProducts()
   if (bm) return NextResponse.json(bm)
 
   const db = await createClient()
