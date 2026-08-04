@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { calcMayorista } from '@/lib/precios'
 
 const BASE_URL = 'https://app.vittomare.com/lista-precios'
 const urlDe = (tipo: 'mayorista' | 'minorista') => `${BASE_URL}?tipo=${tipo}`
@@ -16,10 +17,11 @@ export default function ListaPreciosAdminPage() {
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  // Por producto: % de descuento (pctProd) o precio mayorista fijo (precioProd)
+  // Por producto: precio mayorista por kilo + kilos por caja + on/off
   const [prods, setProds] = useState<{ id: string; name: string; price: number; category: string }[]>([])
-  const [pctProd, setPctProd] = useState<Record<string, string>>({})
-  const [precioProd, setPrecioProd] = useState<Record<string, string>>({})
+  const [precioKgProd, setPrecioKgProd] = useState<Record<string, string>>({})
+  const [kilosCajaProd, setKilosCajaProd] = useState<Record<string, string>>({})
+  const [offProd, setOffProd] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     fetch('/api/settings').then(r => r.json()).then((arr) => {
@@ -31,12 +33,13 @@ export default function ListaPreciosAdminPage() {
       try {
         const m = JSON.parse(s.DESCUENTOS_MAYORISTA_POR_PRODUCTO || '{}')
         if (m && typeof m === 'object') {
-          const pp: Record<string, string> = {}, pr: Record<string, string> = {}
-          for (const [k, v] of Object.entries(m as Record<string, { pct?: number; precio?: number }>)) {
-            if (v && typeof v.pct === 'number') pp[k] = String(v.pct)
-            if (v && typeof v.precio === 'number') pr[k] = String(v.precio)
+          const pk: Record<string, string> = {}, kc: Record<string, string> = {}, off: Record<string, boolean> = {}
+          for (const [k, v] of Object.entries(m as Record<string, { precioKg?: number; kilosCaja?: number; off?: boolean }>)) {
+            if (v && typeof v.precioKg === 'number') pk[k] = String(v.precioKg)
+            if (v && typeof v.kilosCaja === 'number') kc[k] = String(v.kilosCaja)
+            if (v && v.off) off[k] = true
           }
-          setPctProd(pp); setPrecioProd(pr)
+          setPrecioKgProd(pk); setKilosCajaProd(kc); setOffProd(off)
         }
       } catch { /* ignore */ }
     }).catch(() => {})
@@ -51,25 +54,25 @@ export default function ListaPreciosAdminPage() {
   const num = (v: string, max = 1e12) => Math.min(max, Math.max(0, Number((v || '').replace(/[^0-9.]/g, '')) || 0))
   const descGeneralNum = Math.min(90, num(descuento))
 
-  // Precio mayorista resultante de un producto (precio fijo > % propio > general)
-  function precioMayDe(p: { id: string; price: number }): number {
-    const pr = precioProd[p.id]?.trim()
-    if (pr) return Math.round(num(pr))
-    const pc = pctProd[p.id]?.trim()
-    const pct = pc ? Math.min(90, num(pc)) : descGeneralNum
-    return Math.round(p.price * (1 - pct / 100))
+  // Cálculo mayorista en vivo (precio/kg × kilos de caja; fallback al descuento general)
+  function mayDe(p: { id: string; price: number }) {
+    const pk = precioKgProd[p.id]?.trim(), kc = kilosCajaProd[p.id]?.trim()
+    return calcMayorista(p.price, {
+      precioKg: pk ? num(pk) : undefined,
+      kilosCaja: kc ? num(kc) : undefined,
+    }, descGeneralNum)
   }
 
   async function guardar() {
     setSaving(true)
-    const mapa: Record<string, { pct?: number; precio?: number }> = {}
+    const mapa: Record<string, { precioKg?: number; kilosCaja?: number; off?: boolean }> = {}
     for (const p of prods) {
-      const o: { pct?: number; precio?: number } = {}
-      const pr = precioProd[p.id]?.trim()
-      const pc = pctProd[p.id]?.trim()
-      if (pr) o.precio = Math.round(num(pr))
-      else if (pc) o.pct = Math.min(90, num(pc))
-      if (o.pct !== undefined || o.precio !== undefined) mapa[p.id] = o
+      const o: { precioKg?: number; kilosCaja?: number; off?: boolean } = {}
+      const pk = precioKgProd[p.id]?.trim(), kc = kilosCajaProd[p.id]?.trim()
+      if (pk) o.precioKg = Math.round(num(pk))
+      if (kc) o.kilosCaja = num(kc)
+      if (offProd[p.id]) o.off = true
+      if (o.precioKg !== undefined || o.kilosCaja !== undefined || o.off) mapa[p.id] = o
     }
     await fetch('/api/settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -200,28 +203,45 @@ export default function ListaPreciosAdminPage() {
         <div className="card" style={{ marginBottom: 20 }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>🏷️ Precio mayorista por producto</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 12 }}>
-            Por cada producto podés poner un <strong>% de descuento</strong> o directamente el <strong>precio mayorista fijo</strong>. Si cargás precio, manda el precio. Si dejás ambos vacíos, usa el descuento general ({descGeneralNum}%).
+            Por producto: <strong>precio mayorista por kilo</strong> × <strong>kilos de la caja</strong> = precio de la caja. Si dejás el $/kg vacío, usa el descuento general ({descGeneralNum}%) sobre el público. Destildá <strong>“Mayor”</strong> para que un producto no salga en la lista mayorista.
           </div>
-          <div style={{ maxHeight: 420, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ display: 'flex', gap: 8, padding: '0 0 4px', fontSize: '0.62rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <span style={{ flex: 1, minWidth: 140 }}>Producto</span>
+            <span style={{ width: 44, textAlign: 'center' }}>Mayor</span>
+            <span style={{ width: 84, textAlign: 'center' }}>$ / kg</span>
+            <span style={{ width: 64, textAlign: 'center' }}>kg caja</span>
+            <span style={{ width: 110, textAlign: 'right' }}>Precio caja</span>
+          </div>
+          <div style={{ maxHeight: 440, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
             {categorias.map(cat => (
               <div key={cat}>
                 <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#C9A96E', textTransform: 'uppercase', letterSpacing: 0.5, margin: '10px 0 4px' }}>{cat}</div>
                 {prods.filter(p => p.category === cat).map(p => {
-                  const usaPrecio = !!precioProd[p.id]?.trim()
+                  const off = !!offProd[p.id]
+                  const may = mayDe(p)
                   return (
-                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 0', borderBottom: '1px solid var(--border)', opacity: off ? 0.5 : 1 }}>
                       <div style={{ flex: 1, minWidth: 140 }}>
                         <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{p.name}</div>
                         <div style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>público {fmt(p.price)}</div>
                       </div>
-                      <input value={pctProd[p.id] || ''} onChange={e => setPctProd(m => ({ ...m, [p.id]: e.target.value }))}
-                        placeholder={`${descGeneralNum}%`} title="% de descuento"
-                        style={{ ...inp, width: 66, opacity: usaPrecio ? 0.4 : 1, padding: '6px 8px' }} disabled={usaPrecio} />
-                      <span style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>o</span>
-                      <input value={precioProd[p.id] || ''} onChange={e => setPrecioProd(m => ({ ...m, [p.id]: e.target.value }))}
-                        placeholder="$ fijo" title="Precio mayorista fijo"
-                        style={{ ...inp, width: 92, padding: '6px 8px' }} />
-                      <div style={{ width: 96, textAlign: 'right', fontWeight: 700, fontSize: '0.85rem', color: '#22c55e' }}>{fmt(precioMayDe(p))}</div>
+                      <label style={{ width: 44, display: 'flex', justifyContent: 'center', cursor: 'pointer' }} title="Se ofrece por mayorista">
+                        <input type="checkbox" checked={!off} onChange={e => setOffProd(m => ({ ...m, [p.id]: !e.target.checked }))} />
+                      </label>
+                      <input value={precioKgProd[p.id] || ''} onChange={e => setPrecioKgProd(m => ({ ...m, [p.id]: e.target.value }))}
+                        placeholder="$/kg" title="Precio mayorista por kilo" disabled={off}
+                        style={{ ...inp, width: 84, padding: '6px 8px' }} />
+                      <input value={kilosCajaProd[p.id] || ''} onChange={e => setKilosCajaProd(m => ({ ...m, [p.id]: e.target.value }))}
+                        placeholder="kg" title="Kilos por caja" disabled={off}
+                        style={{ ...inp, width: 64, padding: '6px 8px' }} />
+                      <div style={{ width: 110, textAlign: 'right' }}>
+                        {off ? <span style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>—</span> : (
+                          <>
+                            <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#22c55e' }}>{fmt(may.boxTotal)}</div>
+                            {may.porCaja && <div style={{ fontSize: '0.6rem', color: 'var(--muted)' }}>caja {may.kilosCaja}kg</div>}
+                          </>
+                        )}
+                      </div>
                     </div>
                   )
                 })}

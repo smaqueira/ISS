@@ -1,6 +1,7 @@
 import { getBlueMarketCatalog } from '@/lib/bluemarket'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
+import { calcMayorista, type MayCfg } from '@/lib/precios'
 import PrintButton from './PrintButton'
 
 export const dynamic = 'force-dynamic'
@@ -31,26 +32,27 @@ export default async function CatalogoPDFPage({ searchParams }: {
     price: number | null; unit: string | null; image_url: string | null
   }[]
 
-  // Precios mayoristas: precio fijo por producto > % por producto > % general.
+  // Mayorista = precio/kg × kilos de la caja (por producto); fallback al descuento general.
   const db = await createClient()
   const { data: settings } = await db.from('settings').select('key, value')
     .in('key', ['DESCUENTO_MAYORISTA', 'DESCUENTOS_MAYORISTA_POR_PRODUCTO'])
   const sm = Object.fromEntries((settings || []).map((r: { key: string; value: string }) => [r.key, r.value]))
-  const clamp = (n: number) => Math.min(90, Math.max(0, n))
-  const descuentoGeneral = clamp(Number(sm.DESCUENTO_MAYORISTA) || 0)
-  let mapa: Record<string, { pct?: number; precio?: number }> = {}
+  const descuentoGeneral = Math.min(90, Math.max(0, Number(sm.DESCUENTO_MAYORISTA) || 0))
+  let mapa: Record<string, MayCfg> = {}
   try { const m = JSON.parse(sm.DESCUENTOS_MAYORISTA_POR_PRODUCTO || '{}'); if (m && typeof m === 'object') mapa = m } catch { /* ignore */ }
-  const precioDe = (p: { id: string; price: number | null }): number | null => {
-    if (!p.price) return p.price
-    if (!esMayorista) return p.price
-    const o = mapa[String(p.id)]
-    if (o && typeof o.precio === 'number' && o.precio > 0) return Math.round(o.precio)
-    const pct = (o && typeof o.pct === 'number' && !isNaN(o.pct)) ? o.pct : descuentoGeneral
-    return Math.round(p.price * (1 - clamp(pct) / 100))
+
+  // Devuelve el texto principal y un subtexto (para la caja) del precio de un producto
+  function precioTexto(p: { id: string; price: number | null; unit: string | null }): { main: string; sub: string | null; hay: boolean } {
+    if (!p.price) return { main: 'Consultar precio', sub: null, hay: false }
+    if (!esMayorista) return { main: `$${p.price.toLocaleString('es-AR')} / ${p.unit || 'kg'}`, sub: null, hay: true }
+    const may = calcMayorista(p.price, mapa[String(p.id)], descuentoGeneral)
+    if (may.porCaja) return { main: `$${may.boxTotal.toLocaleString('es-AR')}`, sub: `caja ${may.kilosCaja} kg · $${may.unitKg.toLocaleString('es-AR')}/kg`, hay: true }
+    return { main: `$${may.unitKg.toLocaleString('es-AR')} / kg`, sub: null, hay: true }
   }
 
   const byCategory: Record<string, typeof items> = {}
   for (const p of items) {
+    if (esMayorista && mapa[String(p.id)]?.off) continue // oculto en mayorista
     const cat = (p.category as string) || 'Otros'
     if (!byCategory[cat]) byCategory[cat] = []
     byCategory[cat].push(p)
@@ -132,10 +134,7 @@ export default async function CatalogoPDFPage({ searchParams }: {
             </div>
             <div className="grid">
               {prods.map(p => {
-                const precio = precioDe(p)
-                const price = precio
-                  ? `$${Number(precio).toLocaleString('es-AR')} / ${p.unit || 'kg'}`
-                  : 'Consultar precio'
+                const pt = precioTexto(p)
                 return (
                   <div key={p.id} className="card">
                     {p.image_url
@@ -144,7 +143,8 @@ export default async function CatalogoPDFPage({ searchParams }: {
                     }
                     <div className="card-body">
                       <div className="card-name">{p.name}</div>
-                      <div className={`card-price${!precio ? ' consultar' : ''}`}>{price}</div>
+                      <div className={`card-price${!pt.hay ? ' consultar' : ''}`}>{pt.main}</div>
+                      {pt.sub && <div style={{ fontSize: '10px', color: '#7EC8C8aa', fontWeight: 600, marginTop: 2 }}>{pt.sub}</div>}
                     </div>
                   </div>
                 )

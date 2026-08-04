@@ -1,6 +1,7 @@
 import { getBlueMarketCatalog as getBlueMarketProducts } from '@/lib/bluemarket'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
+import { calcMayorista, type MayCfg } from '@/lib/precios'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,23 +42,26 @@ export default async function ListaPreciosPage({ searchParams }: {
   const whatsapp = s.COMPANY_WHATSAPP || ''
   const logo = s.COMPANY_LOGO_URL || ''
 
-  // Minorista (pública) = precio de BlueMarket tal cual.
-  // Mayorista (privada) = precio de BlueMarket MENOS el descuento de CADA producto
-  // (mapa {id: %}); si un producto no tiene descuento propio, usa el general.
-  // Por producto se puede fijar el precio mayorista directo (precio) o un % de
-  // descuento (pct). Si no hay nada del producto, se usa el descuento general.
-  const clamp = (n: number) => Math.min(90, Math.max(0, n))
-  const descuentoGeneral = clamp(Number(s.DESCUENTO_MAYORISTA) || 0)
-  let mapa: Record<string, { pct?: number; precio?: number }> = {}
+  // Minorista (pública) = precio de BlueMarket por kilo, tal cual.
+  // Mayorista (privada) = precio/kg mayorista × kilos de la caja (por producto);
+  // si el producto no tiene precio/kg cargado, usa el descuento general sobre el minorista.
+  const descuentoGeneral = Math.min(90, Math.max(0, Number(s.DESCUENTO_MAYORISTA) || 0))
+  let mapa: Record<string, MayCfg> = {}
   try { const m = JSON.parse(s.DESCUENTOS_MAYORISTA_POR_PRODUCTO || '{}'); if (m && typeof m === 'object') mapa = m } catch { /* ignore */ }
-  const precioMayorista = (p: { id: string | number; price: number }) => {
-    const o = mapa[String(p.id)]
-    if (o && typeof o.precio === 'number' && o.precio > 0) return Math.round(o.precio)
-    const pct = (o && typeof o.pct === 'number' && !isNaN(o.pct)) ? o.pct : descuentoGeneral
-    return Math.round(p.price * (1 - clamp(pct) / 100))
-  }
   const compraMinima = esMayorista ? (s.COMPRA_MINIMA || '') : (s.COMPRA_MINIMA_MINORISTA || '')
-  const precioDe = (p: { id: string | number; price: number }) => esMayorista ? precioMayorista(p) : p.price
+
+  function renderPrecio(p: { id: string | number; price: number | null }) {
+    if (!p.price) return <span style={{ color: '#64748b', fontWeight: 600, fontSize: '0.85rem' }}>Consultar</span>
+    if (!esMayorista) return <span>{formatPrice(p.price)}</span>
+    const may = calcMayorista(p.price, mapa[String(p.id)], descuentoGeneral)
+    if (may.porCaja) return (
+      <div style={{ textAlign: 'right' }}>
+        <div>{formatPrice(may.boxTotal)}</div>
+        <div style={{ fontSize: '0.68rem', color: '#94a3b8', fontWeight: 500 }}>caja {may.kilosCaja} kg · {formatPrice(may.unitKg)}/kg</div>
+      </div>
+    )
+    return <span>{formatPrice(may.unitKg)} / kg</span>
+  }
 
   const etiqueta = esMayorista ? 'MAYORISTA' : 'MINORISTA'
   const publico = esMayorista ? 'Precios para negocios' : 'Precios para particulares'
@@ -87,7 +91,8 @@ export default async function ListaPreciosPage({ searchParams }: {
 
       {/* Productos por categoría */}
       {categorias.map(cat => {
-        const items = (products || []).filter(p => (p.category || 'General') === cat)
+        // En mayorista se ocultan los productos deshabilitados para mayor
+        const items = (products || []).filter(p => (p.category || 'General') === cat && !(esMayorista && mapa[String(p.id)]?.off))
         if (!items.length) return null
         return (
           <div key={cat} style={{ marginBottom: 28 }}>
@@ -101,8 +106,8 @@ export default async function ListaPreciosPage({ searchParams }: {
                   {p.unit && <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginLeft: 6 }}>/ {p.unit}</span>}
                   {p.featured && <span style={{ marginLeft: 8, fontSize: '0.65rem', background: '#f97316', color: 'white', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>DESTACADO</span>}
                 </div>
-                <div style={{ fontWeight: 700, color: p.price ? '#0D1326' : '#64748b', fontSize: '0.9rem', whiteSpace: 'nowrap', marginLeft: 16 }}>
-                  {p.price ? formatPrice(precioDe(p)) : 'Consultar'}
+                <div style={{ fontWeight: 700, color: '#0D1326', fontSize: '0.9rem', marginLeft: 16, textAlign: 'right' }}>
+                  {renderPrecio(p)}
                 </div>
               </div>
             ))}
