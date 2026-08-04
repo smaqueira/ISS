@@ -44,7 +44,7 @@ export default function ListaPreciosAdminPage() {
       } catch { /* ignore */ }
     }).catch(() => {})
 
-    fetch('/api/catalog').then(r => r.json()).then((arr) => {
+    fetch('/api/catalog?all=1').then(r => r.json()).then((arr) => {
       if (Array.isArray(arr)) setProds(arr.map((p: { id: string; name: string; price: number; category?: string }) => ({
         id: String(p.id), name: p.name, price: Number(p.price) || 0, category: p.category || 'General',
       })))
