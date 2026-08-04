@@ -205,14 +205,14 @@ export default function ListaPreciosAdminPage() {
           <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 12 }}>
             Por producto: <strong>precio mayorista por kilo</strong> × <strong>kilos de la caja</strong> = precio de la caja. Si dejás el $/kg vacío, usa el descuento general ({descGeneralNum}%) sobre el público. Destildá <strong>“Mayor”</strong> para que un producto no salga en la lista mayorista.
           </div>
-          <div style={{ display: 'flex', gap: 8, padding: '0 0 4px', fontSize: '0.62rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            <span style={{ flex: 1, minWidth: 140 }}>Producto</span>
-            <span style={{ width: 44, textAlign: 'center' }}>Mayor</span>
-            <span style={{ width: 84, textAlign: 'center' }}>$ / kg</span>
-            <span style={{ width: 64, textAlign: 'center' }}>kg caja</span>
-            <span style={{ width: 110, textAlign: 'right' }}>Precio caja</span>
-          </div>
           <div style={{ maxHeight: 440, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', gap: 8, padding: '0 0 4px', position: 'sticky', top: 0, zIndex: 1, background: 'var(--surface)', fontSize: '0.62rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <span style={{ flex: 1, minWidth: 140 }}>Producto</span>
+              <span style={{ width: 44, textAlign: 'center' }}>Mayor</span>
+              <span style={{ width: 84, textAlign: 'center' }}>$ / kg</span>
+              <span style={{ width: 64, textAlign: 'center' }}>kg caja</span>
+              <span style={{ width: 110, textAlign: 'right' }}>Precio caja</span>
+            </div>
             {categorias.map(cat => (
               <div key={cat}>
                 <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#C9A96E', textTransform: 'uppercase', letterSpacing: 0.5, margin: '10px 0 4px' }}>{cat}</div>
