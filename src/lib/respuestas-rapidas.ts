@@ -11,7 +11,7 @@ function productos(rubro?: string | null): string {
   const n = normalizar(rubro || '')
   if (n.includes('sushi')) return 'salmón, atún y mariscos calidad sashimi'
   if (n.includes('parrilla')) return 'rabas, langostinos, pulpo y mariscos'
-  return 'pescados y mariscos frescos'
+  return 'pescados y mariscos de calidad'
 }
 
 export interface RespuestaRapida { id: string; emoji: string; label: string; texto: string }
@@ -25,7 +25,7 @@ export function respuestasRapidas(nombre?: string | null, rubro?: string | null,
   return [
     {
       id: 'catalogo', emoji: '📋', label: 'Catálogo + lista',
-      texto: `¡Genial! 🙌 Te paso el catálogo con la lista de precios mayorista actualizada. Trabajamos ${prod}, con selección diaria y entrega a domicilio. Si querés, decime qué productos usan más y te confirmo disponibilidad y valor puntual. 🐟`,
+      texto: `¡Genial! 🙌 Te paso el catálogo con la lista de precios mayorista actualizada. Trabajamos ${prod}, con cadena de frío cuidada y entrega a domicilio. Si querés, decime qué productos usan más y te confirmo disponibilidad y valor puntual. 🐟`,
     },
     {
       id: 'precios', emoji: '💲', label: 'Cotización',
@@ -37,7 +37,7 @@ export function respuestasRapidas(nombre?: string | null, rubro?: string | null,
     },
     {
       id: 'minima', emoji: '🛒', label: 'Mínima / entrega',
-      texto: `Te cuento: ${min ? `la compra mínima es ${min}, ` : ''}entregamos a domicilio y seleccionamos el producto el mismo día para garantizar frescura. Coordinamos el reparto según tu zona. ¿Avanzamos con un pedido de prueba?`,
+      texto: `Te cuento: ${min ? `la compra mínima es ${min}, ` : ''}entregamos a domicilio y cuidamos la cadena de frío de punta a punta. Coordinamos el reparto según tu zona. ¿Avanzamos con un pedido de prueba?`,
     },
     {
       id: 'seguimiento', emoji: '🔁', label: 'Seguimiento suave',

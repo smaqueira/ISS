@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
   ])
 
   const nombre = companyName || 'nuestro equipo'
-  const descripcion = companyDesc || 'pescados y mariscos frescos'
+  const descripcion = companyDesc || 'pescados y mariscos de calidad'
   const catalogoUrl  = 'https://vittomare.com/productos'
 
   const fish  = String.fromCodePoint(0x1F41F)
@@ -30,12 +30,12 @@ export async function GET(req: NextRequest, { params }: { params: Params }) {
 
   const esPrimerContacto = !client.fecha_primer_contacto && !client.last_contact
 
-  const cuerpo = `${fish} Seleccionamos nuestros productos diariamente para garantizar la mejor calidad.\n${truck} Hacemos entregas a domicilio.\n${snow} Mantenemos la cadena de frío en todo el proceso.${compraMinima ? `\n🛒 Compra mínima: ${compraMinima}` : ''}`
+  const cuerpo = `${fish} Seleccionamos nuestros productos para garantizar la mejor calidad.\n${truck} Hacemos entregas a domicilio.\n${snow} Mantenemos la cadena de frío en todo el proceso.${compraMinima ? `\n🛒 Compra mínima: ${compraMinima}` : ''}`
 
   const nombreLugar = (client.name || '').trim()
   const whatsapp = esPrimerContacto
     ? elegirPrimerContacto(id, nombreLugar, client.rubro)
-    : `¡Hola! ${wave} ¿Cómo estás?\n\nTe escribimos de *${nombre}*, especialistas en ${descripcion}.\n\n${cuerpo}\n\nPodés ver todos nuestros productos y precios en:\n${catalogoUrl}\n\n${spark} Nuestro compromiso es que disfrutes productos frescos y de la mejor calidad en cada entrega.\n\n¿Te gustaría recibir nuestro catálogo o hacer un pedido? Estamos para ayudarte.`
+    : `¡Hola! ${wave} ¿Cómo estás?\n\nTe escribimos de *${nombre}*, especialistas en ${descripcion}.\n\n${cuerpo}\n\nPodés ver todos nuestros productos y precios en:\n${catalogoUrl}\n\n${spark} Nuestro compromiso es que disfrutes productos de la mejor calidad en cada entrega.\n\n¿Te gustaría recibir nuestro catálogo o hacer un pedido? Estamos para ayudarte.`
 
   const phone = (client.phone || '').replace(/\D/g, '')
   const url = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(whatsapp)}` : null
