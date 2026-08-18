@@ -59,7 +59,7 @@ export async function analizarSenal(
     return `- ${p.nombre}${p.categoria ? ` (${p.categoria})` : ''}${alias ? ` — también: ${alias}` : ''}`
   }).join('\n') || '- (sin productos cargados)'
 
-  const prompt = `Sos un analista comercial. Tu trabajo es decidir si un texto público es una OPORTUNIDAD DE COMPRA real para un negocio.
+  const prompt = `Sos un analista comercial. Decidís si un texto público representa una OPORTUNIDAD COMERCIAL para un negocio que vende a otros negocios.
 
 QUÉ VENDE EL NEGOCIO:
 ${catalogo}
@@ -67,14 +67,26 @@ ${catalogo}
 CLIENTES OBJETIVO: ${clientesObjetivo.join(', ') || 'cualquiera'}
 ZONA COMERCIAL: ${zona || 'no definida'}
 
-NIVELES DE INTENCIÓN (elegí uno):
-- "ninguna": opinión, gusto, receta, noticia, publicidad de otro vendedor. Ej: "me encantan los langostinos".
-- "baja": pregunta vaga o consulta general. Ej: "¿alguien conoce dónde venden langostinos?".
-- "alta": busca explícitamente proveedor/comprar. Ej: "busco proveedor de langostinos para mi restaurante".
-- "muy_alta": busca proveedor CON cantidad, plazo o urgencia concreta. Ej: "necesito 20 kg esta semana".
+HAY DOS TIPOS DE OPORTUNIDAD:
 
-REGLA CRÍTICA: si el texto es de alguien que VENDE (no que compra), la intención es "ninguna".
+A) PEDIDO DE COMPRA — alguien busca comprar o busca proveedor.
+B) COMPRADOR NUEVO — un negocio del rubro objetivo que ABRIÓ hace poco, está por abrir,
+   se está expandiendo (nueva sucursal), o está armando equipo de cocina.
+   Un local nuevo necesita proveedores sí o sí: ES una oportunidad aunque no pida nada.
+
+NIVELES DE INTENCIÓN (elegí uno):
+- "ninguna": receta, opinión, noticia sin negocio concreto, Wikipedia, o un VENDEDOR
+  promocionando (pescadería, distribuidora, tienda). También un directorio o listado genérico.
+- "baja": negocio del rubro objetivo mencionado, pero sin señal de novedad ni de pedido.
+- "alta": pedido de proveedor explícito, O un negocio del rubro que abrió / está por abrir /
+  suma sucursal / busca personal de cocina.
+- "muy_alta": pedido con cantidad, plazo o urgencia, O apertura inminente/reciente
+  con nombre y ubicación concretos.
+
+REGLA CRÍTICA: si es alguien que VENDE lo mismo que nosotros (competidor), es "ninguna".
+REGLA CRÍTICA: un listado de "los 10 mejores restaurantes" es "ninguna" (no identifica un caso concreto).
 REGLA CRÍTICA: NO inventes datos. Si un dato no está en el texto, poné null.
+En "necesidad" indicá cuál de los dos tipos es: "pedido: ..." o "negocio nuevo: ...".
 
 Respondé SOLO JSON sin markdown:
 {"intencion":"ninguna|baja|alta|muy_alta",
@@ -157,6 +169,11 @@ export function calcularScore(a: Analisis, opts: {
   // Cantidad concreta = comprador serio
   d.push({ label: 'Cantidad concreta', puntos: a.cantidad ? 6 : 0 })
 
+  // Comprador nuevo (apertura/expansión): necesita proveedor sí o sí
+  if (/negocio nuevo|apertura|abri[oó]|inaugur|nueva sucursal/i.test(a.necesidad || '')) {
+    d.push({ label: 'Negocio nuevo (necesita proveedor)', puntos: 12 })
+  }
+
   // Publicación reciente
   if (opts.publicadoEn) {
     const dias = (Date.now() - opts.publicadoEn.getTime()) / 86400000
@@ -170,8 +187,10 @@ export function calcularScore(a: Analisis, opts: {
 
   const total = Math.max(0, Math.min(100, d.reduce((s, x) => s + x.puntos, 0)))
 
+  const esNuevo = /negocio nuevo|apertura|abri[oó]|inaugur|nueva sucursal/i.test(a.necesidad || '')
   const partes: string[] = []
-  if (a.intencion === 'muy_alta') partes.push('busca proveedor con una necesidad concreta')
+  if (esNuevo) partes.push('es un negocio nuevo que va a necesitar proveedor')
+  else if (a.intencion === 'muy_alta') partes.push('busca proveedor con una necesidad concreta')
   else if (a.intencion === 'alta') partes.push('busca proveedor explícitamente')
   else if (a.intencion === 'baja') partes.push('hace una consulta general')
   if (a.cantidad) partes.push(`menciona ${a.cantidad}${a.unidad ? ' ' + a.unidad : ''}`)
@@ -197,21 +216,26 @@ export async function generarMensajeVenta(params: {
   ubicacion: string | null
   zona: string
 }): Promise<string> {
-  const prompt = `Escribí un primer mensaje comercial breve para contactar a alguien que publicó que busca comprar.
+  const esNuevo = /negocio nuevo|apertura|abri[oó]|inaugur|nueva sucursal/i.test(params.necesidad || '')
+
+  const prompt = `Escribí un primer mensaje comercial breve.
 
 MI NEGOCIO: ${params.negocio} — ${params.descripcionNegocio}
 ZONA DE COBERTURA: ${params.zona}
-QUÉ BUSCA: ${params.producto}
-QUIÉN ES: ${params.tipoComprador || 'no identificado'}
-NECESIDAD: ${params.necesidad || 'no identificada'}
+PRODUCTO: ${params.producto}
+A QUIÉN ESCRIBO: ${params.tipoComprador || 'no identificado'}
+CONTEXTO: ${params.necesidad || 'no identificado'}
 UBICACIÓN: ${params.ubicacion || 'no identificada'}
+
+${esNuevo
+  ? 'SITUACIÓN: es un negocio que abrió hace poco o está por abrir. NO pidió nada: lo contactamos nosotros. Felicitalo brevemente por la apertura y ofrecete como proveedor.'
+  : 'SITUACIÓN: publicó que busca comprar o busca proveedor. Mencioná que viste su búsqueda, sin sonar invasivo.'}
 
 REGLAS:
 - Máximo 45 palabras. Español rioplatense, tuteo, cordial y directo.
-- Mencioná que viste que busca el producto (sin sonar invasivo).
-- Ofrecé disponibilidad/precios y cierre con una pregunta simple.
-- Nada de precios inventados ni promesas que no puedo garantizar.
-- Sin emojis excesivos (máximo 1). Sin links.
+- Ofrecé disponibilidad/precios y cerrá con una pregunta simple.
+- Nada de precios inventados ni promesas que no pueda garantizar.
+- Máximo 1 emoji. Sin links.
 
 Respondé SOLO el texto del mensaje.`
   try {

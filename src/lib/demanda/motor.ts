@@ -27,11 +27,23 @@ const PATRONES_DEMANDA = [
   'alguien conoce proveedor',
   'recomiendan proveedor',
   'donde consigo',
-  'necesito comprar urgente',
 ]
 
 /** Foros y comunidades donde los compradores preguntan (no venden). */
-const SITIOS_PREGUNTA = ['site:reddit.com', 'site:forosperu.net OR site:taringa.net']
+const SITIOS_PREGUNTA = ['site:reddit.com']
+
+/**
+ * COMPRADORES NUEVOS: un local que abre necesita proveedor sí o sí, y esas
+ * aperturas SÍ están indexadas (prensa gastronómica, avisos de personal).
+ * Rinde mucho más que buscar pedidos de compra, que casi no se publican.
+ */
+const PATRONES_APERTURA = [
+  'nuevo restaurante abrió',
+  'nueva apertura gastronómica',
+  'abre sus puertas restaurante',
+  'restaurante busca cocinero',
+  'nuevo local gastronómico',
+]
 
 /** Arma consultas simples a partir de las palabras clave del producto. */
 export function construirQueries(productos: Producto[], zona: string, clientes: string[] = []): string[] {
@@ -40,15 +52,16 @@ export function construirQueries(productos: Producto[], zona: string, clientes: 
   const geo = (zona || 'Buenos Aires').split(/\s*(?:,|\by\b)\s*/)[0].trim() || 'Buenos Aires'
   const cli = clientes.find(c => c !== 'consumidor final')
 
+  // 1) COMPRADORES NUEVOS (lo que más rinde): aperturas en la zona.
+  for (const patron of PATRONES_APERTURA) out.push(`${patron} ${geo}`)
+  if (cli) out.push(`nuevo ${cli} ${geo} apertura`)
+
+  // 2) PEDIDOS DE COMPRA (menos frecuentes, pero valiosos cuando aparecen)
   for (const p of productos) {
-    const terminos = [...new Set([p.nombre, ...(p.keywords || [])].map(t => (t || '').trim()).filter(Boolean))].slice(0, 3)
+    const terminos = [...new Set([p.nombre, ...(p.keywords || [])].map(t => (t || '').trim()).filter(Boolean))].slice(0, 2)
     for (const t of terminos) {
-      // Lenguaje de comprador (pregunta / recomendación)
       for (const patron of PATRONES_DEMANDA) out.push(`${patron} ${t}`)
-      // En foros, donde se pregunta en vez de vender
       for (const sitio of SITIOS_PREGUNTA) out.push(`${sitio} ${t} proveedor`)
-      // B2B con zona
-      if (cli) out.push(`${cli} necesita ${t} ${geo}`)
     }
   }
   return [...new Set(out)]
@@ -162,13 +175,17 @@ const TITULO_RUIDO = /receta|recipe|c[oó]mo (hacer|preparar|cocinar)|paso a pas
 const ES_VENDEDOR = /venta al por mayor|tienda online|comprar online|nuestros productos|precios? y ofertas|distribuidora|pescader[ií]a|frigor[ií]fico|mayorista de|env[ií]os? a domicilio|agregar al carrito|\$\s?\d/i
 const URL_TIENDA = /\/(tienda|shop|productos?|catalogo|store|comprar)\b/i
 
+/** Señales de negocio NUEVO (apertura, expansión, armado de equipo). */
+const ES_NEGOCIO_NUEVO = /abri[oó]|abre sus puertas|nueva? (apertura|sucursal|local)|inaugur|reci[eé]n abierto|pr[oó]xima apertura|busca cocinero|suma[n]? equipo/i
+
 export function esRuidoObvio(s: SenalCruda): boolean {
   const url = s.url || ''
   const txt = `${s.titulo} ${s.fragmento || ''}`
   if (DOMINIOS_RUIDO.test(url) || TITULO_RUIDO.test(txt)) return true
-  // Vendedor: se descarta salvo que el texto tenga una pregunta de comprador
-  const pareceComprador = /busco|necesito|alguien (sabe|conoce|tiene)|recomiend|d[oó]nde consigo|me pasan/i.test(txt)
-  return (ES_VENDEDOR.test(txt) || URL_TIENDA.test(url)) && !pareceComprador
+  // No descartar si es comprador preguntando O un negocio nuevo (apertura)
+  const vale = /busco|necesito|alguien (sabe|conoce|tiene)|recomiend|d[oó]nde consigo|me pasan/i.test(txt)
+    || ES_NEGOCIO_NUEVO.test(txt)
+  return (ES_VENDEDOR.test(txt) || URL_TIENDA.test(url)) && !vale
 }
 
 /** Hash estable para deduplicar oportunidades ya guardadas. */
