@@ -94,23 +94,35 @@ export async function ask(prompt: string, maxTokens = 300): Promise<string> {
   let ultimoErr: unknown
   for (const model of candidatos) {
     try {
+      // Los gpt-oss son modelos de razonamiento: gastan tokens "pensando" y
+      // devuelven contenido VACÍO si el tope es bajo. Se les da más margen y
+      // se les baja el esfuerzo de razonamiento.
+      const esReasoning = /gpt-oss/i.test(model)
+      const params: Record<string, unknown> = {
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.4,
+        max_tokens: esReasoning ? Math.max(maxTokens * 4, 1500) : maxTokens,
+      }
+      if (esReasoning) params.reasoning_effort = 'low'
+
       const res = await groqWithRotation(keys, (groq) =>
-        groq.chat.completions.create({
-          model,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.4,
-          max_tokens: maxTokens,
-        }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        groq.chat.completions.create(params as any),
       )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const texto = ((res as any).choices?.[0]?.message?.content || '').trim()
+      if (!texto) continue   // respuesta vacía → probar el siguiente modelo
+
       modeloOk = model   // recordar el que funcionó
-      return res.choices[0].message.content || ''
+      return texto
     } catch (e) {
       ultimoErr = e
       if (esModeloInexistente(e)) continue   // modelo dado de baja → probar el siguiente
       throw e                                 // otro error (créditos, red): no seguir
     }
   }
-  throw ultimoErr instanceof Error ? ultimoErr : new Error('Ningún modelo de Groq disponible')
+  throw ultimoErr instanceof Error ? ultimoErr : new Error('Ningún modelo de Groq devolvió respuesta')
 }
 
 export function parseJSON<T>(text: string): T {
