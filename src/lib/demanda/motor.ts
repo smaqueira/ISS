@@ -140,6 +140,19 @@ export async function buscarSenales(o: OpcionesScan): Promise<{ senales: SenalCr
   return { senales: unicas, queries, errores }
 }
 
+/**
+ * Descarta ruido evidente ANTES de gastar una llamada de IA: recetas, wikipedia,
+ * videos, y tiendas online (son competidores vendiendo, no compradores).
+ */
+const DOMINIOS_RUIDO = /youtube\.com|youtu\.be|wikipedia\.org|tiktok\.com|pinterest\.|cookpad|recetas?|paulinacocina|directoalpaladar/i
+const TITULO_RUIDO = /receta|recipe|c[oó]mo (hacer|preparar|cocinar)|paso a paso|ingredientes|beneficios|propiedades/i
+
+export function esRuidoObvio(s: SenalCruda): boolean {
+  const url = s.url || ''
+  const txt = `${s.titulo} ${s.fragmento || ''}`
+  return DOMINIOS_RUIDO.test(url) || TITULO_RUIDO.test(txt)
+}
+
 /** Hash estable para deduplicar oportunidades ya guardadas. */
 export function hashSenal(s: SenalCruda): string {
   const base = (s.url || `${s.titulo}|${s.fragmento}`).toLowerCase().trim()

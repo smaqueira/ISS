@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
-import { buscarSenales, hashSenal } from '@/lib/demanda/motor'
+import { buscarSenales, hashSenal, esRuidoObvio } from '@/lib/demanda/motor'
 import { analizarSenal, calcularScore, type Producto } from '@/lib/demanda/ai'
 import { getDemandaConfig, ajusteAprendizaje } from '@/lib/demanda/config'
 
@@ -36,11 +36,16 @@ export async function POST() {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Error buscando' }, { status: 500 })
   }
 
-  // 2) Descartar las que ya tenemos guardadas
-  const hashes = senales.map(hashSenal)
+  // 2) Descartar ruido evidente (recetas, wikipedia, videos) SIN gastar IA
+  const preFiltradas = senales.filter(s => !esRuidoObvio(s))
+  const ruidoObvio = senales.length - preFiltradas.length
+
+  // 3) Descartar las que ya tenemos guardadas. Tope 12: cada análisis usa una
+  // llamada de IA (~3s) y la función tiene 60s de límite.
+  const hashes = preFiltradas.map(hashSenal)
   const { data: yaHay } = await db.from('demand_opportunities').select('hash').in('hash', hashes)
   const conocidos = new Set((yaHay || []).map(r => r.hash))
-  const nuevas = senales.filter(s => !conocidos.has(hashSenal(s))).slice(0, 25)
+  const nuevas = preFiltradas.filter(s => !conocidos.has(hashSenal(s))).slice(0, 12)
 
   // 3) Analizar con IA + puntuar + guardar las que son oportunidad
   let guardadas = 0, descartadas = 0, fallosIA = 0
@@ -48,9 +53,17 @@ export async function POST() {
   const muestraDescartadas: { titulo: string; por_que: string }[] = []
   let ultimoErrorIA = ''
 
-  for (const s of nuevas) {
-    const a = await analizarSenal(s, productos, cfg.clientesObjetivo, cfg.zona)
+  // Analizar en paralelo (lotes de 4) para no pasarse del límite de tiempo
+  const analisis: { s: typeof nuevas[number]; a: Awaited<ReturnType<typeof analizarSenal>> }[] = []
+  for (let i = 0; i < nuevas.length; i += 4) {
+    const lote = nuevas.slice(i, i + 4)
+    const res = await Promise.all(lote.map(async s => ({
+      s, a: await analizarSenal(s, productos, cfg.clientesObjetivo, cfg.zona),
+    })))
+    analisis.push(...res)
+  }
 
+  for (const { s, a } of analisis) {
     // Un fallo de la IA NO es ruido: se cuenta aparte para no ocultar el problema.
     if (a.explicacion?.startsWith('ERROR IA:')) {
       fallosIA++
@@ -110,7 +123,8 @@ export async function POST() {
     revisadas: senales.length,
     nuevas: nuevas.length,
     oportunidades: guardadas,
-    ruido_descartado: descartadas,
+    ruido_descartado: descartadas + ruidoObvio,
+    ruido_obvio: ruidoObvio,
     queries: queries.length,
     errores,
     fallos_ia: fallosIA,
