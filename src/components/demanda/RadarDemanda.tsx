@@ -62,7 +62,12 @@ export default function RadarDemanda() {
       const r = await fetch('/api/demanda/scan', { method: 'POST' })
       const d = await r.json()
       if (!r.ok) { alert(d.error || 'No se pudo escanear'); return }
-      alert(`Radar ejecutado:\n\n${d.oportunidades} oportunidades nuevas\n${d.ruido_descartado} señales descartadas (ruido)\n${d.revisadas} resultados revisados`)
+      let msg = `Radar ejecutado:\n\n${d.oportunidades} oportunidades nuevas\n${d.ruido_descartado} señales descartadas (ruido)\n${d.revisadas} resultados revisados`
+      if (d.oportunidades === 0 && d.descartadas_muestra?.length) {
+        msg += `\n\nQué trajo el buscador (y por qué se descartó):\n` +
+          d.descartadas_muestra.slice(0, 5).map((x: { titulo: string; por_que: string }) => `• ${x.titulo}\n   → ${x.por_que}`).join('\n')
+      }
+      alert(msg)
       cargar()
       fetch('/api/demanda/resumen').then(r => r.json()).then(setResumen).catch(() => {})
     } finally { setEscaneando(false) }

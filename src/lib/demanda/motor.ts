@@ -14,12 +14,20 @@ export interface SenalCruda extends Senal {
  * nunca aparece indexada y mata los resultados. Google entiende la intención.
  */
 const PATRONES_DEMANDA = [
+  'compro',              // primera persona del COMPRADOR (lo que publica quien busca)
   'busco proveedor',
-  'necesito proveedor',
-  'compro por mayor',
-  'busco distribuidor',
-  'quien vende por mayor',
-  'donde comprar por mayor',
+  'necesito comprar',
+]
+
+/**
+ * Sitios donde la gente PUBLICA pedidos de compra (clasificados, foros, marketplaces).
+ * Buscar acotado a estos sitios evita que Google devuelva solo páginas de vendedores
+ * que hicieron SEO con la frase "busco proveedor".
+ */
+const SITIOS_PEDIDOS = [
+  'site:mercadolibre.com.ar',
+  'site:facebook.com/marketplace',
+  'site:x.com OR site:twitter.com',
 ]
 
 /** Arma las consultas a partir de las palabras clave del producto. */
@@ -32,13 +40,13 @@ export function construirQueries(productos: Producto[], zona: string, clientes: 
     const terminos = [...new Set([p.nombre, ...(p.keywords || [])].map(t => (t || '').trim()).filter(Boolean))].slice(0, 3)
 
     for (const t of terminos) {
-      // 1) Intención pura (sin zona: la zona reduce mucho el universo)
-      for (const patron of PATRONES_DEMANDA.slice(0, 3)) out.push(`${patron} ${t}`)
-      // 2) Intención + zona (para lo local)
-      if (zonaCorta) out.push(`busco proveedor ${t} ${zonaCorta}`)
-      // 3) Intención + tipo de cliente (B2B real)
-      const cli = clientes[0]
-      if (cli) out.push(`${cli} busca proveedor ${t}`)
+      // 1) Lenguaje de comprador, abierto
+      for (const patron of PATRONES_DEMANDA) out.push(`${patron} ${t}`)
+      // 2) Acotado a sitios donde se publican pedidos (lo que más rinde)
+      for (const sitio of SITIOS_PEDIDOS) out.push(`${sitio} compro ${t}`)
+      // 3) B2B con tipo de cliente + zona
+      const cli = clientes.find(c => c !== 'consumidor final') || clientes[0]
+      if (cli) out.push(`${cli} necesita proveedor ${t}${zonaCorta ? ' ' + zonaCorta : ''}`)
     }
   }
   return [...new Set(out)]

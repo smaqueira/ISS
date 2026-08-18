@@ -45,10 +45,17 @@ export async function POST() {
   // 3) Analizar con IA + puntuar + guardar las que son oportunidad
   let guardadas = 0, descartadas = 0
   const creadas: { titulo: string; score: number }[] = []
+  const muestraDescartadas: { titulo: string; por_que: string }[] = []
 
   for (const s of nuevas) {
     const a = await analizarSenal(s, productos, cfg.clientesObjetivo, cfg.zona)
-    if (a.intencion === 'ninguna') { descartadas++; continue }  // ruido: no se guarda
+    if (a.intencion === 'ninguna') {
+      descartadas++
+      if (muestraDescartadas.length < 10) {
+        muestraDescartadas.push({ titulo: s.titulo.slice(0, 80), por_que: a.explicacion || 'sin intención de compra' })
+      }
+      continue  // ruido: no se guarda
+    }
 
     const { ajuste } = await ajusteAprendizaje(db, [
       { dimension: 'tipo_comprador', valor: a.tipo_comprador },
@@ -99,5 +106,6 @@ export async function POST() {
     queries: queries.length,
     errores,
     top: creadas.sort((a, b) => b.score - a.score).slice(0, 5),
+    descartadas_muestra: muestraDescartadas,   // para ver qué está trayendo el buscador
   })
 }
