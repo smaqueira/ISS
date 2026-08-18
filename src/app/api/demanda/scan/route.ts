@@ -43,12 +43,20 @@ export async function POST() {
   const nuevas = senales.filter(s => !conocidos.has(hashSenal(s))).slice(0, 25)
 
   // 3) Analizar con IA + puntuar + guardar las que son oportunidad
-  let guardadas = 0, descartadas = 0
+  let guardadas = 0, descartadas = 0, fallosIA = 0
   const creadas: { titulo: string; score: number }[] = []
   const muestraDescartadas: { titulo: string; por_que: string }[] = []
+  let ultimoErrorIA = ''
 
   for (const s of nuevas) {
     const a = await analizarSenal(s, productos, cfg.clientesObjetivo, cfg.zona)
+
+    // Un fallo de la IA NO es ruido: se cuenta aparte para no ocultar el problema.
+    if (a.explicacion?.startsWith('ERROR IA:')) {
+      fallosIA++
+      ultimoErrorIA = a.explicacion
+      continue
+    }
     if (a.intencion === 'ninguna') {
       descartadas++
       if (muestraDescartadas.length < 10) {
@@ -105,6 +113,8 @@ export async function POST() {
     ruido_descartado: descartadas,
     queries: queries.length,
     errores,
+    fallos_ia: fallosIA,
+    error_ia: ultimoErrorIA || undefined,
     top: creadas.sort((a, b) => b.score - a.score).slice(0, 5),
     descartadas_muestra: muestraDescartadas,   // para ver qué está trayendo el buscador
   })

@@ -111,8 +111,10 @@ Contenido: ${senal.fragmento.slice(0, 1200)}`
       necesidad: r.necesidad || null,
       explicacion: r.explicacion || '',
     }
-  } catch {
-    return VACIO
+  } catch (e) {
+    // Importante: dejar visible POR QUÉ falló. Si se traga el error, una señal
+    // buena termina contada como "ruido" y parece que no hay demanda.
+    return { ...VACIO, explicacion: `ERROR IA: ${e instanceof Error ? e.message : String(e)}`.slice(0, 200) }
   }
 }
 

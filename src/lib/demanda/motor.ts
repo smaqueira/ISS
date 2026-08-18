@@ -30,23 +30,24 @@ const SITIOS_PEDIDOS = [
   'site:x.com OR site:twitter.com',
 ]
 
-/** Arma las consultas a partir de las palabras clave del producto. */
+/** Arma las consultas a partir de las palabras clave del producto.
+ *  Todas quedan ancladas a Buenos Aires / Argentina. */
 export function construirQueries(productos: Producto[], zona: string, clientes: string[] = []): string[] {
   const out: string[] = []
-  const zonaCorta = (zona || '').split(/[,y]/)[0].trim()  // "CABA y GBA" → "CABA"
+  const geo = (zona || '').trim() || 'Buenos Aires Argentina'
 
   for (const p of productos) {
     // Nombre + hasta 2 keywords propias (evita repetir el mismo término)
     const terminos = [...new Set([p.nombre, ...(p.keywords || [])].map(t => (t || '').trim()).filter(Boolean))].slice(0, 3)
 
     for (const t of terminos) {
-      // 1) Lenguaje de comprador, abierto
-      for (const patron of PATRONES_DEMANDA) out.push(`${patron} ${t}`)
+      // 1) Lenguaje de comprador, siempre en la zona
+      for (const patron of PATRONES_DEMANDA) out.push(`${patron} ${t} ${geo}`)
       // 2) Acotado a sitios donde se publican pedidos (lo que más rinde)
-      for (const sitio of SITIOS_PEDIDOS) out.push(`${sitio} compro ${t}`)
-      // 3) B2B con tipo de cliente + zona
+      for (const sitio of SITIOS_PEDIDOS) out.push(`${sitio} compro ${t} ${geo}`)
+      // 3) B2B con tipo de cliente
       const cli = clientes.find(c => c !== 'consumidor final') || clientes[0]
-      if (cli) out.push(`${cli} necesita proveedor ${t}${zonaCorta ? ' ' + zonaCorta : ''}`)
+      if (cli) out.push(`${cli} necesita proveedor ${t} ${geo}`)
     }
   }
   return [...new Set(out)]
