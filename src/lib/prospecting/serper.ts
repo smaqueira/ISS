@@ -10,12 +10,14 @@ interface PlaceResult {
 }
 
 async function getKeys(): Promise<string[]> {
-  const [k1, k2, k3] = await Promise.all([
+  const ks = await Promise.all([
     getSetting('SERPER_API_KEY_1'),
     getSetting('SERPER_API_KEY_2'),
     getSetting('SERPER_API_KEY_3'),
+    getSetting('SERPER_API_KEY_4'),
+    getSetting('SERPER_API_KEY_5'),
   ])
-  return [k1, k2, k3].filter(Boolean)
+  return [...new Set(ks.filter(Boolean))]
 }
 
 export async function searchPlaces(query: string, city: string): Promise<PlaceResult[]> {

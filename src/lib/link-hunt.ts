@@ -11,11 +11,12 @@ export interface OrganicResult { link?: string; title?: string; snippet?: string
 export const exhaustedKeys = new Set<string>()
 
 export async function getSerperKeys(): Promise<string[]> {
-  const [k0, k1, k2, k3] = await Promise.all([
+  const ks = await Promise.all([
     getSetting('SERPER_API_KEY'), getSetting('SERPER_API_KEY_1'),
     getSetting('SERPER_API_KEY_2'), getSetting('SERPER_API_KEY_3'),
+    getSetting('SERPER_API_KEY_4'), getSetting('SERPER_API_KEY_5'),
   ])
-  return [...new Set([k0, k1, k2, k3].filter(Boolean))] as string[]
+  return [...new Set(ks.filter(Boolean))] as string[]
 }
 
 export async function searchSerper(query: string, apiKey: string): Promise<OrganicResult[]> {

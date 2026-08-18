@@ -64,6 +64,8 @@ const GROUPS = [
       { key: 'SERPER_API_KEY_1', label: 'Serper API Key 1', placeholder: '0eb2...' },
       { key: 'SERPER_API_KEY_2', label: 'Serper API Key 2', placeholder: '0eb2...' },
       { key: 'SERPER_API_KEY_3', label: 'Serper API Key 3', placeholder: '0eb2...' },
+      { key: 'SERPER_API_KEY_4', label: 'Serper API Key 4', placeholder: '0eb2...' },
+      { key: 'SERPER_API_KEY_5', label: 'Serper API Key 5', placeholder: '0eb2...' },
     ],
   },
   {
