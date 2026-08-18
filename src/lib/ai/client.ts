@@ -8,11 +8,11 @@ import { getSetting } from '@/lib/settings'
  * Se puede forzar uno con la setting GROQ_MODEL.
  */
 const MODELOS = [
-  'llama-3.3-70b-versatile',
-  'openai/gpt-oss-120b',
-  'moonshotai/kimi-k2-instruct',
-  'qwen/qwen3-32b',
-  'llama-3.1-8b-instant',
+  'openai/gpt-oss-120b',   // el más capaz de los disponibles hoy
+  'openai/gpt-oss-20b',    // más rápido, por si el grande está saturado
+  'qwen/qwen3.6-27b',
+  'groq/compound',
+  'llama-3.3-70b-versatile', // legacy: por si vuelve o hay cuentas que aún lo tienen
 ]
 
 let modeloOk: string | null = null   // cache del que respondió bien
