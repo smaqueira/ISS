@@ -35,6 +35,31 @@ export async function GET() {
 
   diag.queries = construirQueries(productos, cfg.zona, cfg.clientesObjetivo).slice(0, 12)
 
+  // Sonda directa a Serper: reporta el status REAL (searchSerper se traga los errores)
+  const sonda: Record<string, unknown>[] = []
+  for (const k of keys) {
+    try {
+      const res = await fetch('https://google.serper.dev/search', {
+        method: 'POST',
+        headers: { 'X-API-KEY': k, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: 'busco proveedor langostinos', gl: 'ar', hl: 'es', num: 10 }),
+      })
+      const txt = await res.text()
+      let organicos = 0
+      try { organicos = (JSON.parse(txt).organic || []).length } catch { /* no json */ }
+      sonda.push({
+        key: k.slice(0, 6) + '…',
+        status: res.status,
+        ok: res.ok,
+        organicos,
+        respuesta: res.ok ? undefined : txt.slice(0, 200),
+      })
+    } catch (e) {
+      sonda.push({ key: k.slice(0, 6) + '…', error: String(e).slice(0, 160) })
+    }
+  }
+  diag.sonda_serper = sonda
+
   const { senales, errores } = await buscarSenales({
     productos, zona: cfg.zona, clientes: cfg.clientesObjetivo, maxQueries: 6,
   })
