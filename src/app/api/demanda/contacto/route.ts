@@ -33,9 +33,21 @@ export async function POST(req: NextRequest) {
     email: c.email || null,
     updated_at: new Date().toISOString(),
   }
-  const { data, error } = await db.from('demand_opportunities').update(patch).eq('id', id).select().single()
-  if (error) return NextResponse.json({ error: error.message, contacto: c }, { status: 500 })
+  const encontrados = [
+    c.telefono && 'teléfono', c.instagram && 'Instagram', c.email && 'email',
+    c.web && 'web', c.direccion && 'dirección',
+  ].filter(Boolean)
 
-  const encontrados = [c.telefono && 'teléfono', c.instagram && 'Instagram', c.email && 'email', c.web && 'web', c.direccion && 'dirección'].filter(Boolean)
-  return NextResponse.json({ ...data, encontrados })
+  const { data, error } = await db.from('demand_opportunities').update(patch).eq('id', id).select().single()
+
+  // Si el guardado falla (ej. faltan las columnas), igual devolvemos los datos
+  // encontrados para que se puedan usar y para ver el motivo real.
+  if (error) {
+    return NextResponse.json({
+      ...o, ...patch, encontrados,
+      aviso: `Datos encontrados pero NO guardados: ${error.message}`,
+      diagnostico: c.diagnostico,
+    })
+  }
+  return NextResponse.json({ ...data, encontrados, diagnostico: c.diagnostico })
 }

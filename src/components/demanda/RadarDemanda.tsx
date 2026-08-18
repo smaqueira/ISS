@@ -238,7 +238,10 @@ function DetalleOportunidad({ o: oInicial, onClose, onUpdate }: {
       const d = await r.json()
       if (!r.ok) { alert(d.error || 'No se pudo buscar'); return }
       setO(prev => ({ ...prev, ...d }))
-      if (!d.encontrados?.length) alert('No se encontraron datos de contacto. Probá corrigiendo el nombre del negocio.')
+      if (d.aviso) { alert(`⚠️ ${d.aviso}\n\nFaltan las columnas en la base: corré el ALTER TABLE.`); return }
+      if (!d.encontrados?.length) {
+        alert(`No se encontraron datos de contacto.\n\nQué pasó:\n${(d.diagnostico || []).join('\n')}\n\nProbá corrigiendo el nombre (agregale el barrio).`)
+      }
     } finally { setBuscandoContacto(false) }
   }
 
