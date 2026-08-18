@@ -1,7 +1,37 @@
 import Groq from 'groq-sdk'
 import { getSetting } from '@/lib/settings'
 
-const MODEL = 'llama-3.3-70b-versatile'
+/**
+ * Modelos candidatos, en orden de preferencia. Groq da de baja modelos cada
+ * tanto (llama-3.3-70b-versatile dejó de existir y rompió TODA la IA del
+ * sistema en silencio). Se prueban en orden y se recuerda el que funciona.
+ * Se puede forzar uno con la setting GROQ_MODEL.
+ */
+const MODELOS = [
+  'llama-3.3-70b-versatile',
+  'openai/gpt-oss-120b',
+  'moonshotai/kimi-k2-instruct',
+  'qwen/qwen3-32b',
+  'llama-3.1-8b-instant',
+]
+
+let modeloOk: string | null = null   // cache del que respondió bien
+
+/** Modelo a usar en llamadas directas (usa el que ya sabemos que anda). */
+export function modeloPreferido(): string {
+  return modeloOk ?? MODELOS[0]
+}
+
+/** Lista de candidatos, para reintentar si el modelo fue dado de baja. */
+export function modelosCandidatos(): string[] {
+  return [...new Set([modeloOk, ...MODELOS].filter(Boolean))] as string[]
+}
+
+function esModeloInexistente(e: unknown): boolean {
+  const status = (e as { status?: number } | null)?.status
+  const msg = String((e as { message?: string } | null)?.message || '')
+  return status === 404 || /model_not_found|does not exist|decommissioned/i.test(msg)
+}
 
 const KEY_NAMES = ['GROQ_API_KEY', 'GROQ_API_KEY_1', 'GROQ_API_KEY_2', 'GROQ_API_KEY_3', 'GROQ_API_KEY_4']
 
@@ -57,15 +87,30 @@ export async function groqWithRotation<T>(
 
 export async function ask(prompt: string, maxTokens = 300): Promise<string> {
   const keys = await getKeys()
-  const res = await groqWithRotation(keys, (groq) =>
-    groq.chat.completions.create({
-      model: MODEL,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.4,
-      max_tokens: maxTokens,
-    }),
-  )
-  return res.choices[0].message.content || ''
+  const forzado = await getSetting('GROQ_MODEL')
+  // Orden: el forzado por config → el que ya sabemos que anda → el resto
+  const candidatos = [...new Set([forzado, modeloOk, ...MODELOS].filter(Boolean))] as string[]
+
+  let ultimoErr: unknown
+  for (const model of candidatos) {
+    try {
+      const res = await groqWithRotation(keys, (groq) =>
+        groq.chat.completions.create({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.4,
+          max_tokens: maxTokens,
+        }),
+      )
+      modeloOk = model   // recordar el que funcionó
+      return res.choices[0].message.content || ''
+    } catch (e) {
+      ultimoErr = e
+      if (esModeloInexistente(e)) continue   // modelo dado de baja → probar el siguiente
+      throw e                                 // otro error (créditos, red): no seguir
+    }
+  }
+  throw ultimoErr instanceof Error ? ultimoErr : new Error('Ningún modelo de Groq disponible')
 }
 
 export function parseJSON<T>(text: string): T {

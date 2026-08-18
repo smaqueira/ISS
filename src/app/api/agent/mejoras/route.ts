@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { groqWithRotation } from '@/lib/ai/client'
+import { groqWithRotation, modeloPreferido } from '@/lib/ai/client'
 import { getBusinessConfig } from '@/lib/business-context'
 
 export const runtime = 'nodejs'
@@ -71,7 +71,7 @@ export async function GET() {
     db.from('settings').select('value').eq('key', 'LAST_MEJORAS_ANALYSIS').single(),
   ])
 
-  // Métricas de canales (últimos 30 días)
+  // MÃ©tricas de canales (Ãºltimos 30 dÃ­as)
   const channelCounts: Record<string, number> = {}
   const typeCounts: Record<string, number> = {}
   const activityByDay: Record<string, number> = {}
@@ -91,7 +91,7 @@ export async function GET() {
   const hasGmail = configuredKeys.includes('GMAIL_USER')
   const hasWhatsApp = configuredKeys.includes('COMPANY_WHATSAPP')
   const hasCustomerBot = configuredKeys.includes('TELEGRAM_CUSTOMER_BOT_TOKEN')
-  // Groq está OK si hay CUALQUIER key configurada (rotación usa GROQ_API_KEY + _1..4)
+  // Groq estÃ¡ OK si hay CUALQUIER key configurada (rotaciÃ³n usa GROQ_API_KEY + _1..4)
   const hasGroq = apiKeys.length > 0
   const hasResend = configuredKeys.includes('RESEND_API_KEY')
 
@@ -103,7 +103,7 @@ export async function GET() {
   const conversionRate = totalClients ? Math.round(((cerrados || 0) / totalClients) * 100) : 0
   const contactRate = totalClients ? Math.round(((contactados || 0) / totalClients) * 100) : 0
 
-  // Tipos de interacción más frecuentes
+  // Tipos de interacciÃ³n mÃ¡s frecuentes
   const topTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   // Top clientes por score
@@ -112,82 +112,82 @@ export async function GET() {
   ).join('\n')
 
   const systemState = `
-MÉTRICAS DEL SISTEMA (últimos 30 días):
+MÃ‰TRICAS DEL SISTEMA (Ãºltimos 30 dÃ­as):
 
 CLIENTES:
 - Total acumulado: ${totalClients || 0} (${b2b || 0} B2B + ${b2c || 0} B2C)
 - Nuevos esta semana: ${clientsThisWeek || 0}
-- Sin contactar: ${nuevos || 0} → oportunidad inmediata
+- Sin contactar: ${nuevos || 0} â†’ oportunidad inmediata
 - Contactados activos: ${contactados || 0}
-- Cerrados/ganados: ${cerrados || 0} (${conversionRate}% conversión)
-- Fríos: ${frios || 0} → clientes a reactivar
+- Cerrados/ganados: ${cerrados || 0} (${conversionRate}% conversiÃ³n)
+- FrÃ­os: ${frios || 0} â†’ clientes a reactivar
 - Tasa de contacto: ${contactRate}%
 
 TOP 5 LEADS POR SCORE:
 ${topClientsText || '- Sin datos'}
 
-ACTIVIDAD POR CANAL (30 días):
+ACTIVIDAD POR CANAL (30 dÃ­as):
 ${Object.entries(channelCounts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `- ${k}: ${v} interacciones`).join('\n') || '- Sin actividad registrada'}
 
-TIPOS DE INTERACCIÓN MÁS FRECUENTES:
+TIPOS DE INTERACCIÃ“N MÃS FRECUENTES:
 ${topTypes.map(([k, v]) => `- ${k}: ${v}`).join('\n') || '- Sin datos'}
 
-ACTIVIDAD PROMEDIO DIARIA: ${avgDailyActivity} interacciones/día
+ACTIVIDAD PROMEDIO DIARIA: ${avgDailyActivity} interacciones/dÃ­a
 
-PEDIDOS (30 días):
+PEDIDOS (30 dÃ­as):
 ${Object.entries(ordersByStatus).map(([k, v]) => `- ${k}: ${v}`).join('\n') || '- Sin pedidos en el sistema'}
 
-CONFIGURACIÓN:
-- Gmail (captura emails): ${hasGmail ? '✅ activo' : '❌ no configurado'}
-- WhatsApp Business API: ${hasWhatsApp ? '✅ activo' : '❌ pendiente — canal principal bloqueado'}
-- Bot cliente vittomare_bot: ${hasCustomerBot ? '✅ activo' : '❌ no configurado'}
-- IA Groq: ${hasGroq ? '✅ activo' : '❌ no configurado'}
-- Resend (email outbound): ${hasResend ? '✅ activo' : '❌ no configurado'}
-- Instagram DMs: ❌ pendiente cuenta profesional
+CONFIGURACIÃ“N:
+- Gmail (captura emails): ${hasGmail ? 'âœ… activo' : 'âŒ no configurado'}
+- WhatsApp Business API: ${hasWhatsApp ? 'âœ… activo' : 'âŒ pendiente â€” canal principal bloqueado'}
+- Bot cliente vittomare_bot: ${hasCustomerBot ? 'âœ… activo' : 'âŒ no configurado'}
+- IA Groq: ${hasGroq ? 'âœ… activo' : 'âŒ no configurado'}
+- Resend (email outbound): ${hasResend ? 'âœ… activo' : 'âŒ no configurado'}
+- Instagram DMs: âŒ pendiente cuenta profesional
 
-ANÁLISIS ANTERIOR:
-${previousAnalysis?.value ? `Último análisis: ${previousAnalysis.value.slice(0, 300)}...` : 'Primer análisis — sin historial previo'}
+ANÃLISIS ANTERIOR:
+${previousAnalysis?.value ? `Ãšltimo anÃ¡lisis: ${previousAnalysis.value.slice(0, 300)}...` : 'Primer anÃ¡lisis â€” sin historial previo'}
 `
 
   const completion = await groqWithRotation(apiKeys, (groq) => groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
+    model: modeloPreferido(),
     messages: [
       {
         role: 'system',
         content: `Sos un consultor senior de negocios y ventas para pymes en Argentina.
-Conocés en profundidad el negocio de ${biz.name} y su sistema de ventas ISS.
+ConocÃ©s en profundidad el negocio de ${biz.name} y su sistema de ventas ISS.
 
 CONTEXTO DEL NEGOCIO:
 ${biz.description}
 
 TU ROL:
-- Analizás los datos reales del sistema cada vez que te consultan
-- Identificás patrones, cuellos de botella y oportunidades concretas
-- Proponés acciones específicas para el negocio según su contexto
-- Priorizás por impacto en ventas reales (clientes activos y recurrentes)
-- Sos directo, concreto y conocés las limitaciones del free tier
+- AnalizÃ¡s los datos reales del sistema cada vez que te consultan
+- IdentificÃ¡s patrones, cuellos de botella y oportunidades concretas
+- ProponÃ©s acciones especÃ­ficas para el negocio segÃºn su contexto
+- PriorizÃ¡s por impacto en ventas reales (clientes activos y recurrentes)
+- Sos directo, concreto y conocÃ©s las limitaciones del free tier
 
 FORMATO DE RESPUESTA:
-Usá exactamente estas 3 secciones:
-🔴 CRÍTICO (hacer esta semana para no perder ventas)
-🟡 ALTO IMPACTO (próximas 2 semanas, mejora significativa)
-🟢 OPTIMIZACIONES (cuando haya tiempo)
+UsÃ¡ exactamente estas 3 secciones:
+ðŸ”´ CRÃTICO (hacer esta semana para no perder ventas)
+ðŸŸ¡ ALTO IMPACTO (prÃ³ximas 2 semanas, mejora significativa)
+ðŸŸ¢ OPTIMIZACIONES (cuando haya tiempo)
 
-Para cada ítem: nombre corto → explicación de 1-2 líneas enfocada en el impacto concreto para este negocio.
-Máximo 4 ítems por sección. Sé específico, no genérico.`,
+Para cada Ã­tem: nombre corto â†’ explicaciÃ³n de 1-2 lÃ­neas enfocada en el impacto concreto para este negocio.
+MÃ¡ximo 4 Ã­tems por secciÃ³n. SÃ© especÃ­fico, no genÃ©rico.`,
       },
       {
         role: 'user',
-        content: `Analizá este estado actual y dame las recomendaciones más impactantes para ${biz.name} hoy:\n\n${systemState}`,
+        content: `AnalizÃ¡ este estado actual y dame las recomendaciones mÃ¡s impactantes para ${biz.name} hoy:\n\n${systemState}`,
       },
     ],
     max_tokens: 1800,
     temperature: 0.4,
   }))
 
-  const analysis = completion.choices[0]?.message?.content || 'No se pudo generar el análisis.'
+  const analysis = completion.choices[0]?.message?.content || 'No se pudo generar el anÃ¡lisis.'
 
-  // Guardar resumen del análisis para la próxima vez
+  // Guardar resumen del anÃ¡lisis para la prÃ³xima vez
   await db.from('settings').upsert({
     key: 'LAST_MEJORAS_ANALYSIS',
     value: `[${today}] ${analysis.slice(0, 500)}`,

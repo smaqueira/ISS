@@ -76,6 +76,17 @@ export async function GET() {
   diag.sin_ver_antes = senales.length - (yaHay || []).length
   diag.filas_en_tabla = totalGuardadas ?? 0
 
+  // Modelos de Groq realmente disponibles con la key actual
+  try {
+    const { getSetting } = await import('@/lib/settings')
+    const gk = (await getSetting('GROQ_API_KEY_1')) || (await getSetting('GROQ_API_KEY'))
+    if (gk) {
+      const res = await fetch('https://api.groq.com/openai/v1/models', { headers: { Authorization: `Bearer ${gk}` } })
+      const j = await res.json()
+      diag.groq_modelos = (j.data || []).map((m: { id: string }) => m.id).sort()
+    }
+  } catch (e) { diag.groq_modelos_error = String(e).slice(0, 120) }
+
   // PRUEBA DIRECTA DE LA IA sobre la primera señal (para ver si responde)
   if (senales.length) {
     const a = await analizarSenal(senales[0], productos, cfg.clientesObjetivo, cfg.zona)

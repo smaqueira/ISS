@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Groq from 'groq-sdk'
 import type { ChatCompletionCreateParamsNonStreaming, ChatCompletion } from 'groq-sdk/resources/chat/completions'
 import { getBusinessConfig } from '@/lib/business-context'
-import { groqWithRotation } from '@/lib/ai/client'
+import { groqWithRotation, modeloPreferido } from '@/lib/ai/client'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -27,7 +27,7 @@ async function getAllGroqKeys(db: ReturnType<typeof getDb>): Promise<string[]> {
   return keys
 }
 
-// ─── Definición de herramientas ───────────────────────────────────────────────
+// â”€â”€â”€ DefiniciÃ³n de herramientas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
   {
     type: 'function',
@@ -48,13 +48,13 @@ const TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'registrar_interaccion',
-      description: 'Registra una interacción/contacto con un cliente (llamada, WhatsApp, reunión, etc.). Usar cuando el usuario dice que habló con alguien o quiere anotar una nota sobre un cliente.',
+      description: 'Registra una interacciÃ³n/contacto con un cliente (llamada, WhatsApp, reuniÃ³n, etc.). Usar cuando el usuario dice que hablÃ³ con alguien o quiere anotar una nota sobre un cliente.',
       parameters: {
         type: 'object',
         properties: {
           client_id: { type: 'string', description: 'ID del cliente' },
-          tipo: { type: 'string', description: 'Tipo de interacción: llamada, whatsapp, reunion, email, visita' },
-          notas: { type: 'string', description: 'Resumen de la interacción o nota a registrar' },
+          tipo: { type: 'string', description: 'Tipo de interacciÃ³n: llamada, whatsapp, reunion, email, visita' },
+          notas: { type: 'string', description: 'Resumen de la interacciÃ³n o nota a registrar' },
         },
         required: ['client_id', 'tipo', 'notas'],
       },
@@ -64,7 +64,7 @@ const TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'actualizar_estado_cliente',
-      description: 'Cambia el estado de un cliente (nuevo → contactado → interesado → cliente → inactivo). Usar cuando el usuario dice que ya contactó a alguien, cerró una venta, etc.',
+      description: 'Cambia el estado de un cliente (nuevo â†’ contactado â†’ interesado â†’ cliente â†’ inactivo). Usar cuando el usuario dice que ya contactÃ³ a alguien, cerrÃ³ una venta, etc.',
       parameters: {
         type: 'object',
         properties: {
@@ -80,11 +80,11 @@ const TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
     type: 'function',
     function: {
       name: 'crear_tarea',
-      description: 'Crea un recordatorio o tarea para el día. Usar cuando el usuario quiere que le recuerdes algo o agenda una acción pendiente.',
+      description: 'Crea un recordatorio o tarea para el dÃ­a. Usar cuando el usuario quiere que le recuerdes algo o agenda una acciÃ³n pendiente.',
       parameters: {
         type: 'object',
         properties: {
-          titulo: { type: 'string', description: 'Título corto de la tarea' },
+          titulo: { type: 'string', description: 'TÃ­tulo corto de la tarea' },
           descripcion: { type: 'string', description: 'Detalle de la tarea' },
           prioridad: { type: 'string', enum: ['urgente', 'importante', 'rutina'], description: 'Prioridad de la tarea' },
           client_id: { type: 'string', description: 'ID del cliente relacionado (opcional)' },
@@ -96,7 +96,7 @@ const TOOLS: Groq.Chat.Completions.ChatCompletionTool[] = [
   },
 ]
 
-// ─── Ejecutores de herramientas ───────────────────────────────────────────────
+// â”€â”€â”€ Ejecutores de herramientas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type ToolArgs = Record<string, unknown>
 
 async function runTool(name: string, args: ToolArgs, db: ReturnType<typeof getDb>): Promise<string> {
@@ -108,15 +108,15 @@ async function runTool(name: string, args: ToolArgs, db: ReturnType<typeof getDb
       if (args.status) query = query.eq('status', args.status)
       query = query.or(`name.ilike.%${q}%,rubro.ilike.%${q}%,city.ilike.%${q}%`).limit(limit)
       const { data } = await query
-      if (!data?.length) return `No encontré clientes con "${q}".`
+      if (!data?.length) return `No encontrÃ© clientes con "${q}".`
       return data.map(c =>
-        `• ${c.name} | ${c.type} | ${c.status} | ${c.rubro || 'sin rubro'} | ${c.city || 'sin ciudad'} | tel: ${c.phone || '-'} | score: ${c.score || 0} | id: ${c.id}`
+        `â€¢ ${c.name} | ${c.type} | ${c.status} | ${c.rubro || 'sin rubro'} | ${c.city || 'sin ciudad'} | tel: ${c.phone || '-'} | score: ${c.score || 0} | id: ${c.id}`
       ).join('\n')
     }
 
     if (name === 'registrar_interaccion') {
       const { data: client } = await db.from('clients').select('id, name').eq('id', args.client_id).single()
-      if (!client) return `No encontré cliente con id ${args.client_id}`
+      if (!client) return `No encontrÃ© cliente con id ${args.client_id}`
       const { error } = await db.from('interactions').insert({
         client_id: args.client_id,
         channel: 'whatsapp',
@@ -126,12 +126,12 @@ async function runTool(name: string, args: ToolArgs, db: ReturnType<typeof getDb
       })
       if (error) return `Error al guardar: ${error.message}`
       await db.from('clients').update({ last_contact: new Date().toISOString() }).eq('id', args.client_id)
-      return `✅ Interacción registrada con ${client.name}: "${args.notas}"`
+      return `âœ… InteracciÃ³n registrada con ${client.name}: "${args.notas}"`
     }
 
     if (name === 'actualizar_estado_cliente') {
       const { data: client } = await db.from('clients').select('id, name, status').eq('id', args.client_id).single()
-      if (!client) return `No encontré cliente con id ${args.client_id}`
+      if (!client) return `No encontrÃ© cliente con id ${args.client_id}`
       const prev = client.status
       await db.from('clients').update({ status: args.status }).eq('id', args.client_id)
       if (args.notas) {
@@ -140,7 +140,7 @@ async function runTool(name: string, args: ToolArgs, db: ReturnType<typeof getDb
           type: 'cambio_estado', notes: String(args.notas), ai_generated: false,
         })
       }
-      return `✅ ${client.name}: estado cambiado de "${prev}" → "${args.status}"${args.notas ? `. Nota: ${args.notas}` : ''}`
+      return `âœ… ${client.name}: estado cambiado de "${prev}" â†’ "${args.status}"${args.notas ? `. Nota: ${args.notas}` : ''}`
     }
 
     if (name === 'crear_tarea') {
@@ -155,7 +155,7 @@ async function runTool(name: string, args: ToolArgs, db: ReturnType<typeof getDb
         done: false,
       })
       if (error) return `Error al crear tarea: ${error.message}`
-      return `✅ Tarea creada: "${args.titulo}" (${args.prioridad})`
+      return `âœ… Tarea creada: "${args.titulo}" (${args.prioridad})`
     }
 
     return `Herramienta "${name}" no reconocida`
@@ -165,26 +165,26 @@ async function runTool(name: string, args: ToolArgs, db: ReturnType<typeof getDb
 }
 
 function buildSystemPrompt(bizName: string, bizDescription: string): string {
-  return `Sos el asistente personal de Sebastian Maqueira, dueño de ${bizName}.
+  return `Sos el asistente personal de Sebastian Maqueira, dueÃ±o de ${bizName}.
 
 SOBRE EL NEGOCIO:
 ${bizDescription}
 
 TU ROL:
-- Asistís a Sebastian en su día a día operativo y comercial
-- Tenés acceso a herramientas para buscar clientes, registrar interacciones, cambiar estados y crear tareas — USÁLAS cuando corresponda
+- AsistÃ­s a Sebastian en su dÃ­a a dÃ­a operativo y comercial
+- TenÃ©s acceso a herramientas para buscar clientes, registrar interacciones, cambiar estados y crear tareas â€” USÃLAS cuando corresponda
 - Cuando Sebastian mencione un cliente por nombre, buscalo primero con buscar_clientes
-- Cuando diga que habló con alguien o contactó a alguien, registrá la interacción
-- Cuando diga que cerró una venta, cambiá el estado a "cliente"
-- Hablás en español rioplatense, sos directo y práctico
-- Nunca pedís confirmación innecesaria — si el contexto es claro, actuá
+- Cuando diga que hablÃ³ con alguien o contactÃ³ a alguien, registrÃ¡ la interacciÃ³n
+- Cuando diga que cerrÃ³ una venta, cambiÃ¡ el estado a "cliente"
+- HablÃ¡s en espaÃ±ol rioplatense, sos directo y prÃ¡ctico
+- Nunca pedÃ­s confirmaciÃ³n innecesaria â€” si el contexto es claro, actuÃ¡
 
 CONTEXTO DEL SISTEMA (datos de hoy):
 {CONTEXT}
 
-Si Sebastian pregunta qué hacer hoy, priorizá:
+Si Sebastian pregunta quÃ© hacer hoy, priorizÃ¡:
 1. Clientes nuevos sin contactar (oportunidad inmediata)
-2. Clientes fríos a reactivar
+2. Clientes frÃ­os a reactivar
 3. Pedidos pendientes
 4. Leads con score alto sin cerrar`
 }
@@ -222,11 +222,11 @@ export async function POST(req: NextRequest) {
 Fecha: ${hoy.toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
 CLIENTES: ${r1.count || 0} total (${r4.count || 0} B2B + ${r5.count || 0} B2C) | ${r2.count || 0} sin contactar | ${r3.count || 0} inactivos | ${r6.count || 0} nuevos esta semana
 TOP LEADS: ${topLeadsText || 'sin datos'}
-PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o.status} $${o.total || '?'}`).join(', ') || 'ninguno'}`
+PEDIDOS: ${r9.count || 0} pendientes | Ãºltimos: ${(r8.data || []).map(o => `${o.status} $${o.total || '?'}`).join(', ') || 'ninguno'}`
 
     const systemContent = buildSystemPrompt(biz.name, biz.description).replace('{CONTEXT}', context)
 
-    // Función que intenta una llamada rotando keys en caso de 429
+    // FunciÃ³n que intenta una llamada rotando keys en caso de 429
     async function groqCreate(params: ChatCompletionCreateParamsNonStreaming): Promise<ChatCompletion> {
       const res = await groqWithRotation(apiKeys, (groq) => groq.chat.completions.create(params))
       return res as Groq.Chat.Completions.ChatCompletion
@@ -243,7 +243,7 @@ PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o
       let completion: Awaited<ReturnType<typeof groqCreate>>
       try {
         completion = await groqCreate({
-          model: 'llama-3.3-70b-versatile',
+          model: modeloPreferido(),
           messages: groqMessages,
           tools: TOOLS,
           tool_choice: 'auto',
@@ -253,7 +253,7 @@ PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o
       } catch {
         // Si Groq rechaza la tool call (error de schema), reintentamos sin tools
         const fallback = await groqCreate({
-          model: 'llama-3.3-70b-versatile',
+          model: modeloPreferido(),
           messages: groqMessages,
           max_tokens: 1000,
           temperature: 0.4,
@@ -267,7 +267,7 @@ PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o
 
       groqMessages.push(msg as Groq.Chat.Completions.ChatCompletionMessageParam)
 
-      // Sin tool calls → respuesta final
+      // Sin tool calls â†’ respuesta final
       if (!msg.tool_calls?.length) {
         return NextResponse.json({ reply: msg.content || 'Sin respuesta.', actions })
       }
@@ -285,7 +285,7 @@ PEDIDOS: ${r9.count || 0} pendientes | últimos: ${(r8.data || []).map(o => `${o
       }
     }
 
-    return NextResponse.json({ reply: 'Acción completada.', actions })
+    return NextResponse.json({ reply: 'AcciÃ³n completada.', actions })
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
     return NextResponse.json({ error: msg }, { status: 500 })

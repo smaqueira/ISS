@@ -1,14 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import Groq from 'groq-sdk'
+import { modeloPreferido } from '@/lib/ai/client'
 
 export const runtime = 'nodejs'
 
 const CANAL_ICONS: Record<string, string> = {
-  whatsapp: '💬',
-  instagram: '📸',
-  email: '📧',
-  telegram: '✈️',
+  whatsapp: 'ðŸ’¬',
+  instagram: 'ðŸ“¸',
+  email: 'ðŸ“§',
+  telegram: 'âœˆï¸',
 }
 
 export async function GET(req: NextRequest) {
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
     messages.push({
       id: i.id,
       canal: i.channel || 'whatsapp',
-      canal_icon: CANAL_ICONS[i.channel] || '💬',
+      canal_icon: CANAL_ICONS[i.channel] || 'ðŸ’¬',
       direction: isIncoming ? 'in' : 'out',
       client_id: c.id,
       client_name: c.name,
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest) {
     messages.push({
       id: ig.id,
       canal: 'instagram',
-      canal_icon: '📸',
+      canal_icon: 'ðŸ“¸',
       direction: 'in',
       client_id: null,
       client_name: ig.username || 'Instagramer',
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest) {
     })
   }
 
-  // Agrupar por client_id (o ig_user_id) → conversaciones
+  // Agrupar por client_id (o ig_user_id) â†’ conversaciones
   const convMap = new Map<string, Conversation>()
 
   for (const msg of messages) {
@@ -137,21 +138,21 @@ export async function POST(req: NextRequest) {
   const negocio = rubro ? `restaurante/negocio (${rubro})` : 'cliente'
 
   const completion = await groq.chat.completions.create({
-    model: 'llama-3.3-70b-versatile',
+    model: modeloPreferido(),
     messages: [
       {
         role: 'system',
-        content: `Sos el asistente de ventas de Vitto Mare, una pescadería premium de CABA.
-Respondés mensajes de ${esB2B ? 'clientes B2B (restaurantes, hoteles, roticerías)' : 'clientes particulares'} por ${canal}.
-Tono: profesional pero cercano, directo, sin florilegios. Máximo 3 líneas.
+        content: `Sos el asistente de ventas de Vitto Mare, una pescaderÃ­a premium de CABA.
+RespondÃ©s mensajes de ${esB2B ? 'clientes B2B (restaurantes, hoteles, roticerÃ­as)' : 'clientes particulares'} por ${canal}.
+Tono: profesional pero cercano, directo, sin florilegios. MÃ¡ximo 3 lÃ­neas.
 Objetivo: resolver la consulta, generar confianza y avanzar hacia la venta.`,
       },
       {
         role: 'user',
         content: `El cliente se llama "${client_name}" (${negocio}).
-Escribió: "${last_message}"
+EscribiÃ³: "${last_message}"
 
-Generá una respuesta lista para enviar por ${canal}.`,
+GenerÃ¡ una respuesta lista para enviar por ${canal}.`,
       },
     ],
     temperature: 0.6,
