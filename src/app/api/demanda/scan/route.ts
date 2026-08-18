@@ -30,7 +30,7 @@ export async function POST() {
   let senales, queries, errores
   try {
     ({ senales, queries, errores } = await buscarSenales({
-      productos, zona: cfg.zona, rssUrls: cfg.rssUrls, maxQueries: 12,
+      productos, zona: cfg.zona, clientes: cfg.clientesObjetivo, rssUrls: cfg.rssUrls, maxQueries: 12,
     }))
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : 'Error buscando' }, { status: 500 })

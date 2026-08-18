@@ -9,25 +9,36 @@ export interface SenalCruda extends Senal {
   publicado_en?: string | null
 }
 
-/** Frases que delatan intención de compra (se combinan con las keywords del producto). */
+/**
+ * Frases que delatan intención de compra. SIN comillas: la frase exacta casi
+ * nunca aparece indexada y mata los resultados. Google entiende la intención.
+ */
 const PATRONES_DEMANDA = [
-  'busco proveedor de',
-  'necesito comprar',
-  'alguien vende',
-  'donde comprar',
-  'quiero comprar',
-  'busco quien venda',
+  'busco proveedor',
+  'necesito proveedor',
+  'compro por mayor',
+  'busco distribuidor',
+  'quien vende por mayor',
+  'donde comprar por mayor',
 ]
 
 /** Arma las consultas a partir de las palabras clave del producto. */
-export function construirQueries(productos: Producto[], zona: string, maxPorProducto = 3): string[] {
+export function construirQueries(productos: Producto[], zona: string, clientes: string[] = []): string[] {
   const out: string[] = []
+  const zonaCorta = (zona || '').split(/[,y]/)[0].trim()  // "CABA y GBA" → "CABA"
+
   for (const p of productos) {
-    const terminos = [p.nombre, ...(p.keywords || [])].filter(Boolean).slice(0, 2)
+    // Nombre + hasta 2 keywords propias (evita repetir el mismo término)
+    const terminos = [...new Set([p.nombre, ...(p.keywords || [])].map(t => (t || '').trim()).filter(Boolean))].slice(0, 3)
+
     for (const t of terminos) {
-      for (const patron of PATRONES_DEMANDA.slice(0, maxPorProducto)) {
-        out.push(`"${patron} ${t}" ${zona}`.trim())
-      }
+      // 1) Intención pura (sin zona: la zona reduce mucho el universo)
+      for (const patron of PATRONES_DEMANDA.slice(0, 3)) out.push(`${patron} ${t}`)
+      // 2) Intención + zona (para lo local)
+      if (zonaCorta) out.push(`busco proveedor ${t} ${zonaCorta}`)
+      // 3) Intención + tipo de cliente (B2B real)
+      const cli = clientes[0]
+      if (cli) out.push(`${cli} busca proveedor ${t}`)
     }
   }
   return [...new Set(out)]
@@ -87,6 +98,7 @@ async function fuenteRSS(urls: string[]): Promise<SenalCruda[]> {
 export interface OpcionesScan {
   productos: Producto[]
   zona: string
+  clientes?: string[]
   fuentes?: { buscador?: boolean; rss?: boolean }
   rssUrls?: string[]
   maxQueries?: number
@@ -96,7 +108,7 @@ export interface OpcionesScan {
 export async function buscarSenales(o: OpcionesScan): Promise<{ senales: SenalCruda[]; queries: string[]; errores: string[] }> {
   const errores: string[] = []
   const usar = { buscador: true, rss: true, ...(o.fuentes || {}) }
-  const queries = construirQueries(o.productos, o.zona).slice(0, o.maxQueries ?? 12)
+  const queries = construirQueries(o.productos, o.zona, o.clientes).slice(0, o.maxQueries ?? 12)
   let senales: SenalCruda[] = []
 
   if (usar.buscador && queries.length) {
