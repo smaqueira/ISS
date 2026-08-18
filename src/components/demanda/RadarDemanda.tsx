@@ -10,6 +10,15 @@ interface Opp {
   cantidad: string | null; unidad: string | null; ubicacion: string | null; tipo_comprador: string | null
   urgencia: string | null; presupuesto: string | null; necesidad: string | null
   estado: string; feedback: string | null; created_at: string; publicado_en: string | null
+  // Datos de contacto (se buscan con el botón)
+  negocio?: string | null; telefono?: string | null; direccion?: string | null
+  web?: string | null; instagram?: string | null; email?: string | null
+}
+
+function waLink(tel?: string | null): string | null {
+  const d = (tel || '').replace(/\D/g, '')
+  if (d.length < 8) return null
+  return `https://wa.me/${d.startsWith('54') ? d : '54' + d.replace(/^0/, '')}`
 }
 interface Metricas { nuevas: number; alta_intencion: number; match_promedio: number; hoy: number }
 
@@ -187,6 +196,14 @@ export default function RadarDemanda() {
                     {o.tipo_comprador && <span>🏢 {o.tipo_comprador}</span>}
                     {o.urgencia === 'alta' && <span style={{ color: '#f97316' }}>⚡ Urgente</span>}
                   </div>
+                  {(o.telefono || o.instagram || o.email) && (
+                    <div style={{ fontSize: '0.72rem', display: 'flex', gap: 8, color: '#22c55e', fontWeight: 600 }}>
+                      {o.telefono && <span>📞</span>}
+                      {o.instagram && <span>📸</span>}
+                      {o.email && <span>✉️</span>}
+                      <span style={{ color: 'var(--muted)', fontWeight: 400 }}>contacto listo</span>
+                    </div>
+                  )}
                   <div style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>Detectado {hace(o.created_at)}</div>
                 </div>
               )
@@ -200,13 +217,33 @@ export default function RadarDemanda() {
 }
 
 // ─────────────────────────────────────────────────────────────
-function DetalleOportunidad({ o, onClose, onUpdate }: {
+function DetalleOportunidad({ o: oInicial, onClose, onUpdate }: {
   o: Opp; onClose: () => void; onUpdate: (id: string, p: { estado?: string; feedback?: string }) => void
 }) {
+  const [o, setO] = useState<Opp>(oInicial)
   const [mensaje, setMensaje] = useState('')
   const [generando, setGenerando] = useState(false)
   const [copiado, setCopiado] = useState(false)
+  const [buscandoContacto, setBuscandoContacto] = useState(false)
+  const [nombreNegocio, setNombreNegocio] = useState(oInicial.negocio || oInicial.ubicacion || '')
   const n = NIVEL(o.score || 0)
+
+  async function buscarContacto() {
+    setBuscandoContacto(true)
+    try {
+      const r = await fetch('/api/demanda/contacto', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: o.id, negocio: nombreNegocio }),
+      })
+      const d = await r.json()
+      if (!r.ok) { alert(d.error || 'No se pudo buscar'); return }
+      setO(prev => ({ ...prev, ...d }))
+      if (!d.encontrados?.length) alert('No se encontraron datos de contacto. Probá corrigiendo el nombre del negocio.')
+    } finally { setBuscandoContacto(false) }
+  }
+
+  const wa = waLink(o.telefono)
+  const hayContacto = !!(o.telefono || o.instagram || o.email || o.web)
 
   async function generar() {
     setGenerando(true)
@@ -278,6 +315,44 @@ function DetalleOportunidad({ o, onClose, onUpdate }: {
             ✅ {o.accion}
           </div>
         )}
+
+        {/* DATOS DE CONTACTO */}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+          <div style={{ fontSize: '0.68rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 6 }}>
+            📇 Datos de contacto
+          </div>
+
+          {!hayContacto && (
+            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+              <input value={nombreNegocio} onChange={e => setNombreNegocio(e.target.value)}
+                placeholder="Nombre del negocio (corregilo si hace falta)"
+                style={{ flex: 1, background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 10px', color: 'var(--text)', fontSize: '0.82rem' }} />
+            </div>
+          )}
+
+          {hayContacto && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8, fontSize: '0.82rem' }}>
+              {o.negocio && <div><strong>{o.negocio}</strong></div>}
+              {o.telefono && <div>📞 {o.telefono}</div>}
+              {o.direccion && <div style={{ color: 'var(--muted)' }}>📍 {o.direccion}</div>}
+              {o.instagram && <div>📸 @{o.instagram}</div>}
+              {o.email && <div>✉️ {o.email}</div>}
+              {o.web && <div style={{ color: 'var(--muted)', wordBreak: 'break-all' }}>🌐 {o.web}</div>}
+            </div>
+          )}
+
+          {/* Acciones directas */}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            <button onClick={buscarContacto} disabled={buscandoContacto} className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>
+              {buscandoContacto ? '⏳ Buscando…' : hayContacto ? '↻ Actualizar datos' : '🔍 Buscar datos de contacto'}
+            </button>
+            {wa && <a href={wa} target="_blank" rel="noreferrer" className="btn btn-primary" style={{ fontSize: '0.8rem', background: '#25D366' }}>💬 WhatsApp</a>}
+            {o.instagram && <a href={`https://ig.me/m/${o.instagram}`} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ fontSize: '0.8rem', color: '#DD2A7B', borderColor: '#DD2A7B55' }}>📸 Instagram</a>}
+            {o.email && <a href={`mailto:${o.email}`} className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>✉️ Email</a>}
+            {o.telefono && <a href={`tel:${o.telefono}`} className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>📞 Llamar</a>}
+            {o.direccion && <a href={`https://maps.google.com/?q=${encodeURIComponent(o.direccion)}`} target="_blank" rel="noreferrer" className="btn btn-ghost" style={{ fontSize: '0.8rem' }}>🗺️ Mapa</a>}
+          </div>
+        </div>
 
         {/* Mensaje sugerido */}
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>

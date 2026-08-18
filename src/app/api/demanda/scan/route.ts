@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { buscarSenales, hashSenal, esRuidoObvio } from '@/lib/demanda/motor'
 import { analizarSenal, calcularScore, type Producto } from '@/lib/demanda/ai'
 import { getDemandaConfig, ajusteAprendizaje } from '@/lib/demanda/config'
+import { igDeTexto } from '@/lib/demanda/contacto'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -113,6 +114,8 @@ export async function POST() {
       tipo_comprador: a.tipo_comprador, urgencia: a.urgencia,
       presupuesto: a.presupuesto, necesidad: a.necesidad,
       estado: 'nueva',
+      // Instagram gratis si la señal viene de un post (sin gastar búsquedas)
+      instagram: igDeTexto(s.url) || igDeTexto(s.titulo) || null,
       hash: hashSenal(s),
     })
     if (!error) { guardadas++; creadas.push({ titulo: s.titulo, score: sc.score }) }
