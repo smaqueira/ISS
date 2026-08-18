@@ -29,10 +29,21 @@ export async function searchSerper(query: string, apiKey: string): Promise<Organ
       exhaustedKeys.add(apiKey)
       return []
     }
-    if (!res.ok) return []
+    if (!res.ok) {
+      // Serper avisa "Not enough credits" con status 400 (no 429): también es
+      // key agotada. Si no se marca, falla en silencio y parece "sin resultados".
+      const txt = await res.text().catch(() => '')
+      if (/not enough credits|quota|limit/i.test(txt)) exhaustedKeys.add(apiKey)
+      return []
+    }
     const data = await res.json()
     return data.organic || []
   } catch { return [] }
+}
+
+/** ¿Se agotaron TODAS las keys? (para avisar en vez de decir "sin resultados") */
+export function todasAgotadas(keys: string[]): boolean {
+  return keys.length > 0 && keys.every(k => exhaustedKeys.has(k))
 }
 
 async function fetchPage(url: string): Promise<string> {

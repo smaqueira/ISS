@@ -2,7 +2,7 @@
 // Fuentes MODULARES: cada conector devuelve Senal[] y se puede activar/desactivar
 // sin tocar el resto. Solo fuentes públicas y APIs autorizadas (ver punto 16).
 
-import { getSerperKeys, searchSerper } from '@/lib/link-hunt'
+import { getSerperKeys, searchSerper, todasAgotadas } from '@/lib/link-hunt'
 import type { Senal, Producto } from './ai'
 
 export interface SenalCruda extends Senal {
@@ -61,6 +61,9 @@ async function fuenteBuscador(queries: string[]): Promise<SenalCruda[]> {
         url: r.link,
         fuente: 'google',
       })
+    }
+    if (todasAgotadas(keys)) {
+      throw new Error('Las API keys de Serper se quedaron sin créditos. Renovalas o cargá una nueva en Configuración → Serper API Key.')
     }
   }
   return out
