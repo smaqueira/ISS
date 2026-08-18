@@ -239,14 +239,29 @@ REGLAS:
 - Máximo 45 palabras. Español rioplatense, tuteo, cordial y directo.
 - Ofrecé disponibilidad/precios y cerrá con una pregunta simple.
 - Nada de precios inventados ni promesas que no pueda garantizar.
+- PROHIBIDO usar las palabras "fresco", "frescos", "fresca" o "frescura": el producto
+  no se vende como fresco. Usá "de calidad", "seleccionados" o "cadena de frío".
 - Máximo 1 emoji. Sin links.
 
 Respondé SOLO el texto del mensaje.`
   try {
-    return (await ask(prompt, 200)).trim()
+    return sinFresco((await ask(prompt, 200)).trim())
   } catch {
-    return `Hola, vi que estás buscando ${params.producto}. Trabajamos ${params.descripcionNegocio} con entrega en ${params.zona}. ¿Querés que te pase disponibilidad y precios?`
+    return sinFresco(`Hola, vi que estás buscando ${params.producto}. Trabajamos ${params.descripcionNegocio} con entrega en ${params.zona}. ¿Querés que te pase disponibilidad y precios?`)
   }
+}
+
+/**
+ * Red de seguridad: el producto NO se vende como fresco. Si la IA (o la
+ * descripción del negocio) mete "fresco/frescura", se reemplaza por un claim real.
+ */
+export function sinFresco(texto: string): string {
+  return texto
+    .replace(/\bfrescos\b/gi, 'de calidad')
+    .replace(/\bfrescas\b/gi, 'de calidad')
+    .replace(/\bfresco\b/gi, 'de calidad')
+    .replace(/\bfresca\b/gi, 'de calidad')
+    .replace(/\bfrescura\b/gi, 'calidad')
 }
 
 // ─────────────────────────────────────────────────────────────

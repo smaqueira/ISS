@@ -37,7 +37,8 @@ export async function GET(req: NextRequest) {
     const diasSinContacto = Math.floor((now.getTime() - new Date(client.last_contact || client.created_at).getTime()) / 86400000)
 
     const mensaje = await ask(
-      `Sos el vendedor de "${s.COMPANY_NAME || 'Vitto Mare'}" — ${s.COMPANY_DESCRIPTION || 'pescados y mariscos frescos en Buenos Aires'}.
+      `Sos el vendedor de "${s.COMPANY_NAME || 'Vitto Mare'}" — ${s.COMPANY_DESCRIPTION || 'pescados y mariscos de calidad en Buenos Aires'}.
+NUNCA uses las palabras "fresco/frescos/frescura": el producto no se vende como fresco. Usá "de calidad", "seleccionados" o "cadena de frío".
 
 Generá un mensaje de WhatsApp de seguimiento para este prospecto:
 - Nombre: ${client.name}
