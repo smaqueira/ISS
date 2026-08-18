@@ -84,7 +84,11 @@ NIVELES DE INTENCIÓN (elegí uno):
   con nombre y ubicación concretos.
 
 REGLA CRÍTICA: si es alguien que VENDE lo mismo que nosotros (competidor), es "ninguna".
-REGLA CRÍTICA: un listado de "los 10 mejores restaurantes" es "ninguna" (no identifica un caso concreto).
+SOBRE LOS LISTADOS:
+- "Los 10 MEJORES restaurantes de siempre" → "ninguna" (ranking, no dice nada nuevo).
+- "Las 10 APERTURAS del mes" / "nuevos locales que abrieron" → "alta": cada uno es un
+  comprador nuevo. En ese caso poné en "necesidad": "negocio nuevo: aperturas recientes"
+  y en "producto_nombre" el producto nuestro que le serviría.
 REGLA CRÍTICA: NO inventes datos. Si un dato no está en el texto, poné null.
 En "necesidad" indicá cuál de los dos tipos es: "pedido: ..." o "negocio nuevo: ...".
 
