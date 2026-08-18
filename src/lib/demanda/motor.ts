@@ -18,12 +18,20 @@ export interface SenalCruda extends Senal {
  * zona completa tipo "CABA y GBA", varios modificadores) devuelven CERO
  * resultados. Google necesita frases simples.
  */
+/**
+ * Frases que escribe un COMPRADOR, no un vendedor. Las genéricas tipo
+ * "proveedor de X" están copadas por el SEO de las pescaderías: devuelven
+ * competidores. Las de pregunta/recomendación aparecen en foros y grupos.
+ */
 const PATRONES_DEMANDA = [
-  'busco proveedor',
-  'compro',
-  'necesito',
-  'quien vende',
+  'alguien conoce proveedor',
+  'recomiendan proveedor',
+  'donde consigo',
+  'necesito comprar urgente',
 ]
+
+/** Foros y comunidades donde los compradores preguntan (no venden). */
+const SITIOS_PREGUNTA = ['site:reddit.com', 'site:forosperu.net OR site:taringa.net']
 
 /** Arma consultas simples a partir de las palabras clave del producto. */
 export function construirQueries(productos: Producto[], zona: string, clientes: string[] = []): string[] {
@@ -33,11 +41,14 @@ export function construirQueries(productos: Producto[], zona: string, clientes: 
   const cli = clientes.find(c => c !== 'consumidor final')
 
   for (const p of productos) {
-    const terminos = [...new Set([p.nombre, ...(p.keywords || [])].map(t => (t || '').trim()).filter(Boolean))].slice(0, 4)
+    const terminos = [...new Set([p.nombre, ...(p.keywords || [])].map(t => (t || '').trim()).filter(Boolean))].slice(0, 3)
     for (const t of terminos) {
-      for (const patron of PATRONES_DEMANDA) out.push(`${patron} ${t}`)   // simple: lo que funciona
-      out.push(`${t} por mayor ${geo}`)                                    // una sola con zona
-      if (cli) out.push(`${cli} proveedor ${t}`)                           // ángulo B2B
+      // Lenguaje de comprador (pregunta / recomendación)
+      for (const patron of PATRONES_DEMANDA) out.push(`${patron} ${t}`)
+      // En foros, donde se pregunta en vez de vender
+      for (const sitio of SITIOS_PREGUNTA) out.push(`${sitio} ${t} proveedor`)
+      // B2B con zona
+      if (cli) out.push(`${cli} necesita ${t} ${geo}`)
     }
   }
   return [...new Set(out)]
@@ -147,10 +158,17 @@ export async function buscarSenales(o: OpcionesScan): Promise<{ senales: SenalCr
 const DOMINIOS_RUIDO = /youtube\.com|youtu\.be|wikipedia\.org|tiktok\.com|pinterest\.|cookpad|recetas?|paulinacocina|directoalpaladar/i
 const TITULO_RUIDO = /receta|recipe|c[oó]mo (hacer|preparar|cocinar)|paso a paso|ingredientes|beneficios|propiedades/i
 
+/** Páginas de VENTA (competidores). Son la mayoría de lo que devuelve Google. */
+const ES_VENDEDOR = /venta al por mayor|tienda online|comprar online|nuestros productos|precios? y ofertas|distribuidora|pescader[ií]a|frigor[ií]fico|mayorista de|env[ií]os? a domicilio|agregar al carrito|\$\s?\d/i
+const URL_TIENDA = /\/(tienda|shop|productos?|catalogo|store|comprar)\b/i
+
 export function esRuidoObvio(s: SenalCruda): boolean {
   const url = s.url || ''
   const txt = `${s.titulo} ${s.fragmento || ''}`
-  return DOMINIOS_RUIDO.test(url) || TITULO_RUIDO.test(txt)
+  if (DOMINIOS_RUIDO.test(url) || TITULO_RUIDO.test(txt)) return true
+  // Vendedor: se descarta salvo que el texto tenga una pregunta de comprador
+  const pareceComprador = /busco|necesito|alguien (sabe|conoce|tiene)|recomiend|d[oó]nde consigo|me pasan/i.test(txt)
+  return (ES_VENDEDOR.test(txt) || URL_TIENDA.test(url)) && !pareceComprador
 }
 
 /** Hash estable para deduplicar oportunidades ya guardadas. */
