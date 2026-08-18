@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
-import { construirQueries, buscarSenales } from '@/lib/demanda/motor'
+import { construirQueries, buscarSenales, hashSenal } from '@/lib/demanda/motor'
 import { getDemandaConfig } from '@/lib/demanda/config'
 import { getSerperKeys } from '@/lib/link-hunt'
-import type { Producto } from '@/lib/demanda/ai'
+import { analizarSenal, type Producto } from '@/lib/demanda/ai'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -67,6 +67,20 @@ export async function GET() {
   diag.errores = errores
   diag.muestra = senales.slice(0, 8).map(s => ({ titulo: s.titulo, url: s.url, fragmento: s.fragmento?.slice(0, 150) }))
   if (!senales.length) diag.problema = 'El buscador no devolvió resultados para estas consultas'
+
+  // ¿Cuántas ya están guardadas? (dedup) — si todas son "conocidas", no se analiza nada
+  const hashes = senales.map(hashSenal)
+  const { data: yaHay } = await db.from('demand_opportunities').select('hash').in('hash', hashes)
+  const { count: totalGuardadas } = await db.from('demand_opportunities').select('*', { count: 'exact', head: true })
+  diag.ya_conocidas = (yaHay || []).length
+  diag.sin_ver_antes = senales.length - (yaHay || []).length
+  diag.filas_en_tabla = totalGuardadas ?? 0
+
+  // PRUEBA DIRECTA DE LA IA sobre la primera señal (para ver si responde)
+  if (senales.length) {
+    const a = await analizarSenal(senales[0], productos, cfg.clientesObjetivo, cfg.zona)
+    diag.prueba_ia = { sobre: senales[0].titulo.slice(0, 70), resultado: a }
+  }
 
   return NextResponse.json(diag)
 }

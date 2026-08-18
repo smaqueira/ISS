@@ -62,7 +62,7 @@ export default function RadarDemanda() {
       const r = await fetch('/api/demanda/scan', { method: 'POST' })
       const d = await r.json()
       if (!r.ok) { alert(d.error || 'No se pudo escanear'); return }
-      let msg = `Radar ejecutado:\n\n${d.oportunidades} oportunidades nuevas\n${d.ruido_descartado} señales descartadas (ruido)\n${d.revisadas} resultados revisados`
+      let msg = `Radar ejecutado:\n\n${d.oportunidades} oportunidades nuevas\n${d.ruido_descartado} señales descartadas (ruido)\n${d.revisadas} resultados revisados\n${d.nuevas} señales sin ver antes (las que se analizan)`
       if (d.fallos_ia) msg += `\n\n⚠️ ${d.fallos_ia} señales NO se pudieron analizar (falla de IA):\n${d.error_ia || ''}`
       if (d.oportunidades === 0 && d.descartadas_muestra?.length) {
         msg += `\n\nQué trajo el buscador (y por qué se descartó):\n` +
