@@ -2,7 +2,7 @@
 // Fuentes MODULARES: cada conector devuelve Senal[] y se puede activar/desactivar
 // sin tocar el resto. Solo fuentes públicas y APIs autorizadas (ver punto 16).
 
-import { getSerperKeys, searchSerper, todasAgotadas } from '@/lib/link-hunt'
+import { getSerperKeys, searchSerper, todasAgotadas, exhaustedKeys } from '@/lib/link-hunt'
 import type { Senal, Producto } from './ai'
 
 export interface SenalCruda extends Senal {
@@ -13,41 +13,31 @@ export interface SenalCruda extends Senal {
  * Frases que delatan intención de compra. SIN comillas: la frase exacta casi
  * nunca aparece indexada y mata los resultados. Google entiende la intención.
  */
-const PATRONES_DEMANDA = [
-  'compro',              // primera persona del COMPRADOR (lo que publica quien busca)
-  'busco proveedor',
-  'necesito comprar',
-]
-
 /**
- * Sitios donde la gente PUBLICA pedidos de compra (clasificados, foros, marketplaces).
- * Buscar acotado a estos sitios evita que Google devuelva solo páginas de vendedores
- * que hicieron SEO con la frase "busco proveedor".
+ * Consultas CORTAS. Aprendido a los golpes: las queries largas (con "site:",
+ * zona completa tipo "CABA y GBA", varios modificadores) devuelven CERO
+ * resultados. Google necesita frases simples.
  */
-const SITIOS_PEDIDOS = [
-  'site:mercadolibre.com.ar',
-  'site:facebook.com/marketplace',
-  'site:x.com OR site:twitter.com',
+const PATRONES_DEMANDA = [
+  'busco proveedor',
+  'compro',
+  'necesito',
+  'quien vende',
 ]
 
-/** Arma las consultas a partir de las palabras clave del producto.
- *  Todas quedan ancladas a Buenos Aires / Argentina. */
+/** Arma consultas simples a partir de las palabras clave del producto. */
 export function construirQueries(productos: Producto[], zona: string, clientes: string[] = []): string[] {
   const out: string[] = []
-  const geo = (zona || '').trim() || 'Buenos Aires Argentina'
+  // Solo el primer token geográfico: "CABA y GBA" → "CABA". Más que eso mata la búsqueda.
+  const geo = (zona || 'Buenos Aires').split(/\s*(?:,|\by\b)\s*/)[0].trim() || 'Buenos Aires'
+  const cli = clientes.find(c => c !== 'consumidor final')
 
   for (const p of productos) {
-    // Nombre + hasta 2 keywords propias (evita repetir el mismo término)
-    const terminos = [...new Set([p.nombre, ...(p.keywords || [])].map(t => (t || '').trim()).filter(Boolean))].slice(0, 3)
-
+    const terminos = [...new Set([p.nombre, ...(p.keywords || [])].map(t => (t || '').trim()).filter(Boolean))].slice(0, 4)
     for (const t of terminos) {
-      // 1) Lenguaje de comprador, siempre en la zona
-      for (const patron of PATRONES_DEMANDA) out.push(`${patron} ${t} ${geo}`)
-      // 2) Acotado a sitios donde se publican pedidos (lo que más rinde)
-      for (const sitio of SITIOS_PEDIDOS) out.push(`${sitio} compro ${t} ${geo}`)
-      // 3) B2B con tipo de cliente
-      const cli = clientes.find(c => c !== 'consumidor final') || clientes[0]
-      if (cli) out.push(`${cli} necesita proveedor ${t} ${geo}`)
+      for (const patron of PATRONES_DEMANDA) out.push(`${patron} ${t}`)   // simple: lo que funciona
+      out.push(`${t} por mayor ${geo}`)                                    // una sola con zona
+      if (cli) out.push(`${cli} proveedor ${t}`)                           // ángulo B2B
     }
   }
   return [...new Set(out)]
@@ -59,8 +49,14 @@ async function fuenteBuscador(queries: string[]): Promise<SenalCruda[]> {
   if (!keys.length) throw new Error('Serper no está configurado (SERPER_API_KEY_1)')
 
   const out: SenalCruda[] = []
+  let turno = 0
   for (let i = 0; i < queries.length; i++) {
-    const key = keys[i % keys.length]
+    // Usar solo keys vivas: rotar sobre las agotadas desperdicia consultas.
+    const vivas = keys.filter(k => !exhaustedKeys.has(k))
+    if (!vivas.length) {
+      throw new Error('Las API keys de Serper se quedaron sin créditos. Cargá una nueva en Configuración → Serper API Key.')
+    }
+    const key = vivas[turno++ % vivas.length]
     const organics = await searchSerper(queries[i], key)
     for (const r of organics) {
       if (!r.link || !r.title) continue
