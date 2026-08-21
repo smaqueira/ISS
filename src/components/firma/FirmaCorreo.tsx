@@ -13,8 +13,16 @@ const AZUL = '#0D1326'
 const AGUA = '#7EC8C8'
 const ORO  = '#C9A96E'
 
+type Estilo = 'completa' | 'minimalista' | 'compacta'
+const ESTILOS: { k: Estilo; label: string; desc: string }[] = [
+  { k: 'completa', label: 'Completa', desc: 'Logo + datos + pie' },
+  { k: 'minimalista', label: 'Minimalista', desc: 'Sin logo, solo texto' },
+  { k: 'compacta', label: 'Compacta', desc: 'Todo en 2 líneas' },
+]
+
 export default function FirmaCorreo() {
   const [d, setD] = useState<Datos>({ nombre: '', cargo: '', telefono: '', email: '' })
+  const [estilo, setEstilo] = useState<Estilo>('completa')
   const [emp, setEmp] = useState<Record<string, string>>({})
   const [guardando, setGuardando] = useState(false)
   const [ok, setOk] = useState(false)
@@ -63,6 +71,37 @@ export default function FirmaCorreo() {
   function html(): string {
     const link = (t: string, h: string) =>
       `<a href="${h}" style="color:${AGUA};text-decoration:none">${t}</a>`
+    const wa = tel ? `https://wa.me/${tel.replace(/\D/g, '')}` : ''
+    const webHref = web.startsWith('http') ? web : `https://${web}`
+    const webTxt = web.replace(/^https?:\/\//, '')
+
+    // ── MINIMALISTA: sin logo, línea de color al costado ──
+    if (estilo === 'minimalista') return `
+<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:${AZUL};line-height:1.5">
+  <tr>
+    <td style="border-left:3px solid ${AGUA};padding-left:14px">
+      <div style="font-size:15px;font-weight:bold">${d.nombre || 'Nombre Apellido'}</div>
+      ${d.cargo ? `<div style="font-size:12px;color:#64748b">${d.cargo}</div>` : ''}
+      <div style="font-size:13px;font-weight:bold;padding-top:6px;letter-spacing:0.5px">${negocio.toUpperCase()}</div>
+      <div style="font-size:10px;color:${ORO};letter-spacing:2px;padding-bottom:6px">PESCADOS &middot; MARISCOS</div>
+      <div style="font-size:12px;color:#334155">
+        ${tel ? `${link(d.telefono, wa)}` : ''}${tel && d.email ? ' &nbsp;|&nbsp; ' : ''}${d.email ? link(d.email, `mailto:${d.email}`) : ''}
+      </div>
+      <div style="font-size:12px;color:#334155">
+        ${ig ? `${link('@' + ig, `https://instagram.com/${ig}`)} &nbsp;|&nbsp; ` : ''}${link(webTxt, webHref)}
+      </div>
+    </td>
+  </tr>
+</table>`.trim()
+
+    // ── COMPACTA: dos líneas, para responder rápido ──
+    if (estilo === 'compacta') return `
+<div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:${AZUL};line-height:1.6">
+  <strong>${d.nombre || 'Nombre Apellido'}</strong>${d.cargo ? ` &middot; <span style="color:#64748b">${d.cargo}</span>` : ''} &middot; <strong style="letter-spacing:0.5px">${negocio.toUpperCase()}</strong><br/>
+  ${tel ? `${link(d.telefono, wa)} &middot; ` : ''}${d.email ? `${link(d.email, `mailto:${d.email}`)} &middot; ` : ''}${ig ? `${link('@' + ig, `https://instagram.com/${ig}`)} &middot; ` : ''}${link(webTxt, webHref)}
+</div>`.trim()
+
+    // ── COMPLETA (por defecto) ──
     return `
 <table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:${AZUL};line-height:1.5">
   <tr>
@@ -141,6 +180,28 @@ export default function FirmaCorreo() {
         {campo('Cargo', 'cargo', 'Ventas mayoristas')}
         {campo('Teléfono / WhatsApp', 'telefono', '+54 9 11 6047-4554')}
         {campo('Email', 'email', 'ventas@vittomare.com')}
+      </div>
+
+      {/* Estilo de firma */}
+      <div>
+        <div style={{ fontSize: '0.72rem', fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
+          Estilo
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {ESTILOS.map(e => {
+            const on = estilo === e.k
+            return (
+              <button key={e.k} onClick={() => setEstilo(e.k)} style={{
+                flex: 1, minWidth: 150, textAlign: 'left', padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
+                border: `1px solid ${on ? 'var(--accent)' : 'var(--border)'}`,
+                background: on ? 'var(--accent)18' : 'transparent',
+              }}>
+                <div style={{ fontWeight: 700, fontSize: '0.85rem', color: on ? 'var(--accent)' : 'var(--text)' }}>{e.label}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>{e.desc}</div>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Vista previa: así se va a ver en el correo */}
